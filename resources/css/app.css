@@ -1,3 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+    --color-bg: #FFFFFF;
+    --color-surface: #FFFFFF;
+    --color-container: #F9FAFB;
+
+    --color-border: #E5E7EB;
+
+    --color-text: #1F2937;
+    --color-muted: #6B7280;
+
+    --color-primary: #E30613;
+    --color-primary-hover: #B7050F;
+
+    --color-secondary: #FFE800;
+
+    --color-success: #22C55E;
+    --color-danger: #EF4444;
+    --color-warning: #F59E0B;
+}
