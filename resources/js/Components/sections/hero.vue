@@ -74,7 +74,7 @@
             <div class="w-10 h-10 lg:w-12 lg:h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center mb-3">
               <svg class="w-5 h-5 lg:w-6 lg:h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7h-3v7h.05a2.5 2.5 0 004.9 0H17a1 1 0 001-1V9l-2-2h-2z"></path></svg>
             </div>
-            <h3 class="font-bold text-xs lg:text-sm text-gray-900 mb-1">Gratis Antar Jemput</h3>
+            <h3 class="font-bold text-xs lg:text-sm text-gray-900 mb-1">Layanan Antar Jemput</h3>
             <p class="text-[10px] text-muted hidden sm:block">Kami jemput dan antar langsung ke lokasi Anda.</p>
           </div>
           <div class="bg-white rounded-2xl shadow-xl p-4 lg:p-6 flex flex-col items-center text-center border border-border hover:-translate-y-1 transition-all">
