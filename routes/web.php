@@ -5,18 +5,80 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// ─────────────────────────────────────────────
+//  Public Routes
+// ─────────────────────────────────────────────
+
 Route::get('/', function () {
     return Inertia::render('home', [
-        'canLogin' => Route::has('login'),
+        'canLogin'    => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
     ]);
 })->name('home');
 
+
+// ─────────────────────────────────────────────
+//  Dashboard Router (redirect sesuai role)
+//  Dipakai sebagai fallback route('dashboard')
+// ─────────────────────────────────────────────
+
 Route::get('/dashboard', function () {
-    return Inertia::render('dashboard/Dashboard');
+    $role = auth()->user()->role;
+
+    return match ($role) {
+        'admin'    => redirect()->route('admin.dashboard'),
+        'operator' => redirect()->route('operator.dashboard'),
+        'kurir'    => redirect()->route('kurir.dashboard'),
+        default    => redirect()->route('home'),   // pelanggan
+    };
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+
+// ─────────────────────────────────────────────
+//  Admin Dashboard
+// ─────────────────────────────────────────────
+
+Route::middleware(['auth', 'verified', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return Inertia::render('dashboard/Admin');
+        })->name('dashboard');
+    });
+
+
+// ─────────────────────────────────────────────
+//  Operator Dashboard
+// ─────────────────────────────────────────────
+
+Route::middleware(['auth', 'verified', 'role:operator'])
+    ->prefix('operator')
+    ->name('operator.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return Inertia::render('dashboard/Operator');
+        })->name('dashboard');
+    });
+
+
+// ─────────────────────────────────────────────
+//  Kurir Dashboard
+// ─────────────────────────────────────────────
+
+Route::middleware(['auth', 'verified', 'role:kurir'])
+    ->prefix('kurir')
+    ->name('kurir.')
+    ->group(function () {
+        Route::get('/dashboard', function () {
+            return Inertia::render('dashboard/Kurir');
+        })->name('dashboard');
+    });
+
+
+// ─────────────────────────────────────────────
+//  Profile (semua role yang sudah login)
+// ─────────────────────────────────────────────
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

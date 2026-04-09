@@ -33,7 +33,20 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended($this->redirectByRole($request->user()->role));
+    }
+
+    /**
+     * Tentukan URL tujuan berdasarkan role user.
+     */
+    private function redirectByRole(string $role): string
+    {
+        return match ($role) {
+            'admin'    => route('admin.dashboard', absolute: false),
+            'operator' => route('operator.dashboard', absolute: false),
+            'kurir'    => route('kurir.dashboard', absolute: false),
+            default    => route('home', absolute: false),  // pelanggan
+        };
     }
 
     /**
