@@ -3,9 +3,9 @@
 </script>
 
 <template>
-  <div id="hero-section" class="h-screen flex flex-col font-sans text-text bg-bg overflow-hidden">
+  <div id="hero-section" class="min-h-screen lg:h-screen flex flex-col font-sans text-text bg-bg overflow-visible lg:overflow-hidden">
     <!-- Main Hero Body -->
-    <div class="relative flex-1 bg-primary text-white overflow-hidden flex items-center pt-20">
+    <div class="relative flex-1 bg-primary text-white overflow-hidden flex items-center pt-24 lg:pt-20 pb-20 lg:pb-0">
       <div class="absolute inset-0 opacity-20 pointer-events-none">
         <div class="absolute top-10 left-10 w-12 h-12 bg-surface rounded-full opacity-50"></div>
         <div class="absolute top-40 right-1/4 w-8 h-8 bg-surface rounded-full opacity-50"></div>
@@ -13,9 +13,9 @@
       </div>
 
       <!-- Compact spacing -->
-      <div class="relative z-10 flex flex-col lg:flex-row items-center max-w-screen-2xl mx-auto px-8 py-8 gap-8 w-full">
+      <div class="relative z-10 flex flex-col lg:flex-row items-center max-w-screen-2xl mx-auto px-6 py-6 lg:px-8 lg:py-8 gap-8 w-full">
         <div class="lg:w-1/2">
-          <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-4 tracking-tighter">
+          <h1 class="text-3xl lg:text-6xl font-bold leading-tight mb-4 tracking-tighter">
             Laundry Beres,<br/>
             <span class="text-secondary text-shadow">Hidup Jadi Ringan</span>
           </h1>
@@ -34,7 +34,7 @@
           </div>
         </div>
 
-        <div class="lg:w-1/2 relative flex justify-center mt-8 lg:-mt-16">
+        <div class="hidden lg:w-1/2 relative lg:flex justify-center mt-8 lg:-mt-16">
           <div class="w-full max-w-lg h-64 lg:h-80 bg-white/10 rounded-3xl flex items-center justify-center border-4 border-white/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
              <div class="absolute inset-0 bg-linear-to-tr from-primary/20 to-transparent group-hover:scale-110 transition-transform duration-700"></div>
              <span class="text-white font-bold text-xl drop-shadow-lg z-10">HiWash Experience</span>
@@ -68,7 +68,7 @@
     </div>
 
     <!-- Quick Features -->
-    <div class="relative z-20 max-w-7xl mx-auto px-8 -mt-10 mb-6 lg:mb-10">
+    <div class="relative z-20 max-w-7xl mx-auto px-6 lg:px-8 -mt-10 mb-12 lg:mb-10">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="bg-white rounded-2xl shadow-xl p-4 lg:p-6 flex flex-col items-center text-center border border-border hover:-translate-y-1 transition-all">
             <div class="w-10 h-10 lg:w-12 lg:h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center mb-3">
