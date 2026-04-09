@@ -1,12 +1,15 @@
 <script setup>
+import { Head } from '@inertiajs/vue3';
 import Navbar from '@/Components/navbar.vue';
-import Footer from '@/Components/footer.vue'; // Pastikan footer diimpor jika belum
+import Footer from '@/Components/footer.vue';
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col bg-bg text-text">
 
-    <header class="bg-primary text-white">
+    <Head title="HiWash" />
+
+    <header>
       <Navbar :canLogin="$page.props.canLogin" :canRegister="$page.props.canRegister" />
     </header>
 

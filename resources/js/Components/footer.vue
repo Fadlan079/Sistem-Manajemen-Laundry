@@ -1,5 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+
+const currentYear = new Date().getFullYear();
 </script>
 
 <template>
@@ -9,22 +11,26 @@ import { Link } from '@inertiajs/vue3';
 
         <div class="space-y-6">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-              <span class="text-primary font-black text-2xl italic">L</span>
+            <div class="flex items-center justify-center">
+              <img src="logo.png" alt="Logo" class="w-12 h-12 rounded-full">
             </div>
+
             <div class="flex flex-col">
-              <span class="text-xl font-black tracking-tighter leading-none">LAUNDRY</span>
-              <span class="text-secondary text-sm font-bold tracking-[0.2em]">KITA</span>
+              <span class="text-xl font-black tracking-tighter leading-none">HiWash</span>
+              <span class="text-secondary text-sm font-bold tracking-[0.2em]">LAUNDRY   </span>
             </div>
           </div>
           <p class="text-white/80 leading-relaxed text-sm">
             Standar baru dalam perawatan pakaian. Menggabungkan teknologi modern dengan ketelitian tradisional untuk hasil yang tak tertandingi.
           </p>
           <div class="flex gap-3">
-            <a href="#" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
+            <a href="https://www.instagram.com/hiwash.id/" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
               <i class="fab fa-instagram text-lg"></i>
             </a>
-            <a href="#" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
+            <a href="https://www.facebook.com/people/HiWash-Laundry/61557078466426/?ref=NONE_xav_ig_profile_page_web#" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
+              <i class="fab fa-facebook text-lg"></i>
+            </a>
+            <a href="https://api.whatsapp.com/send?phone=6285186869231" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
               <i class="fab fa-whatsapp text-lg"></i>
             </a>
           </div>
@@ -33,10 +39,10 @@ import { Link } from '@inertiajs/vue3';
         <div>
           <h4 class="text-secondary font-bold uppercase tracking-widest text-xs mb-8">Navigasi Utama</h4>
           <ul class="space-y-4">
-            <li><a href="#hero" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Beranda</a></li>
-            <li><a href="#services" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Layanan</a></li>
+            <li><Link :href="route('home')" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Beranda</Link></li>
+            <li><a href="#layanan" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Layanan</a></li>
+            <li><a href="#kontak" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Kontak</a></li>
             <li><a href="#faq" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">FAQ</a></li>
-            <li><a href="#contact" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Kontak</a></li>
           </ul>
         </div>
 
@@ -83,8 +89,8 @@ import { Link } from '@inertiajs/vue3';
 
       <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="text-sm text-white/50 text-center md:text-left">
-          &copy; 2026 <span class="text-white font-bold">LaundryKita</span>.
-          Dibuat dengan jiwa dan seni oleh <span class="text-secondary font-medium">Fahri Noor Royyan</span>.
+          &copy; {{ currentYear }} <span class="text-white font-bold">HiWash Laundry</span>.
+          Hak Cipta Dilindungi <span class="text-secondary font-medium">HiWash Laundry</span>.
         </div>
         <div class="flex gap-8 text-xs font-bold uppercase tracking-widest">
           <a href="#" class="text-white/40 hover:text-secondary transition-colors">Privacy Policy</a>

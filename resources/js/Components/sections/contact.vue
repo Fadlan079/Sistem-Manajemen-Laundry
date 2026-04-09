@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <div id="contact" class="py-24 px-8 bg-bg border-t border-border">
+  <div id="kontak" class="py-24 px-8 bg-bg border-t border-border">
     <div class="max-w-5xl mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
 

@@ -14,33 +14,40 @@ defineProps({
 </script>
 
 <template>
-  <nav class="relative z-10 flex justify-between items-center px-8 py-6 max-w-screen-2xl mx-auto">
-    <div class="flex items-center gap-2">
-      <div class="w-10 h-10 bg-secondary rounded-full flex items-center justify-center text-primary font-bold text-xl">
-        Hi
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-primary/90 backdrop-blur-md border-b border-white/10">
+    <div class="flex justify-between items-center px-6 py-3 max-w-screen-2xl mx-auto text-white">
+      <Link :href="route('home')" class="flex items-center opacity-90 hover:opacity-100 transition">
+        <img src="logo.png" alt="HiWash Logo" class="h-8 w-8 rounded-full">
+      </Link>
+
+      <div class="hidden lg:flex items-center gap-8 text-[13px] font-medium tracking-wide">
+        <Link :href="route('home')" class="text-secondary transition-colors">Beranda</Link>
+        <a href="#layanan" class="text-white/70 hover:text-white transition-colors">Layanan</a>
+        <a href="#kontak" class="text-white/70 hover:text-white transition-colors">Kontak</a>
+        <a href="#lacak" class="text-white/70 hover:text-white transition-colors">FAQ</a>
       </div>
-      <span class="text-2xl font-extrabold tracking-tight">Wash<br/><span class="text-lg font-semibold leading-none">Laundry</span></span>
-    </div>
 
-    <div class="hidden lg:flex items-center gap-6 text-sm font-medium">
-      <Link :href="route('home')" class="border-b-2 border-secondary pb-1">Beranda</Link>
-      <a href="#layanan" class="hover:text-secondary/80 transition">Layanan</a>
-      <a href="#tentang" class="hover:text-secondary/80 transition">Tentang</a>
-      <a href="#kontak" class="hover:text-secondary/80 transition">Kontak</a>
-      <a href="#lacak" class="hover:text-secondary/80 transition">Lacak Pesanan</a>
-    </div>
+      <div class="flex items-center gap-5 text-[13px] font-medium">
+        <button aria-label="Search" class="text-white/70 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </button>
 
-    <div class="flex items-center gap-4 text-sm font-medium">
-      <button aria-label="Search">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      </button>
-      <template v-if="canLogin">
-        <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="px-5 py-2 rounded-md border border-white hover:bg-surface hover:text-primary transition">Dashboard</Link>
-        <template v-else>
-          <Link :href="route('login')" class="px-5 py-2 rounded-md border border-white hover:bg-surface hover:text-primary transition">Masuk</Link>
-          <Link v-if="canRegister" :href="route('register')" class="px-5 py-2 rounded-md bg-secondary text-text hover:brightness-95 transition">Daftar</Link>
+        <template v-if="canLogin">
+          <Link v-if="$page.props.auth.user" :href="route('dashboard')"
+            class="px-4 py-1.5 rounded border border-white/20 hover:bg-white hover:text-primary transition-all duration-300">
+            Dashboard
+          </Link>
+          <template v-else>
+            <Link :href="route('login')" class="text-white/70 hover:text-white transition">Masuk</Link>
+            <Link v-if="canRegister" :href="route('register')"
+              class="px-4 py-1.5 rounded bg-secondary text-primary font-semibold hover:bg-secondary/90 transition-all">
+              Daftar
+            </Link>
+          </template>
         </template>
-      </template>
+      </div>
     </div>
   </nav>
 </template>
