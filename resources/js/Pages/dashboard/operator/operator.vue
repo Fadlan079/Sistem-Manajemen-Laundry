@@ -9,6 +9,7 @@ const user = computed(() => usePage().props.auth.user);
 
 <template>
     <Head title="Dashboard Operator - Hi Wash Laundry" />
+    
 
     <DashboardLayout title="Overview">
         <!-- Main Content -->

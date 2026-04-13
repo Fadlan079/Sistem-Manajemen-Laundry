@@ -62,7 +62,15 @@ Route::middleware(['auth', 'verified', 'role:operator'])
     ->group(function () {
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard/operator/operator');
-        })->name('dashboard');
+        })->name('dashboard');  
+
+        Route::get('/PesananMasuk', function () {
+            return Inertia::render('dashboard/operator/PesananMasuk');
+        })->name('pesanan.masuk');
+
+        Route::get('/layanan', function () {
+            return Inertia::render('dashboard/operator/layanan');
+        })->name('layanan');
     });
 
 
