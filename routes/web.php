@@ -49,6 +49,18 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/manajemen-users', function () {
             return Inertia::render('dashboard/admin/manajemen-users');
         })->name('users');
+
+        Route::get('/manajemen-order', function () {
+            return Inertia::render('dashboard/admin/manajemen-order');
+        })->name('orders');
+
+        Route::get('/layanan-laundry', function () {
+            return Inertia::render('dashboard/admin/layanan-laundry');
+        })->name('services');
+
+        Route::get('/pickup-delivery', function () {
+            return Inertia::render('dashboard/admin/pickup');
+        })->name('pickup');
     });
 
 
