@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\DeliveryController;
+use App\Http\Controllers\Customer\CustomerDashboardController;
+use App\Http\Controllers\Customer\CustomerOrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,6 +20,7 @@ Route::get('/', function () {
     return Inertia::render('home', [
         'canLogin'    => Route::has('login'),
         'canRegister' => Route::has('register'),
+        'serviceList' => \App\Models\Service::where('status', 'tersedia')->get(),
     ]);
 })->name('home');
 
@@ -34,7 +37,7 @@ Route::get('/dashboard', function () {
         'admin'    => redirect()->route('admin.dashboard'),
         'operator' => redirect()->route('operator.dashboard'),
         'kurir'    => redirect()->route('kurir.dashboard'),
-        default    => redirect()->route('home'),
+        default    => redirect()->route('pelanggan.dashboard'),
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
 

@@ -67,6 +67,10 @@ function openEdit(s) {
     form.estimate    = s.estimate;
     form.status      = s.status;
     form.description = s.description ?? '';
+    form.icon        = s.icon ?? '';
+    form.features    = s.features ?? [];
+    form.unit        = s.unit ?? '/kg';
+    form.tag         = s.tag ?? '';
     form.clearErrors();
     showFormModal.value = true;
 }
@@ -86,7 +90,11 @@ function closeModals() {
 // ── Inertia Form ─────────────────────────────────────────────────
 const form = useForm({
     name: '', category: 'Kiloan', price: '', estimate: '', status: 'tersedia', description: '',
+    icon: '', features: [], unit: '/kg', tag: ''
 });
+
+function addFeature() { form.features.push(''); }
+function removeFeature(idx) { form.features.splice(idx, 1); }
 
 function submitForm() {
     if (editingService.value) {
@@ -482,8 +490,47 @@ const chartPriceData = computed(() => ({
                             <!-- Description -->
                             <div>
                                 <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Deskripsi</label>
-                                <textarea v-model="form.description" rows="3" placeholder="Deskripsi singkat layanan..."
+                                <textarea v-model="form.description" rows="2" placeholder="Deskripsi singkat layanan..."
                                     class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition resize-none"></textarea>
+                            </div>
+
+                            <!-- Icon & Unit & Tag -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Ikon (FontAwesome)</label>
+                                    <input v-model="form.icon" type="text" placeholder="fa-solid fa-shirt"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Satuan Harga</label>
+                                    <input v-model="form.unit" type="text" placeholder="/kg"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Label Tag (Opsional)</label>
+                                    <input v-model="form.tag" type="text" placeholder="Cepat"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                </div>
+                            </div>
+
+                            <!-- Features List -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted">Daftar Kelebihan / Fitur</label>
+                                    <button type="button" @click="addFeature" class="text-[10px] bg-container hover:bg-border text-text px-2 py-1 rounded-sm font-bold transition">
+                                        + Tambah Fitur
+                                    </button>
+                                </div>
+                                <div class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                    <div v-for="(feat, idx) in form.features" :key="idx" class="flex items-center gap-2">
+                                        <input v-model="form.features[idx]" type="text" placeholder="Fitur unggulan..."
+                                            class="w-full px-3 py-2 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                        <button type="button" @click="removeFeature(idx)" class="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-sm hover:bg-rose-600 hover:text-white transition">
+                                            <i class="fa-solid fa-xmark text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <p v-if="form.features.length === 0" class="text-xs text-muted italic">Belum ada fitur ditambahkan.</p>
+                                </div>
                             </div>
 
                             <!-- Actions -->

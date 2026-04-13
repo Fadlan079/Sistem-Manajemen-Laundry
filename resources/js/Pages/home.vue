@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/app.vue'
 import HeroSection from '@/Components/sections/hero.vue'
 import AboutSection from '@/Components/sections/about.vue'
 import LayananSection from '@/Components/sections/layanan.vue'
+import CaraKerjaSection from '@/Components/sections/cara-kerja.vue'
 import ContactSection from '@/Components/sections/contact.vue'
 import FaqSection from '@/Components/sections/faq.vue'
 
@@ -13,6 +14,10 @@ defineProps({
     canRegister: {
         type: Boolean,
     },
+    serviceList: {
+        type: Array,
+        default: () => []
+    }
 });
 </script>
 
@@ -20,7 +25,8 @@ defineProps({
     <AppLayout>
         <HeroSection />
         <!-- <AboutSection /> -->
-        <LayananSection />
+        <LayananSection :services="serviceList" />
+        <CaraKerjaSection />
         <ContactSection />
         <FaqSection />
     </AppLayout>

@@ -13,6 +13,14 @@ class Service extends Model
         'estimate',
         'status',
         'description',
+        'icon',
+        'features',
+        'unit',
+        'tag',
+    ];
+
+    protected $casts = [
+        'features' => 'array',
     ];
 
     public function orders()

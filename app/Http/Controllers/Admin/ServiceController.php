@@ -98,6 +98,10 @@ class ServiceController extends Controller
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],
             'description' => 'nullable|string',
+            'icon'        => 'nullable|string|max:100',
+            'features'    => 'nullable|array',
+            'unit'        => 'nullable|string|max:20',
+            'tag'         => 'nullable|string|max:50',
         ]);
 
         Service::create($validated);
@@ -114,6 +118,10 @@ class ServiceController extends Controller
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],
             'description' => 'nullable|string',
+            'icon'        => 'nullable|string|max:100',
+            'features'    => 'nullable|array',
+            'unit'        => 'nullable|string|max:20',
+            'tag'         => 'nullable|string|max:50',
         ]);
 
         $service->update($validated);
