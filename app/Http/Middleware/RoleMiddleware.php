@@ -18,9 +18,11 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        if (! in_array($request->user()->role, $roles)) {
+        $userRole = strtolower($request->user()->role);
+
+        if (! in_array($userRole, array_map('strtolower', $roles))) {
             // Redirect ke halaman yang sesuai dengan role mereka
-            return match ($request->user()->role) {
+            return match ($userRole) {
                 'admin'    => redirect()->route('admin.dashboard'),
                 'operator' => redirect()->route('operator.dashboard'),
                 'kurir'    => redirect()->route('kurir.dashboard'),

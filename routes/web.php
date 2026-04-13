@@ -26,10 +26,10 @@ Route::get('/dashboard', function () {
     $role = auth()->user()->role;
 
     return match ($role) {
-        'admin'    => redirect()->route('admin.dashboard/admin'),
-        'operator' => redirect()->route('operator.dashboard/operator'),
-        'kurir'    => redirect()->route('kurir.dashboard/kurir'),
-        default    => redirect()->route('home'),   // pelanggan
+        'admin'    => redirect()->route('admin.dashboard'),
+        'operator' => redirect()->route('operator.dashboard'),
+        'kurir'    => redirect()->route('kurir.dashboard'),
+        default    => redirect()->route('home'),
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -45,6 +45,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard/admin/admin');
         })->name('dashboard');
+
+        Route::get('/manajemen-users', function () {
+            return Inertia::render('dashboard/admin/manajemen-users');
+        })->name('users');
     });
 
 

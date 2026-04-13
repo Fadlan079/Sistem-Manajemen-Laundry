@@ -2,34 +2,50 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
+const props = defineProps({
+    isOpen: Boolean
+});
+
+const emit = defineEmits(['update:isOpen']);
+
 const page = usePage();
 const user = computed(() => page.props.auth?.user || { role: 'admin' });
-const role = computed(() => user.value.role || 'admin');
+const role = computed(() => (user.value.role || 'admin').toLowerCase());
 
-const allLinks = {
+const allLinks = computed(() => ({
     admin: [
-        { name: 'Overview', href: '#', active: true, icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-        { name: 'Manajemen User', href: '#', active: false, icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-        { name: 'Semua Pesanan', href: '#', active: false, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-        { name: 'Pengaturan', href: '#', active: false, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+        { name: 'Overview', href: route('admin.dashboard'), active: route().current('admin.dashboard'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        { name: 'Manajemen User', href: route('admin.users'), active: route().current('admin.users'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+        { name: 'Semua Pesanan', href: '#', active: false, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
     ],
     operator: [
-        { name: 'Overview', href: '#', active: true, icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        { name: 'Overview', href: route('operator.dashboard'), active: route().current('operator.dashboard'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
         { name: 'Pesanan Masuk', href: '#', active: false, icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4' },
-        { name: 'Produksi', href: '#', active: false, icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
     ],
     kurir: [
-        { name: 'Overview', href: '#', active: true, icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        { name: 'Overview', href: route('kurir.dashboard'), active: route().current('kurir.dashboard'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
         { name: 'Tugas Jemput', href: '#', active: false, icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-        { name: 'Tugas Antar', href: '#', active: false, icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4' },
     ]
-};
+}));
 
-const links = computed(() => allLinks[role.value] || allLinks.admin);
+const links = computed(() => allLinks.value[role.value] || allLinks.value.admin);
 </script>
 
 <template>
-    <aside class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50">
+    <aside 
+        class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0"
+        :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
+    >
+        <!-- Close Button (Mobile Only) -->
+        <button 
+            @click="emit('update:isOpen', false)"
+            class="absolute top-4 right-4 lg:hidden p-2 rounded-lg bg-black/10 hover:bg-black/20 text-white transition-all"
+        >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
         <!-- Sidebar Header / Logo -->
         <div class="px-8 py-8 border-b border-white/10 flex items-center gap-3">
             <svg class="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
@@ -37,14 +53,14 @@ const links = computed(() => allLinks[role.value] || allLinks.admin);
             </svg>
             <div class="flex flex-col">
                 <span class="font-bold text-xl tracking-tight leading-none text-white">HiWash</span>
-                <span class="text-[10px] text-white/70 font-semibold tracking-widest uppercase mt-1">{{ role }} DASHBOARD</span>
+                <span class="text-[10px] text-white/70 font-semibold tracking-widest uppercase mt-1">{{ role }} Dashboard</span>
             </div>
         </div>
 
         <!-- Navigation Links -->
-        <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+        <nav class="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
             <Link v-for="(link, index) in links" :key="index" :href="link.href" 
-                  class="relative flex items-center gap-4 px-4 py-3 rounded-lg transition overflow-hidden group"
+                  class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition overflow-hidden group"
                   :class="link.active ? 'bg-black/10 text-white font-semibold' : 'text-white/80 hover:bg-black/5 hover:text-white'">
                 <!-- Active Indicator (Yellow bar) -->
                 <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md"></div>
@@ -56,22 +72,34 @@ const links = computed(() => allLinks[role.value] || allLinks.admin);
             </Link>
         </nav>
 
-        <!-- New Order Button / Actions -->
-        <div class="p-6">
-            <button class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-semibold py-3 px-4 rounded-xl shadow-sm transition transform hover:-translate-y-0.5">
+        <!-- Bottom Actions -->
+        <div class="p-6 space-y-4">
+             <button class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm transition transform hover:-translate-y-0.5 active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                New Order
+                <span>New Order</span>
             </button>
-        </div>
 
-        <!-- Bottom - Logout -->
-        <div class="px-4 py-6 border-t border-white/10">
-            <Link :href="route('logout')" method="post" as="button" class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-white/80 hover:bg-black/10 hover:text-white text-[15px] transition group">
-                <svg class="w-5 h-5 opacity-80 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                <span class="font-medium">Logout</span>
-            </Link>
+            <div class="pt-4 border-t border-white/10">
+                <Link :href="route('logout')" method="post" as="button" class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-white/80 hover:bg-black/10 hover:text-white text-[15px] transition group">
+                    <svg class="w-5 h-5 opacity-80 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="font-medium text-sm uppercase tracking-widest">Logout</span>
+                </Link>
+            </div>
         </div>
     </aside>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+</style>
