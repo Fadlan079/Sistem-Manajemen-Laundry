@@ -1,9 +1,52 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
+import { Line, Doughnut, Bar } from 'vue-chartjs';
+import { 
+    Chart as ChartJS, 
+    Title, 
+    Tooltip, 
+    Legend, 
+    LineElement, 
+    LinearScale, 
+    PointElement, 
+    CategoryScale,
+    Filler,
+    ArcElement,
+    BarElement
+} from 'chart.js';
+
+ChartJS.register(
+    Title, 
+    Tooltip, 
+    Legend, 
+    LineElement, 
+    LinearScale, 
+    PointElement, 
+    CategoryScale,
+    Filler,
+    ArcElement,
+    BarElement
+);
 
 const user = computed(() => usePage().props.auth.user);
+
+// State for collapsible chart
+const isChartExpanded = ref(true);
+
+// Load preference from local storage
+onMounted(() => {
+    const savedState = localStorage.getItem('manajemen-users-chart-expanded');
+    if (savedState !== null) {
+        isChartExpanded.value = savedState === 'true';
+    }
+});
+
+// Save preference on change
+watch(isChartExpanded, (newValue) => {
+    localStorage.setItem('manajemen-users-chart-expanded', newValue.toString());
+});
 
 // Dummy Data Pengguna
 const users = ref([
@@ -21,6 +64,135 @@ const userStats = [
     { label: 'Operator Toko', value: '18', icon: 'fa-user-gear', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
     { label: 'Kurir Lapangan', value: '12', icon: 'fa-motorcycle', color: 'text-amber-600', bg: 'bg-amber-500/10' },
 ];
+
+/** CHART CONFIGURATIONS **/
+
+// 1. Distribusi Role User (Doughnut)
+const chartDistributionData = {
+    labels: ['Admin', 'Operator', 'Kurir', 'Pelanggan'],
+    datasets: [{
+        data: [4, 18, 12, 118],
+        backgroundColor: ['#e11d48', '#059669', '#d97706', '#475569'], // Tailwind colors
+        borderWidth: 0,
+        hoverOffset: 4
+    }]
+};
+
+const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'right', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } },
+        tooltip: {
+            backgroundColor: '#0A0A0B',
+            titleFont: { family: 'Space Mono', size: 10 },
+            bodyFont: { family: 'Inter', size: 12, weight: 'bold' },
+            padding: 12,
+            cornerRadius: 4,
+            displayColors: true
+        }
+    },
+    cutout: '70%'
+};
+
+// 2. Pertumbuhan User (Line)
+const chartGrowthData = {
+    labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8'],
+    datasets: [
+        {
+            label: 'User Baru',
+            data: [12, 19, 15, 28, 22, 35, 30, 45],
+            borderColor: '#5B4CF3', // primary
+            backgroundColor: 'rgba(91, 76, 243, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#5B4CF3',
+            pointBorderWidth: 2,
+            pointHoverRadius: 6,
+        }
+    ]
+};
+
+const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: '#0A0A0B',
+            titleFont: { family: 'Space Mono', size: 10 },
+            bodyFont: { family: 'Inter', size: 12, weight: 'bold' },
+            padding: 12,
+            cornerRadius: 4,
+            displayColors: false
+        }
+    },
+    scales: {
+        y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.03)' },
+            border: { display: false },
+            ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' }
+        },
+        x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' }
+        }
+    }
+};
+
+// 3. Verifikasi User (Doughnut)
+const chartVerificationData = {
+    labels: ['Aktif', 'Non-Aktif'],
+    datasets: [{
+        data: [140, 12],
+        backgroundColor: ['#059669', '#cbd5e1'], // Emerald and Slate
+        borderWidth: 0,
+        hoverOffset: 4
+    }]
+};
+
+// 4. Growth per Role (Bar - Stacked)
+const chartGrowthPerRoleData = {
+    labels: ['M1', 'M2', 'M3', 'M4'],
+    datasets: [
+        { label: 'Admin', data: [1, 0, 1, 2], backgroundColor: '#e11d48', borderRadius: 4 },
+        { label: 'Operator', data: [3, 5, 2, 8], backgroundColor: '#059669', borderRadius: 4 },
+        { label: 'Kurir', data: [2, 3, 4, 3], backgroundColor: '#d97706', borderRadius: 4 },
+    ]
+};
+
+const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } },
+        tooltip: {
+            backgroundColor: '#0A0A0B',
+            titleFont: { family: 'Space Mono', size: 10 },
+            bodyFont: { family: 'Inter', size: 12, weight: 'bold' },
+            padding: 12,
+            cornerRadius: 4
+        }
+    },
+    scales: {
+        x: { 
+            stacked: true, 
+            grid: { display: false },
+            border: { display: false },
+            ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' }
+        },
+        y: { 
+            stacked: true, 
+            beginAtZero: true, 
+            grid: { color: 'rgba(0,0,0,0.03)' },
+            border: { display: false },
+            ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' }
+        }
+    }
+};
 
 const getRoleClass = (role) => {
     switch (role) {
@@ -69,6 +241,84 @@ const getRoleClass = (role) => {
 
                     <h3 class="text-3xl font-black text-text tracking-tighter">{{ stat.value }}</h3>
                 </div>
+            </div>
+
+            <!-- Chart Section (Collapsible) -->
+            <div class="bg-surface border border-border rounded-sm shadow-sm overflow-hidden">
+                <button 
+                    @click="isChartExpanded = !isChartExpanded"
+                    class="w-full flex items-center justify-between px-6 py-4 hover:bg-container/50 transition-colors group"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <h3 class="text-xs font-black uppercase tracking-[0.3em] text-text">Visual Analitik - Pertumbuhan User</h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="hidden sm:flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-[9px] font-mono text-muted uppercase tracking-widest italic">Live Trend Analysis</span>
+                        </div>
+                        <i :class="['fa-solid transition-transform duration-300', isChartExpanded ? 'fa-chevron-up' : 'fa-chevron-down text-primary']"></i>
+                    </div>
+                </button>
+
+                <!-- Change max-h strategy here: max-h-[2000px] ensures it fits safely on mobile grids -->
+                <transition 
+                    enter-active-class="transition-all duration-500 ease-out"
+                    leave-active-class="transition-all duration-300 ease-in"
+                    enter-from-class="max-h-0 opacity-0"
+                    enter-to-class="max-h-[2000px] opacity-100"
+                    leave-from-class="max-h-[2000px] opacity-100"
+                    leave-to-class="max-h-0 opacity-0"
+                >
+                    <div v-show="isChartExpanded" class="p-6 border-t border-dashed border-border overflow-hidden">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
+                            <!-- 1. Distribusi Role -->
+                            <div class="flex flex-col space-y-4">
+                                <div class="flex items-center gap-2 border-b border-dashed border-border pb-2">
+                                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Distribusi Role</h4>
+                                </div>
+                                <div class="h-48 md:h-56 w-full relative">
+                                    <Doughnut :data="chartDistributionData" :options="doughnutOptions" />
+                                </div>
+                            </div>
+
+                            <!-- 2. Pertumbuhan Global -->
+                            <div class="flex flex-col space-y-4">
+                                <div class="flex items-center gap-2 border-b border-dashed border-border pb-2">
+                                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Trend Registrasi Global</h4>
+                                </div>
+                                <div class="h-48 md:h-56 w-full relative">
+                                    <Line :data="chartGrowthData" :options="lineOptions" />
+                                </div>
+                            </div>
+
+                            <!-- 3. Status Verifikasi -->
+                            <div class="flex flex-col space-y-4">
+                                <div class="flex items-center gap-2 border-b border-dashed border-border pb-2">
+                                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Status Verifikasi</h4>
+                                </div>
+                                <div class="h-48 md:h-56 w-full relative">
+                                    <Doughnut :data="chartVerificationData" :options="doughnutOptions" />
+                                </div>
+                            </div>
+
+                            <!-- 4. Growth per Role -->
+                            <div class="flex flex-col space-y-4">
+                                <div class="flex items-center gap-2 border-b border-dashed border-border pb-2">
+                                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Registrasi per Role</h4>
+                                </div>
+                                <div class="h-48 md:h-56 w-full relative">
+                                    <Bar :data="chartGrowthPerRoleData" :options="barOptions" />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </transition>
             </div>
 
             <!-- Main Table Section -->
