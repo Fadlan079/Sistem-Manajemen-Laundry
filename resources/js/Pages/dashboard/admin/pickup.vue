@@ -1,13 +1,28 @@
 <script setup>
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, useForm, router, Link } from '@inertiajs/vue3';
 import { computed, ref, onMounted, watch } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 import { Line, Doughnut, Bar } from 'vue-chartjs';
 import { 
     Chart as ChartJS, Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement, BarElement
 } from 'chart.js';
+import Modal from '@/Components/Modal.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement, BarElement);
+
+const props = defineProps({
+    deliveries: Object,
+    stats: Object,
+    filters: Object,
+    orderList: Array,
+    courierList: Array,
+    chartData: Object,
+});
 
 const user = computed(() => usePage().props.auth.user);
 
@@ -25,35 +40,92 @@ watch(isChartExpanded, (newValue) => {
     localStorage.setItem('pickup-chart-expanded', newValue.toString());
 });
 
-// Dummy Data Tasks
-const tasks = ref([
-    { id: '#TSK-1001', customer: 'Andi Wijaya', address: 'Jl. Melati No. 4A', courier: 'Budi (Kurir)', type: 'Pickup', status: 'Selesai', time: '09:00 WIB' },
-    { id: '#TSK-1002', customer: 'Siti Aminah', address: 'Apartemen Sudirman Tower B', courier: 'Anto (Kurir)', type: 'Delivery', status: 'Diperjalanan', time: '11:30 WIB' },
-    { id: '#TSK-1003', customer: 'Rina Kartika', address: 'Perumahan Indah Blok C', courier: 'Belum Ditugaskan', type: 'Pickup', status: 'Menuggu', time: '14:00 WIB' },
-    { id: '#TSK-1004', customer: 'Fadlan Rizqi', address: 'Jl. Merdeka Raya 10', courier: 'Budi (Kurir)', type: 'Delivery', status: 'Diperjalanan', time: '13:00 WIB' },
-    { id: '#TSK-1005', customer: 'Budi Santoso', address: 'Kos Marina No. 12', courier: 'Anto (Kurir)', type: 'Pickup', status: 'Terlambat', time: '10:00 WIB' },
-]);
+// Form and Modal State
+const showingModal = ref(false);
+const isEditing = ref(false);
+const currentDeliveryId = ref(null);
+
+const form = useForm({
+    order_id: '',
+    courier_id: '',
+    type: 'pickup',
+    status: 'dijemput',
+    scheduled_at: '',
+    notes: '',
+});
+
+const searchForm = useForm({
+    search: props.filters?.search || '',
+    status: props.filters?.status || '',
+    type: props.filters?.type || '',
+});
+
+const submitSearch = () => {
+    router.get(route('admin.pickup'), searchForm.data(), { preserveState: true, preserveScroll: true });
+};
+
+const openCreateModal = () => {
+    isEditing.value = false;
+    form.reset();
+    showingModal.value = true;
+};
+
+const openEditModal = (delivery) => {
+    isEditing.value = true;
+    currentDeliveryId.value = delivery.id;
+    form.order_id = delivery.order_id;
+    form.courier_id = delivery.courier_id ?? '';
+    form.type = delivery.type;
+    form.status = delivery.status;
+    form.scheduled_at = delivery.scheduled_at_raw ?? '';
+    form.notes = delivery.notes ?? '';
+    showingModal.value = true;
+};
+
+const closeModal = () => {
+    showingModal.value = false;
+};
+
+const saveDelivery = () => {
+    if (isEditing.value) {
+        form.put(route('admin.pickup.update', currentDeliveryId.value), {
+            onSuccess: () => closeModal(),
+        });
+    } else {
+        form.post(route('admin.pickup.store'), {
+            onSuccess: () => closeModal(),
+        });
+    }
+};
+
+const deleteDelivery = (id) => {
+    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+        router.delete(route('admin.pickup.destroy', id));
+    }
+};
 
 // Statistik Logistik
-const pickupStats = [
-    { label: 'Menuggu Penugasan', value: '12', icon: 'fa-clipboard-list', color: 'text-amber-600', bg: 'bg-amber-500/10' },
-    { label: 'Sedang Diperjalanan', value: '8', icon: 'fa-truck-fast', color: 'text-blue-600', bg: 'bg-blue-500/10' },
-    { label: 'Selesai Hari Ini', value: '45', icon: 'fa-box-check', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { label: 'Kurir Aktif', value: '4', icon: 'fa-users', color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-];
+const pickupStats = computed(() => [
+    { label: 'Menunggu Penugasan', value: props.stats.menunggu, icon: 'fa-clipboard-list', color: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { label: 'Sedang Diperjalanan', value: props.stats.diperjalanan, icon: 'fa-truck-fast', color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { label: 'Selesai Hari Ini', value: props.stats.selesai_hari_ini, icon: 'fa-box-check', color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'Kurir Aktif', value: props.stats.kurir_aktif, icon: 'fa-users', color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
+]);
 
 /** CHART CONFIGURATIONS **/
 
 // 1. Status Tugas Kurir (Doughnut)
-const chartStatusData = {
-    labels: ['Selesai', 'Diperjalanan', 'Menuggu', 'Terkendala/Terlambat'],
-    datasets: [{
-        data: [45, 8, 12, 2],
-        backgroundColor: ['#059669', '#3b82f6', '#d97706', '#e11d48'], 
-        borderWidth: 0,
-        hoverOffset: 4
-    }]
-};
+const chartStatusData = computed(() => {
+    return {
+        labels: ['Selesai', 'Diperjalanan', 'Menunggu'],
+        datasets: [{
+            data: props.chartData.statusDist,
+            backgroundColor: ['#059669', '#3b82f6', '#d97706'], 
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    };
+});
 
 const doughnutOptions = {
     responsive: true, maintainAspectRatio: false,
@@ -65,17 +137,19 @@ const doughnutOptions = {
 };
 
 // 2. Volume Pickup & Delivery Mingguan (Line)
-const chartTrendData = {
-    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
-    datasets: [
-        {
-            label: 'Total Tugas Logistik',
-            data: [40, 52, 60, 48, 80, 110, 85],
-            borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', fill: true, tension: 0.4,
-            pointBackgroundColor: '#fff', pointBorderColor: '#0284c7', pointBorderWidth: 2, pointHoverRadius: 6,
-        }
-    ]
-};
+const chartTrendData = computed(() => {
+    return {
+        labels: props.chartData.weeklyVolume.map(v => v.label).reverse(),
+        datasets: [
+            {
+                label: 'Total Tugas Logistik',
+                data: props.chartData.weeklyVolume.map(v => v.value).reverse(),
+                borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', fill: true, tension: 0.4,
+                pointBackgroundColor: '#fff', pointBorderColor: '#0284c7', pointBorderWidth: 2, pointHoverRadius: 6,
+            }
+        ]
+    };
+});
 
 const lineOptions = {
     responsive: true, maintainAspectRatio: false,
@@ -87,24 +161,28 @@ const lineOptions = {
 };
 
 // 3. Rasio Tepat Waktu (Doughnut)
-const chartTimeData = {
-    labels: ['Tepat Waktu', 'Terlambat (< 30 mnt)', 'Terlambat (> 30 mnt)'],
-    datasets: [{
-        data: [85, 10, 5],
-        backgroundColor: ['#059669', '#f59e0b', '#e11d48'], 
-        borderWidth: 0,
-        hoverOffset: 4
-    }]
-};
+const chartTimeData = computed(() => {
+    return {
+        labels: ['Selesai', 'Sedang Diproses'],
+        datasets: [{
+            data: props.chartData.timeDist,
+            backgroundColor: ['#059669', '#f59e0b'], 
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    };
+});
 
 // 4. Beban Kerja Kurir (Bar)
-const chartCourierData = {
-    labels: ['Budi', 'Anto', 'Bagas', 'Doni'],
-    datasets: [
-        { label: 'Tugas Selesai', data: [15, 12, 10, 8], backgroundColor: '#059669', borderRadius: 4 },
-        { label: 'Sedang Jalan', data: [4, 3, 1, 0], backgroundColor: '#3b82f6', borderRadius: 4 },
-    ]
-};
+const chartCourierData = computed(() => {
+    return {
+        labels: props.chartData.couriers.map(c => c.name),
+        datasets: [
+            { label: 'Tugas Selesai', data: props.chartData.couriers.map(c => c.selesai), backgroundColor: '#059669', borderRadius: 4 },
+            { label: 'Sedang Jalan', data: props.chartData.couriers.map(c => c.jalan), backgroundColor: '#3b82f6', borderRadius: 4 },
+        ]
+    };
+});
 
 const barOptions = {
     responsive: true, maintainAspectRatio: false,
@@ -116,29 +194,31 @@ const barOptions = {
 };
 
 const getStatusClass = (status) => {
-    switch (status) {
-        case 'Selesai': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-        case 'Diperjalanan': return 'bg-blue-100 text-blue-700 border-blue-200';
-        case 'Menuggu': return 'bg-amber-100 text-amber-700 border-amber-200';
-        case 'Terlambat': return 'bg-rose-100 text-rose-700 border-rose-200';
+    switch (status.toLowerCase()) {
+        case 'selesai': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        case 'diantar': return 'bg-blue-100 text-blue-700 border-blue-200';
+        case 'dijemput': return 'bg-amber-100 text-amber-700 border-amber-200';
+        case 'menunggu': return 'bg-amber-100 text-amber-700 border-amber-200';
+        case 'terlambat': return 'bg-rose-100 text-rose-700 border-rose-200';
         default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
 };
 
 const getStatusDot = (status) => {
-    switch (status) {
-        case 'Selesai': return 'bg-emerald-500';
-        case 'Diperjalanan': return 'bg-blue-500';
-        case 'Menuggu': return 'bg-amber-500';
-        case 'Terlambat': return 'bg-rose-500';
+    switch (status.toLowerCase()) {
+        case 'selesai': return 'bg-emerald-500';
+        case 'diantar': return 'bg-blue-500';
+        case 'dijemput': return 'bg-amber-500';
+        case 'menunggu': return 'bg-amber-500';
+        case 'terlambat': return 'bg-rose-500';
         default: return 'bg-slate-300';
     }
 };
 
 const getTypeClass = (type) => {
-     switch (type) {
-        case 'Pickup': return 'bg-purple-100 text-purple-700 border-purple-200';
-        case 'Delivery': return 'bg-teal-100 text-teal-700 border-teal-200';
+     switch (type.toLowerCase()) {
+        case 'pickup': return 'bg-purple-100 text-purple-700 border-purple-200';
+        case 'delivery': return 'bg-teal-100 text-teal-700 border-teal-200';
         default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
 };
@@ -158,7 +238,7 @@ const getTypeClass = (type) => {
                     <p class="text-muted font-medium italic">Pantau penugasan penjemputan dan pengiriman pakaian pelanggan.</p>
                 </div>
                 
-                <button class="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-sm font-black uppercase tracking-widest text-xs shadow-lg transition-all transform hover:-translate-y-1 flex items-center gap-3">
+                <button @click="openCreateModal" class="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-sm font-black uppercase tracking-widest text-xs shadow-lg transition-all transform hover:-translate-y-1 flex items-center gap-3">
                     <i class="fa-solid fa-plus"></i>
                     Tugas & Rute Baru
                 </button>
@@ -248,7 +328,7 @@ const getTypeClass = (type) => {
                 <div class="flex flex-col md:flex-row gap-4 justify-between items-end">
                     <div class="w-full md:max-w-md relative group">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
-                        <input type="text" placeholder="Cari alamat, nama pelanggan, atau kurir..." 
+                        <input type="text" v-model="searchForm.search" @keyup.enter="submitSearch" placeholder="Cari alamat, nama pelanggan, atau kurir..." 
                             class="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm">
                     </div>
 
@@ -273,10 +353,10 @@ const getTypeClass = (type) => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
-                                <tr v-for="task in tasks" :key="task.id" class="hover:bg-container/30 transition-colors group">
+                                <tr v-for="task in deliveries.data" :key="task.id" class="hover:bg-container/30 transition-colors group">
                                     <td class="px-6 py-4">
                                         <div class="flex flex-col">
-                                            <span class="font-bold text-text group-hover:text-primary transition-colors">{{ task.id }}</span>
+                                            <span class="font-bold text-text group-hover:text-primary transition-colors">{{ task.task_no }}</span>
                                             <span :class="getTypeClass(task.type)" class="px-2 py-0.5 mt-2 rounded-sm text-[9px] w-fit font-black uppercase tracking-widest border">
                                                 {{ task.type }}
                                             </span>
@@ -290,24 +370,24 @@ const getTypeClass = (type) => {
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-2">
-                                            <div v-if="task.courier !== 'Belum Ditugaskan'" class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
-                                                {{ task.courier.charAt(0) }}
+                                            <div v-if="task.courier_id" class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                                                {{ task.courier?.charAt(0) ?? 'K' }}
                                             </div>
                                             <div v-else class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold border border-dashed border-slate-300">
                                                 ?
                                             </div>
-                                            <span :class="task.courier === 'Belum Ditugaskan' ? 'text-muted italic' : 'font-bold text-text'" class="text-xs">
-                                                {{ task.courier }}
+                                            <span :class="!task.courier_id ? 'text-muted italic' : 'font-bold text-text'" class="text-xs">
+                                                {{ task.courier ?? 'Belum Ditugaskan' }}
                                             </span>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex flex-col gap-1">
-                                            <div class="flex items-center gap-2 text-text text-xs font-mono font-bold">
-                                                <i class="fa-regular fa-calendar text-muted"></i> Hari Ini
+                                            <div v-if="task.scheduled_at" class="flex items-center gap-2 text-text text-xs font-mono font-bold">
+                                                <i class="fa-regular fa-clock text-muted"></i> {{ task.scheduled_at }}
                                             </div>
-                                            <div class="flex items-center gap-2 text-text text-xs font-mono font-bold">
-                                                <i class="fa-regular fa-clock text-muted"></i> Pkl {{ task.time }}
+                                            <div v-else class="flex items-center gap-2 text-text text-xs font-mono font-bold text-muted">
+                                                Belum diatur
                                             </div>
                                         </div>
                                     </td>
@@ -321,11 +401,11 @@ const getTypeClass = (type) => {
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex justify-end gap-2">
-                                            <button class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-primary hover:border-primary hover:text-white transition-all" title="Lacak di Peta">
-                                                <i class="fa-solid fa-map-location-dot text-xs"></i>
-                                            </button>
-                                            <button class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-text hover:text-white transition-all">
+                                            <button @click="openEditModal(task)" class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-text hover:text-white transition-all">
                                                 <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                            </button>
+                                            <button @click="deleteDelivery(task.id)" class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-rose-500 hover:border-rose-500 hover:text-white transition-all">
+                                                <i class="fa-solid fa-trash text-xs"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -336,16 +416,94 @@ const getTypeClass = (type) => {
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4">
-                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest text-center sm:text-left">Menampilkan 5 tugas terbaru</p>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest text-center sm:text-left">
+                        Menampilkan {{ deliveries.from || 0 }} - {{ deliveries.to || 0 }} dari {{ deliveries.total }} tugas
+                    </p>
                     <div class="flex gap-2">
-                        <button disabled class="w-8 h-8 flex items-center justify-center border border-border text-muted opacity-50 cursor-not-allowed rounded-sm"><i class="fa-solid fa-chevron-left"></i></button>
-                        <button class="w-8 h-8 flex items-center justify-center border border-border bg-primary text-white font-bold text-xs rounded-sm shadow-sm transition">1</button>
-                        <button class="w-8 h-8 flex items-center justify-center border border-border text-muted hover:text-text rounded-sm transition"><i class="fa-solid fa-chevron-right"></i></button>
+                        <Link v-for="(link, idx) in deliveries.links" :key="idx" :href="link.url || '#'"
+                            v-html="link.label"
+                            class="w-8 h-8 flex items-center justify-center border border-border rounded-sm shadow-sm transition text-xs font-bold"
+                            :class="[
+                                link.active ? 'bg-primary text-white' : 'text-muted hover:text-text',
+                                !link.url ? 'opacity-50 cursor-not-allowed' : ''
+                            ]"
+                            :disabled="!link.url"
+                        />
                     </div>
                 </div>
             </div>
         </div>
     </DashboardLayout>
+
+    <Modal :show="showingModal" @close="closeModal">
+        <form @submit.prevent="saveDelivery" class="p-6">
+            <h2 class="text-lg font-black text-text mb-6 tracking-tighter uppercase">{{ isEditing ? 'Edit Data Logistik' : 'Tambah Data Logistik' }}</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <InputLabel for="order_id" value="Siklus Order" />
+                    <select id="order_id" v-model="form.order_id" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required :disabled="isEditing">
+                        <option value="" disabled>Pilih Siklus Order...</option>
+                        <option v-for="order in orderList" :key="order.id" :value="order.id">
+                            {{ order.label }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.order_id" class="mt-2" />
+                </div>
+
+                <div>
+                    <InputLabel for="courier_id" value="Kurir (Opsional)" />
+                    <select id="courier_id" v-model="form.courier_id" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all">
+                        <option value="">Belum Ditugaskan</option>
+                        <option v-for="courier in courierList" :key="courier.id" :value="courier.id">
+                            {{ courier.name }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.courier_id" class="mt-2" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel for="type" value="Tipe Logistik" />
+                        <select id="type" v-model="form.type" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required>
+                            <option value="pickup">Pickup (Jemput)</option>
+                            <option value="delivery">Delivery (Antar)</option>
+                        </select>
+                        <InputError :message="form.errors.type" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <InputLabel for="status" value="Status Logistik" />
+                        <select id="status" v-model="form.status" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required>
+                            <option value="dijemput">Menunggu / Dijemput</option>
+                            <option value="diantar">Sedang Diantar/Perjalanan</option>
+                            <option value="selesai">Selesai</option>
+                        </select>
+                        <InputError :message="form.errors.status" class="mt-2" />
+                    </div>
+                </div>
+
+                <div>
+                    <InputLabel for="scheduled_at" value="Jadwal (Opsional)" />
+                    <TextInput id="scheduled_at" v-model="form.scheduled_at" type="datetime-local" class="mt-1 block w-full" />
+                    <InputError :message="form.errors.scheduled_at" class="mt-2" />
+                </div>
+
+                <div>
+                    <InputLabel for="notes" value="Catatan Logistik" />
+                    <textarea id="notes" v-model="form.notes" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all h-24 px-3 py-2"></textarea>
+                    <InputError :message="form.errors.notes" class="mt-2" />
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <SecondaryButton @click="closeModal">Batal</SecondaryButton>
+                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    Simpan Data Logistik
+                </PrimaryButton>
+            </div>
+        </form>
+    </Modal>
 </template>
 
 <style scoped>

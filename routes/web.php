@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\DeliveryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -42,25 +47,27 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::get('/dashboard', function () {
-            return Inertia::render('dashboard/admin/admin');
-        })->name('dashboard');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-        Route::get('/manajemen-users', function () {
-            return Inertia::render('dashboard/admin/manajemen-users');
-        })->name('users');
+        Route::get('/manajemen-users',          [UserController::class, 'index'])->name('users');
+        Route::post('/manajemen-users',           [UserController::class, 'store'])->name('users.store');
+        Route::put('/manajemen-users/{user}',     [UserController::class, 'update'])->name('users.update');
+        Route::delete('/manajemen-users/{user}',  [UserController::class, 'destroy'])->name('users.destroy');
 
-        Route::get('/manajemen-order', function () {
-            return Inertia::render('dashboard/admin/manajemen-order');
-        })->name('orders');
+        Route::get('/manajemen-order',           [OrderController::class, 'index'])->name('orders');
+        Route::post('/manajemen-order',            [OrderController::class, 'store'])->name('orders.store');
+        Route::put('/manajemen-order/{order}',     [OrderController::class, 'update'])->name('orders.update');
+        Route::delete('/manajemen-order/{order}',  [OrderController::class, 'destroy'])->name('orders.destroy');
 
-        Route::get('/layanan-laundry', function () {
-            return Inertia::render('dashboard/admin/layanan-laundry');
-        })->name('services');
+        Route::get('/layanan-laundry',           [ServiceController::class, 'index'])->name('services');
+        Route::post('/layanan-laundry',            [ServiceController::class, 'store'])->name('services.store');
+        Route::put('/layanan-laundry/{service}',   [ServiceController::class, 'update'])->name('services.update');
+        Route::delete('/layanan-laundry/{service}',[ServiceController::class, 'destroy'])->name('services.destroy');
 
-        Route::get('/pickup-delivery', function () {
-            return Inertia::render('dashboard/admin/pickup');
-        })->name('pickup');
+        Route::get('/pickup-delivery',              [DeliveryController::class, 'index'])->name('pickup');
+        Route::post('/pickup-delivery',              [DeliveryController::class, 'store'])->name('pickup.store');
+        Route::put('/pickup-delivery/{delivery}',   [DeliveryController::class, 'update'])->name('pickup.update');
+        Route::delete('/pickup-delivery/{delivery}',[DeliveryController::class, 'destroy'])->name('pickup.destroy');
     });
 
 

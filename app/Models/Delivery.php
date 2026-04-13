@@ -10,8 +10,15 @@ class Delivery extends Model
         'order_id',
         'courier_id',
         'status',
+        'type',
+        'scheduled_at',
+        'notes',
         'current_lat',
         'current_lng',
+    ];
+
+    protected $casts = [
+        'scheduled_at' => 'datetime',
     ];
 
     public function order()
