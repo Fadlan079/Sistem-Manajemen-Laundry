@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 defineProps({
     services: {
@@ -29,6 +30,17 @@ const getStyle = (idx) => {
     return styles[idx % styles.length];
 };
 
+const page = usePage();
+
+function selectService(service) {
+    const user = page.props.auth?.user;
+    if (!user) {
+        window.location.href = route('login');
+        return;
+    }
+    window.location.href = route('pelanggan.pesan', service.id);
+}
+
 function formatRupiah(val) {
     if (!val) return 'Rp 0';
     return 'Rp' + parseFloat(val).toLocaleString('id-ID');
@@ -37,7 +49,6 @@ function formatRupiah(val) {
 
 <template>
     <div id="layanan" class="font-sans text-text bg-bg overflow-x-hidden">
-        <!-- 1. Pilihan Layanan (Kategori Section) -->
         <div id="kategori" class="py-24 px-8 max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Pilih <span class="text-primary">Layanan Terbaik</span> Untuk Pakaian Anda</h2>
@@ -45,7 +56,6 @@ function formatRupiah(val) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Dynamic Service Cards -->
                 <div v-for="(service, idx) in services" :key="service.id" 
                     :class="getStyle(idx).card"
                     class="rounded-2xl p-8 hover:-translate-y-2 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden">
@@ -74,11 +84,10 @@ function formatRupiah(val) {
                         <div :class="getStyle(idx).price" class="font-bold text-2xl mb-4">
                             {{ formatRupiah(service.price) }}<span v-if="service.unit" class="text-xs opacity-70 font-normal"> {{ service.unit }}</span>
                         </div>
-                        <button :class="getStyle(idx).btn" class="w-full py-3 rounded-lg font-semibold transition-all">Pilih Layanan</button>
+                        <button @click="selectService(service)" :class="getStyle(idx).btn" class="w-full py-3 rounded-lg font-semibold transition-all">Pilih Layanan</button>
                     </div>
                 </div>
 
-                <!-- Empty State -->
                 <div v-if="services.length === 0" class="col-span-full py-12 text-center text-muted italic border-2 border-dashed border-border rounded-2xl">
                     Belum ada layanan yang ditawarkan.
                 </div>
@@ -89,7 +98,7 @@ function formatRupiah(val) {
             <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
                 <div class="lg:w-1/2">
                     <div class="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mb-8 transform -rotate-6">
-                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <svg class="w-10 h-10" fill="none" stroke="currenAtColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     </div>
                     <h2 class="text-3xl font-bold text-gray-900 mb-6">Area Layanan & <span class="text-primary">Operasional</span></h2>
                     <p class="text-muted mb-8 leading-relaxed">Kami melayani dengan sepenuh hati untuk wilayah <span class="font-bold text-gray-900">Samarinda</span> dan sekitarnya. Kenyamanan Anda adalah prioritas kami.</p>

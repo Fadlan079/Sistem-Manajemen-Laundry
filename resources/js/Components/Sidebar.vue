@@ -36,10 +36,19 @@ const allLinks = computed(() => ({
     },
     kurir: {
         'Monitoring': [
-            { name: 'Overview', href: route('kurir.dashboard'), active: route().current('kurir.dashboard'), icon: '...' },
+            { name: 'Overview', href: route('kurir.dashboard'), active: route().current('kurir.dashboard'), icon: 'M4 6h16M4 12h16m-7 6h7' },
         ],
         'Logistik': [
-            { name: 'Tugas Jemput', href: '#', active: false, icon: '...' },
+            { name: 'Tugas Jemput', href: '#', active: false, icon: 'M3 13h13v-2H3v2zm0 4h9v-2H3v2zm0-8h18V7H3v2zm13 8a2 2 0 100-4 2 2 0 000 4zm4 0a2 2 0 100-4 2 2 0 000 4z' },
+        ]
+    },
+    pelanggan: {
+        'Monitoring': [
+            { name: 'Beranda', href: route('pelanggan.pelanggan'), active: route().current('pelanggan.pelanggan'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        ],
+        'Pesanan Saya': [
+            { name: 'Aktivitas', href: route('pelanggan.aktivitas'), active: route().current('pelanggan.aktivitas'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+            { name: 'Pembayaran', href: route('pelanggan.pembayaran'), active: route().current('pelanggan.pembayaran'), icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
         ]
     }
 }));

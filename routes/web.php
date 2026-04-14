@@ -30,17 +30,17 @@ Route::get('/', function () {
 //  Dipakai sebagai fallback route('dashboard')
 // ─────────────────────────────────────────────
 
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
     $role = auth()->user()->role;
+    $query = $request->query();
 
     return match ($role) {
-        'admin'    => redirect()->route('admin.dashboard'),
-        'operator' => redirect()->route('operator.dashboard'),
-        'kurir'    => redirect()->route('kurir.dashboard'),
-        default    => redirect()->route('pelanggan.dashboard'),
+        'admin'    => redirect()->route('admin.dashboard', $query),
+        'operator' => redirect()->route('operator.dashboard', $query),
+        'kurir'    => redirect()->route('kurir.dashboard', $query),
+        default    => redirect()->route('pelanggan.pelanggan', $query),
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
-
 
 // ─────────────────────────────────────────────
 //  Admin Dashboard
@@ -99,6 +99,25 @@ Route::middleware(['auth', 'verified', 'role:kurir'])
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard/kurir/kurir');
         })->name('dashboard');
+    });
+
+
+// ─────────────────────────────────────────────
+//  Pelanggan Dashboard
+// ─────────────────────────────────────────────
+
+Route::middleware(['auth', 'verified'])
+    ->prefix('pelanggan')
+    ->name('pelanggan.')
+    ->group(function () {
+        Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('pelanggan');
+        Route::get('/aktivitas', [CustomerDashboardController::class, 'aktivitas'])->name('aktivitas');
+        Route::get('/aktivitas/{id}', [CustomerDashboardController::class, 'detailAktivitas'])->name('aktivitas.detail');
+        Route::get('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'ulasanAktivitas'])->name('aktivitas.ulasan');
+        Route::get('/pembayaran', [CustomerDashboardController::class, 'pembayaran'])->name('pembayaran');
+        Route::get('/pesan/{service}', [CustomerDashboardController::class, 'buatPesanan'])->name('pesan');
+        Route::post('/pesan', [CustomerDashboardController::class, 'simpanPesanan'])->name('pesan.simpan');
+        Route::post('/aktivitas/{id}/bayar', [CustomerDashboardController::class, 'konfirmasiBayar'])->name('aktivitas.bayar');
     });
 
 
