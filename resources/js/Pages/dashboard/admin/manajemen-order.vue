@@ -55,10 +55,30 @@ const editingOrder    = ref(null);
 const viewingOrder    = ref(null);
 const deletingOrder   = ref(null);
 
+const deliveryType = ref('antar_jemput');
+
+function setDeliveryType(type) {
+    deliveryType.value = type;
+    if (type === 'bawa_sendiri') {
+        form.pickup_address = 'Bawa Mandiri ke Toko';
+        form.delivery_address = 'Ambil Mandiri di Toko';
+    } else if (type === 'antar_saja') {
+        form.pickup_address = 'Bawa Mandiri ke Toko';
+        if (form.delivery_address === 'Ambil Mandiri di Toko' || !form.delivery_address) form.delivery_address = '';
+    } else if (type === 'jemput_saja') {
+        form.delivery_address = 'Ambil Mandiri di Toko';
+        if (form.pickup_address === 'Bawa Mandiri ke Toko' || !form.pickup_address) form.pickup_address = '';
+    } else {
+        if (form.pickup_address === 'Bawa Mandiri ke Toko') form.pickup_address = '';
+        if (form.delivery_address === 'Ambil Mandiri di Toko') form.delivery_address = '';
+    }
+}
+
 function openCreate() {
     editingOrder.value = null;
     form.reset();
     form.clearErrors();
+    deliveryType.value = 'antar_jemput';
     showFormModal.value = true;
 }
 
@@ -66,10 +86,26 @@ function openEdit(o) {
     editingOrder.value = o;
     form.user_id          = String(props.customers.find(c => c.name === o.customer)?.id ?? '');
     form.service_id       = String(o.service_id);
+    form.weight           = o.weight ?? 1;
     form.status           = o.status;
     form.total_price      = o.total_price;
     form.pickup_address   = o.pickup_address;
     form.delivery_address = o.delivery_address;
+    
+    // Auto-detect delivery type
+    const isPickupSelf = !o.pickup_address || o.pickup_address.includes('Mandiri');
+    const isDeliverySelf = !o.delivery_address || o.delivery_address.includes('Mandiri');
+    
+    if (isPickupSelf && isDeliverySelf) {
+        deliveryType.value = 'bawa_sendiri';
+    } else if (isPickupSelf) {
+        deliveryType.value = 'antar_saja';
+    } else if (isDeliverySelf) {
+        deliveryType.value = 'jemput_saja';
+    } else {
+        deliveryType.value = 'antar_jemput';
+    }
+    
     form.clearErrors();
     showFormModal.value = true;
 }
@@ -95,15 +131,15 @@ function closeModals() {
 
 // ── Inertia Form ───────────────────────────────────────────────────
 const form = useForm({
-    user_id: '', service_id: '', status: 'pending',
+    user_id: '', service_id: '', weight: 1, status: 'pending',
     total_price: '', pickup_address: '', delivery_address: '',
 });
 
-// Auto-fill total_price when service changes
-watch(() => form.service_id, (id) => {
-    if (!editingOrder.value) {
-        const svc = props.services.find(s => String(s.id) === String(id));
-        if (svc) form.total_price = svc.price;
+// Auto-fill total_price when service or weight changes
+watch([() => form.service_id, () => form.weight], ([id, weight]) => {
+    const svc = props.services.find(s => String(s.id) === String(id));
+    if (svc) {
+        form.total_price = svc.price * (weight || 1);
     }
 });
 
@@ -490,26 +526,76 @@ const chartServiceData = computed(() => {
                                 </div>
                             </div>
 
-                            <!-- Total Price -->
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Total Harga (Rp) <span class="text-rose-500">*</span></label>
-                                <input v-model="form.total_price" type="number" min="0" placeholder="0"
-                                    class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
-                                <p v-if="form.errors.total_price" class="mt-1 text-xs text-rose-600">{{ form.errors.total_price }}</p>
+                            <!-- Weight & Total Price -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Berat (Kg) <span class="text-rose-500">*</span></label>
+                                    <input v-model="form.weight" type="number" step="0.1" min="0.1" placeholder="1"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                    <p v-if="form.errors.weight" class="mt-1 text-xs text-rose-600">{{ form.errors.weight }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Total Harga (Rp) <span class="text-rose-500">*</span></label>
+                                    <input v-model="form.total_price" type="number" min="0" placeholder="0" readonly
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-slate-50 text-slate-500 cursor-not-allowed outline-none text-sm font-bold transition" />
+                                    <p v-if="form.errors.total_price" class="mt-1 text-xs text-rose-600">{{ form.errors.total_price }}</p>
+                                </div>
+                            </div>
+                            <!-- Helper text for auto calculate -->
+                            <div class="bg-primary/5 border border-primary/20 rounded-sm px-4 py-2 flex gap-3 items-start">
+                                <i class="fa-solid fa-circle-info text-primary mt-0.5 text-xs"></i>
+                                <span class="text-[10px] text-muted leading-relaxed font-medium">Total Harga dihitung <b>otomatis</b> oleh sistem secara real-time berdasarkan layanan dan berat (Kg) pesanan.</span>
+                            </div>
+
+                            <!-- Delivery Option Tabs -->
+                            <div class="space-y-2 pt-2 border-t border-border mt-2">
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted">Opsi Layanan Antar-Jemput <span class="text-rose-500">*</span></label>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <button type="button" @click="setDeliveryType('antar_jemput')"
+                                        :class="deliveryType === 'antar_jemput' ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface border-border text-muted hover:bg-container'"
+                                        class="px-2 py-3 border rounded-sm text-[10px] font-black uppercase tracking-widest transition text-center flex flex-col items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-truck-fast"></i>
+                                        Antar & Jemput
+                                    </button>
+                                    <button type="button" @click="setDeliveryType('jemput_saja')"
+                                        :class="deliveryType === 'jemput_saja' ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface border-border text-muted hover:bg-container'"
+                                        class="px-2 py-3 border rounded-sm text-[10px] font-black uppercase tracking-widest transition text-center flex flex-col items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-box-open"></i>
+                                        Jemput Saja
+                                    </button>
+                                    <button type="button" @click="setDeliveryType('antar_saja')"
+                                        :class="deliveryType === 'antar_saja' ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface border-border text-muted hover:bg-container'"
+                                        class="px-2 py-3 border rounded-sm text-[10px] font-black uppercase tracking-widest transition text-center flex flex-col items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-house-chimney"></i>
+                                        Antar Saja
+                                    </button>
+                                    <button type="button" @click="setDeliveryType('bawa_sendiri')"
+                                        :class="deliveryType === 'bawa_sendiri' ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface border-border text-muted hover:bg-container'"
+                                        class="px-2 py-3 border rounded-sm text-[10px] font-black uppercase tracking-widest transition text-center flex flex-col items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-store"></i>
+                                        Bawa Sendiri
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Addresses -->
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Alamat Pickup <span class="text-rose-500">*</span></label>
-                                <textarea v-model="form.pickup_address" rows="2" placeholder="Alamat jemput laundry..."
+                            <div v-if="deliveryType === 'antar_jemput' || deliveryType === 'jemput_saja'">
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Alamat Pickup (Jemput) <span class="text-rose-500">*</span></label>
+                                <textarea v-model="form.pickup_address" rows="2" placeholder="Alamat jemput laundry dari rumah pelanggan..."
                                     class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition resize-none"></textarea>
                                 <p v-if="form.errors.pickup_address" class="mt-1 text-xs text-rose-600">{{ form.errors.pickup_address }}</p>
                             </div>
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Alamat Pengiriman <span class="text-rose-500">*</span></label>
-                                <textarea v-model="form.delivery_address" rows="2" placeholder="Alamat antar laundry..."
+                            
+                            <div v-if="deliveryType === 'antar_jemput' || deliveryType === 'antar_saja'">
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Alamat Pengiriman (Antar) <span class="text-rose-500">*</span></label>
+                                <textarea v-model="form.delivery_address" rows="2" placeholder="Alamat antar laundry ke rumah pelanggan..."
                                     class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition resize-none"></textarea>
                                 <p v-if="form.errors.delivery_address" class="mt-1 text-xs text-rose-600">{{ form.errors.delivery_address }}</p>
+                            </div>
+
+                            <div v-if="deliveryType === 'bawa_sendiri'" class="bg-blue-50 border border-blue-200 rounded-sm px-4 py-3 flex gap-3 items-start">
+                                <i class="fa-solid fa-store text-blue-600 mt-0.5 text-xs"></i>
+                                <span class="text-[10px] text-blue-800 leading-relaxed font-medium">Pelanggan akan mendatangi toko (Drop-off) dan mengambil kembali cuciannya (Pick-up) secara mandiri.</span>
                             </div>
 
                             <!-- Actions -->
@@ -559,6 +645,7 @@ const chartServiceData = computed(() => {
                                     ['Pelanggan',     viewingOrder.customer],
                                     ['Email',         viewingOrder.customer_email],
                                     ['Layanan',       viewingOrder.service],
+                                    ['Berat (Kg)',    viewingOrder.weight + ' Kg'],
                                     ['Tanggal',       viewingOrder.date],
                                     ['Total Harga',   formatRupiah(viewingOrder.total_price)],
                                     ['Pembayaran',    viewingOrder.payment_method + ' — ' + viewingOrder.payment_status],

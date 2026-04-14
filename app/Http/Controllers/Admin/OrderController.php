@@ -35,6 +35,7 @@ class OrderController extends Controller
             'customer_email' => $o->user?->email ?? '-',
             'service'        => $o->service?->name ?? '-',
             'service_id'     => $o->service_id,
+            'weight'         => $o->weight,
             'status'         => $o->status,
             'total_price'    => $o->total_price,
             'pickup_address' => $o->pickup_address,
@@ -119,6 +120,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'user_id'          => 'required|exists:users,id',
             'service_id'       => 'required|exists:services,id',
+            'weight'           => 'required|numeric|min:0.1',
             'status'           => ['required', Rule::in(['pending', 'diproses', 'selesai', 'diantar'])],
             'total_price'      => 'required|numeric|min:0',
             'pickup_address'   => 'required|string',
@@ -135,6 +137,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'user_id'          => 'required|exists:users,id',
             'service_id'       => 'required|exists:services,id',
+            'weight'           => 'required|numeric|min:0.1',
             'status'           => ['required', Rule::in(['pending', 'diproses', 'selesai', 'diantar'])],
             'total_price'      => 'required|numeric|min:0',
             'pickup_address'   => 'required|string',
