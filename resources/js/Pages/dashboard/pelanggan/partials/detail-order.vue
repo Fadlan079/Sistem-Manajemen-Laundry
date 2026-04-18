@@ -259,6 +259,27 @@ function downloadQR() {
                 </div>
             </section>
 
+            <section v-if="order.review" class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Penilaian Layanan Anda</p>
+                    <div class="flex gap-0.5">
+                        <template v-for="i in 5" :key="i">
+                            <i class="fas fa-star text-sm" :class="i <= order.review.rating ? 'text-[#FFE800]' : 'text-gray-200'"></i>
+                        </template>
+                    </div>
+                </div>
+                
+                <div>
+                    <p v-if="order.review.comment" class="text-xs text-gray-600 leading-relaxed bg-gray-50 border border-gray-100 p-3 rounded-lg italic">
+                        "{{ order.review.comment }}"
+                    </p>
+                    <p v-else class="text-xs text-gray-500 bg-gray-50 border border-gray-100 p-3 rounded-lg italic">
+                        Tidak ada komentar tambahan.
+                    </p>
+                    <p class="text-[10px] text-gray-400 font-medium mt-3 text-right">{{ order.review.date }}</p>
+                </div>
+            </section>
+
         </div>
     </AppLayout>
 </template>

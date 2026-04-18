@@ -13,7 +13,7 @@ class Service extends Model
         'estimate',
         'status',
         'description',
-        'icon',
+        'image',
         'features',
         'unit',
         'tag',

@@ -18,11 +18,46 @@ use Inertia\Inertia;
 // ─────────────────────────────────────────────
 
 Route::get('/', function () {
+    // Compute review stats
+    $reviews = \App\Models\Review::with(['user', 'service'])
+        ->latest()
+        ->get();
+
+    $totalReviews = $reviews->count();
+    $averageRating = $totalReviews > 0 ? round($reviews->avg('rating'), 1) : 0;
+
+    $ratingStats = collect([5, 4, 3, 2, 1])->map(function ($star) use ($reviews, $totalReviews) {
+        $count = $reviews->where('rating', $star)->count();
+        $pct   = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
+        return ['stars' => $star, 'count' => $count, 'percentage' => $pct . '%'];
+    })->values();
+
+    $reviewList = $reviews->take(12)->map(fn($r) => [
+        'id'          => $r->id,
+        'name'        => $r->user->name ?? 'Anonim',
+        'initials'    => implode('', array_map(fn($w) => strtoupper($w[0]), array_slice(explode(' ', trim($r->user->name ?? 'A')), 0, 2))),
+        'rating'      => $r->rating,
+        'comment'     => $r->comment,
+        'service'     => $r->service->name ?? '-',
+        'created_at'  => $r->created_at->diffForHumans(),
+    ]);
+
     return Inertia::render('home', [
-        'canLogin'    => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'serviceList' => \App\Models\Service::where('status', 'tersedia')->get(),
-        'banners'     => \App\Models\Banner::where('is_active', true)
+        'canLogin'      => Route::has('login'),
+        'canRegister'   => Route::has('register'),
+        'serviceList'   => \App\Models\Service::where('status', 'tersedia')->get()->map(fn($s) => [
+            'id'          => $s->id,
+            'name'        => $s->name,
+            'category'    => $s->category,
+            'price'       => $s->price,
+            'estimate'    => $s->estimate,
+            'description' => $s->description,
+            'image_url'   => $s->image ? asset('storage/' . $s->image) : null,
+            'features'    => $s->features,
+            'unit'        => $s->unit,
+            'tag'         => $s->tag,
+        ]),
+        'banners'       => \App\Models\Banner::where('is_active', true)
                             ->orderBy('created_at', 'desc')
                             ->get()
                             ->map(fn($b) => [
@@ -30,6 +65,10 @@ Route::get('/', function () {
                                 'image_url' => asset('storage/' . $b->image),
                                 'is_active' => $b->is_active,
                             ]),
+        'reviews'       => $reviewList,
+        'averageRating' => $averageRating,
+        'totalReviews'  => $totalReviews,
+        'ratingStats'   => $ratingStats,
     ]);
 })->name('home');
 
@@ -136,6 +175,7 @@ Route::middleware(['auth', 'verified'])
         Route::get('/aktivitas', [CustomerDashboardController::class, 'aktivitas'])->name('aktivitas');
         Route::get('/aktivitas/{id}', [CustomerDashboardController::class, 'detailAktivitas'])->name('aktivitas.detail');
         Route::get('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'ulasanAktivitas'])->name('aktivitas.ulasan');
+        Route::post('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'simpanUlasan'])->name('aktivitas.ulasan.post');
         Route::get('/pembayaran', [CustomerDashboardController::class, 'pembayaran'])->name('pembayaran');
         Route::get('/pesan/{service?}', [CustomerDashboardController::class, 'buatPesanan'])->name('pesan');
         Route::post('/pesan', [CustomerDashboardController::class, 'simpanPesanan'])->name('pesan.simpan');

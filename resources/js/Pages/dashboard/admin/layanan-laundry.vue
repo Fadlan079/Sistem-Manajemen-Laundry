@@ -67,7 +67,7 @@ function openEdit(s) {
     form.estimate    = s.estimate;
     form.status      = s.status;
     form.description = s.description ?? '';
-    form.icon        = s.icon ?? '';
+    form.image       = null;
     form.features    = s.features ?? [];
     form.unit        = s.unit ?? '/kg';
     form.tag         = s.tag ?? '';
@@ -90,7 +90,7 @@ function closeModals() {
 // ── Inertia Form ─────────────────────────────────────────────────
 const form = useForm({
     name: '', category: 'Kiloan', price: '', estimate: '', status: 'tersedia', description: '',
-    icon: '', features: [], unit: '/kg', tag: ''
+    image: null, features: [], unit: '/kg', tag: '', _method: 'post'
 });
 
 function addFeature() { form.features.push(''); }
@@ -98,10 +98,12 @@ function removeFeature(idx) { form.features.splice(idx, 1); }
 
 function submitForm() {
     if (editingService.value) {
-        form.put(route('admin.services.update', editingService.value.id), {
+        form._method = 'put';
+        form.post(route('admin.services.update', editingService.value.id), {
             onSuccess: closeModals,
         });
     } else {
+        form._method = 'post';
         form.post(route('admin.services.store'), {
             onSuccess: closeModals,
         });
@@ -346,9 +348,15 @@ const chartPriceData = computed(() => ({
                             </tr>
                             <tr v-for="s in services.data" :key="s.id" class="hover:bg-container/30 transition-colors group">
                                 <td class="px-6 py-4">
-                                    <div>
-                                        <p class="font-bold text-text group-hover:text-primary transition-colors">{{ s.name }}</p>
-                                        <p v-if="s.description" class="text-[11px] text-muted mt-0.5 line-clamp-1">{{ s.description }}</p>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200">
+                                            <img v-if="s.image_url" :src="s.image_url" alt="" class="w-full h-full object-cover">
+                                            <i v-else class="fas fa-image text-gray-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-text group-hover:text-primary transition-colors">{{ s.name }}</p>
+                                            <p v-if="s.description" class="text-[11px] text-muted mt-0.5 line-clamp-1">{{ s.description }}</p>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -494,12 +502,16 @@ const chartPriceData = computed(() => ({
                                     class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition resize-none"></textarea>
                             </div>
 
-                            <!-- Icon & Unit & Tag -->
-                            <div class="grid grid-cols-3 gap-4">
+                            <!-- Image & Unit & Tag -->
+                            <div class="grid grid-cols-3 gap-4 border-t border-border pt-4">
                                 <div>
-                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Ikon (FontAwesome)</label>
-                                    <input v-model="form.icon" type="text" placeholder="fa-solid fa-shirt"
-                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Gambar Layanan</label>
+                                    <input @change="e => form.image = e.target.files[0]" type="file" accept="image/*"
+                                        class="w-full px-4 py-2 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs font-medium transition file:mr-3 file:py-1 file:px-2 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:bg-primary file:text-white hover:file:bg-primary-hover" />
+                                    <p v-if="form.errors.image" class="mt-1 text-xs text-rose-600">{{ form.errors.image }}</p>
+                                    <p v-if="editingService && editingService.image_url" class="mt-2 text-[10px] text-muted font-bold text-blue-500 hover:underline">
+                                        <a :href="editingService.image_url" target="_blank">Lihat Gambar Saat Ini</a>
+                                    </p>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Satuan Harga</label>

@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Delivery;
 use App\Models\Service;
+use App\Models\Review;
 
 class CustomerDashboardController extends Controller
 {
@@ -102,7 +103,7 @@ class CustomerDashboardController extends Controller
         $user = $request->user();
         $dateFilter = $request->query('date', 'semua');
 
-        $query = $user->orders()->with(['service', 'orderItems', 'payments'])->latest();
+        $query = $user->orders()->with(['service', 'orderItems', 'payments', 'review'])->latest();
 
         // Apply date filter
         if ($dateFilter === 'hari_ini') {
@@ -140,10 +141,11 @@ class CustomerDashboardController extends Controller
             }
 
             return [
-                'dbId'        => $order->id,
-                'invoice'     => '#' . $invoice,
-                'service'     => $order->service->name ?? '-',
-                'date'        => $order->created_at->translatedFormat('l, d F Y, H:i'),
+                'dbId'          => $order->id,
+                'invoice'       => '#' . $invoice,
+                'service'       => $order->service->name ?? '-',
+                'service_image' => $order->service && $order->service->image ? asset('storage/' . $order->service->image) : null,
+                'date'          => $order->created_at->translatedFormat('l, d F Y, H:i'),
                 'shortDate'   => $order->created_at->translatedFormat('l, d F Y'),
                 'dbStatus'    => $dbStatus,
                 'isCalculated'=> $isCalculated,
@@ -151,6 +153,7 @@ class CustomerDashboardController extends Controller
                 'type'        => $type,
                 'badgeText'   => $badgeText,
                 'badgeColor'  => $badgeColor,
+                'is_reviewed' => $order->review !== null,
             ];
         });
 
@@ -171,7 +174,7 @@ class CustomerDashboardController extends Controller
 
     public function detailAktivitas(Request $request, $id)
     {
-        $order = Order::with(['service', 'orderItems', 'payments'])
+        $order = Order::with(['service', 'orderItems', 'payments', 'review'])
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
@@ -219,6 +222,11 @@ class CustomerDashboardController extends Controller
                 'paymentMethod' => $methodLabel[$payment?->method ?? 'transfer'] ?? 'Transfer Bank',
                 'invoice'       => 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
                 'pickup_address' => $order->pickup_address,
+                'review'        => $order->review ? [
+                    'rating'  => (int) $order->review->rating,
+                    'comment' => $order->review->comment,
+                    'date'    => $order->review->created_at->translatedFormat('d M Y, H:i'),
+                ] : null,
             ],
         ]);
     }
@@ -228,20 +236,61 @@ class CustomerDashboardController extends Controller
         $order = \App\Models\Order::with('service')
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
-            
+
+        // Only selesai orders can be reviewed
+        if ($order->status !== 'selesai') {
+            return redirect()->route('pelanggan.aktivitas.detail', $id)
+                ->with('error', 'Pesanan belum selesai.');
+        }
+
+        // Check if already reviewed
+        $alreadyReviewed = Review::where('order_id', $id)->exists();
+
         $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
 
         return Inertia::render('dashboard/pelanggan/partials/ulasan', [
             'auth' => [
                 'user' => $request->user(),
             ],
+            'alreadyReviewed' => $alreadyReviewed,
             'order' => [
-                'dbId' => $order->id,
-                'invoice' => '#' . $invoice,
-                'service' => $order->service->name ?? '-',
-                'date' => $order->created_at->translatedFormat('l, d F Y')
+                'dbId'       => $order->id,
+                'service_id' => $order->service_id,
+                'invoice'    => '#' . $invoice,
+                'service'    => $order->service->name ?? '-',
+                'date'       => $order->created_at->translatedFormat('l, d F Y')
             ]
         ]);
+    }
+
+    public function simpanUlasan(Request $request, $id)
+    {
+        $request->validate([
+            'rating'  => 'required|integer|between:1,5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        $order = Order::with('service')
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'selesai')
+            ->findOrFail($id);
+
+        // Prevent duplicate reviews
+        if (Review::where('order_id', $order->id)->exists()) {
+            return redirect()->route('pelanggan.aktivitas')
+                ->with('error', 'Anda sudah memberikan ulasan untuk pesanan ini.');
+        }
+
+        Review::create([
+            'user_id'    => $request->user()->id,
+            'order_id'   => $order->id,
+            'service_id' => $order->service_id,
+            'rating'     => $request->rating,
+            'comment'    => $request->comment,
+        ]);
+
+        return redirect()->route('pelanggan.aktivitas')
+            ->with('success', 'Terima kasih! Ulasan Anda telah dikirim.');
     }
 
     public function batalkanPesanan(Request $request, $id)

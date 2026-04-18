@@ -90,9 +90,9 @@ function formatRupiah(val) {
                         {{ service.tag }}
                     </div>
 
-                    <div :class="getStyle(idx).iconBox" class="w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i v-if="service.icon" :class="[service.icon, 'text-3xl']"></i>
-                        <svg v-else class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <div :class="getStyle(idx).iconBox" class="w-16 h-16 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform border border-transparent group-hover:border-primary/20">
+                        <img v-if="service.image_url" :src="service.image_url" :alt="service.name" class="w-full h-full object-cover">
+                        <svg v-else class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     </div>
 
                     <h3 :class="getStyle(idx).title" class="text-md font-bold mb-3">{{ service.name }}</h3>

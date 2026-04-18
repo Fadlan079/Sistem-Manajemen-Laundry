@@ -73,20 +73,25 @@ function getBadgeIcon(color) {
 
                     <!-- Card Body -->
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                        <div class="flex items-center gap-4 mb-4">
+                        <Link :href="route('pelanggan.aktivitas.detail', order.dbId)" class="flex items-center gap-4 mb-4 group w-full text-left">
                             <!-- Icon -->
-                            <div class="w-14 h-14 bg-[#f4f7f9] flex items-center justify-center rounded-lg border border-gray-100">
-                                <i class="fas fa-shopping-basket text-2xl text-[#829ab1]"></i>
+                            <div class="w-14 h-14 bg-[#f4f7f9] flex items-center justify-center rounded-lg border border-gray-100 transition-colors group-hover:bg-[#E30613]/10 overflow-hidden">
+                                <img v-if="order.service_image" :src="order.service_image" alt="" class="w-full h-full object-cover mix-blend-multiply group-hover:mix-blend-normal transition-all" />
+                                <i v-else class="fas fa-shopping-basket text-2xl text-[#829ab1] transition-colors group-hover:text-[#E30613]"></i>
                             </div>
 
                             <div class="flex-1">
-                                <h3 class="font-black text-gray-900 text-[15px]">{{ order.service }}</h3>
+                                <h3 class="font-black text-gray-900 text-[15px] transition-colors group-hover:text-[#E30613]">{{ order.service }}</h3>
                                 <!-- Different date format based on tab for exact match to mockup -->
                                 <p class="text-[12px] font-medium text-gray-500 mt-1">
                                     {{ activeTab === 'aktif' ? order.date : order.shortDate }}
                                 </p>
                             </div>
-                        </div>
+
+                            <div class="text-gray-300 transition-transform group-hover:text-[#E30613] group-hover:translate-x-1">
+                                <i class="fas fa-chevron-right text-sm"></i>
+                            </div>
+                        </Link>
 
                         <!-- Card Actions -->
                         <div class="flex items-center justify-end" :class="activeTab === 'riwayat' ? 'gap-3' : ''">
@@ -98,7 +103,8 @@ function getBadgeIcon(color) {
                             </template>
 
                             <template v-if="activeTab === 'riwayat'">
-                                <Link :href="route('pelanggan.aktivitas.ulasan', order.dbId)"
+                                <Link v-if="!order.is_reviewed"
+                                      :href="route('pelanggan.aktivitas.ulasan', order.dbId)"
                                       class="flex-1 text-center bg-white border border-gray-200 hover:bg-gray-50 text-[#E30613] px-3 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-colors">
                                     Beri Ulasan
                                 </Link>
