@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/app.vue';
-import { computed, ref } from 'vue';
+import { onMounted } from 'vue';
 
 const props = defineProps({
     auth: Object,
@@ -12,31 +12,32 @@ const props = defineProps({
     service: {
         type: Object,
         required: true
+    },
+    prefill: {
+        type: Object,
+        default: null
     }
 });
 
 const form = useForm({
     service_id:     props.service.id,
-    delivery_type:  'jemput',   // 'jemput' | 'antar' | 'antar_jemput'
+    delivery_type:  'jemput',
     pickup_address: props.auth?.user?.address ?? '',
 });
 
+// Apply prefill if coming from reorder
+onMounted(() => {
+    if (props.prefill) {
+        form.service_id     = props.prefill.service_id;
+        form.delivery_type  = props.prefill.delivery_type;
+        form.pickup_address = props.prefill.pickup_address ?? '';
+    }
+});
+
 const deliveryOptions = [
-    {
-        value: 'antar_jemput',
-        label: 'Antar Jemput',
-        icon: 'fas fa-truck',
-    },
-    {
-        value: 'jemput',
-        label: 'Jemput Saja',
-        icon: 'fas fa-motorcycle',
-    },
-    {
-        value: 'antar',
-        label: 'Antar Saja',
-        icon: 'fas fa-box-open',
-    },
+    { value: 'antar_jemput', label: 'Antar Jemput', icon: 'fas fa-truck' },
+    { value: 'jemput',       label: 'Jemput Saja',  icon: 'fas fa-motorcycle' },
+    { value: 'antar',        label: 'Antar Saja',   icon: 'fas fa-box-open' },
 ];
 
 function submit() {
@@ -60,14 +61,15 @@ function submit() {
             <section class="space-y-3 pt-2">
                 <h2 class="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Pilih Layanan</h2>
                 <div class="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    <button v-for="srv in services" :key="srv.id" type="button" @click="form.service_id = srv.id" 
+                    <button v-for="srv in services" :key="srv.id" type="button" @click="form.service_id = srv.id"
                         class="relative flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all overflow-hidden"
-                        :class="form.service_id === srv.id ? 'border-[#E30613] bg-blue-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'">
-                        
-                        <div class="w-12 h-12 flex items-center justify-center text-4xl mb-2" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-500'">
-                            <i :class="srv.icon"></i>
+                        :class="form.service_id === srv.id ? 'border-[#E30613] bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'">
+
+                        <div class="w-12 h-12 rounded-lg overflow-hidden mb-2 flex items-center justify-center bg-gray-100 border border-gray-200">
+                            <img v-if="srv.image_url" :src="srv.image_url" :alt="srv.name" class="w-full h-full object-cover" />
+                            <i v-else class="fas fa-tshirt text-2xl" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-400'"></i>
                         </div>
-                        
+
                         <span class="text-xs font-bold text-center leading-tight whitespace-nowrap" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-700'">{{ srv.name }}</span>
 
                         <!-- Checkmark Indicator -->

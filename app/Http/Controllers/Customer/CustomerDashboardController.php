@@ -350,6 +350,28 @@ class CustomerDashboardController extends Controller
 
     public function buatPesanan(Request $request, Service $service = null)
     {
+        // Support reorder: pre-fill from a previous order
+        $prefill = null;
+        if ($request->query('reorder')) {
+            $prevOrder = Order::with(['service', 'deliveries'])
+                ->where('user_id', $request->user()->id)
+                ->find($request->query('reorder'));
+            if ($prevOrder) {
+                $hasPickup   = $prevOrder->deliveries->where('type', 'pickup')->isNotEmpty();
+                $hasDelivery = $prevOrder->deliveries->where('type', 'delivery')->isNotEmpty();
+                $deliveryType = 'jemput';
+                if ($hasPickup && $hasDelivery) $deliveryType = 'antar_jemput';
+                elseif ($hasDelivery) $deliveryType = 'antar';
+                $prefill = [
+                    'service_id'     => $prevOrder->service_id,
+                    'delivery_type'  => $deliveryType,
+                    'pickup_address' => $prevOrder->pickup_address,
+                ];
+                // Set the service context to the previous order's service
+                $service = $prevOrder->service;
+            }
+        }
+
         // Jika tidak ada service yang dipilih, ambil yang pertama
         if (!$service || !$service->exists) {
             $service = Service::first();
@@ -359,23 +381,25 @@ class CustomerDashboardController extends Controller
         if (!$service) {
             return redirect()->route('dashboard')->with('error', 'Layanan tidak tersedia.');
         }
+
         $services = Service::all()->map(fn($s) => [
-            'id'   => $s->id,
-            'name' => $s->name,
-            'icon' => $s->icon ?? 'fas fa-tshirt',
+            'id'        => $s->id,
+            'name'      => $s->name,
+            'image_url' => $s->image ? asset('storage/' . $s->image) : null,
         ]);
 
         return Inertia::render('dashboard/pelanggan/buat-pesanan', [
-            'auth'    => ['user' => $request->user()],
+            'auth'     => ['user' => $request->user()],
             'services' => $services,
-            'service' => [
+            'service'  => [
                 'id'          => $service->id,
                 'name'        => $service->name,
                 'description' => $service->description,
                 'price'       => (float) $service->price,
                 'unit'        => $service->unit ?? '/kg',
-                'icon'        => $service->icon,
+                'image_url'   => $service->image ? asset('storage/' . $service->image) : null,
             ],
+            'prefill'  => $prefill,
         ]);
     }
 

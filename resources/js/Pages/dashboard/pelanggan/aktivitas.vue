@@ -108,9 +108,10 @@ function getBadgeIcon(color) {
                                       class="flex-1 text-center bg-white border border-gray-200 hover:bg-gray-50 text-[#E30613] px-3 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-colors">
                                     Beri Ulasan
                                 </Link>
-                                <button class="flex-1 text-center bg-[#E30613] hover:bg-black text-white px-3 py-2.5 rounded-lg text-xs font-bold tracking-wide shadow-sm transition-colors">
+                                <Link :href="route('pelanggan.pesan') + '?reorder=' + order.dbId"
+                                      class="flex-1 text-center bg-[#E30613] hover:bg-black text-white px-3 py-2.5 rounded-lg text-xs font-bold tracking-wide shadow-sm transition-colors">
                                     Pesan Lagi
-                                </button>
+                                </Link>
                             </template>
                         </div>
                     </div>
