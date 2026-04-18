@@ -129,14 +129,28 @@ onMounted(() => {
                     <Link :href="route('pelanggan.aktivitas')" @click="activeSection = 'aktivitas'" :class="[activeSection === 'aktivitas' ? 'text-secondary' : 'text-white/70 hover:text-white']">Aktivitas</Link>
                 </div>
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <!-- Search Input (Desktop) -->
+                    <div class="hidden lg:block relative w-64 mr-2">
+                        <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Cari layanan laundry..."
+                            class="w-full h-10 pl-9 pr-4 bg-white text-gray-900 text-xs font-medium rounded-xl border-none focus:ring-2 focus:ring-secondary placeholder:text-gray-400 shadow-inner outline-none transition-all"
+                        >
+                    </div>
+
                     <template v-if="canLogin">
                         <div v-if="$page.props.auth.user" class="relative">
-                            <button @click="isProfileDesktopOpen = !isProfileDesktopOpen" class="flex items-center focus:outline-none shrink-0">
-                                <div v-if="$page.props.auth.user.profile_photo_url" class="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+                            <button @click="isProfileDesktopOpen = !isProfileDesktopOpen" class="flex items-center focus:outline-none shrink-0 group">
+                                <div v-if="$page.props.auth.user.profile_photo_url" class="w-10 h-10 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition-colors">
                                     <img :src="$page.props.auth.user.profile_photo_url" alt="Profile" class="w-full h-full object-cover">
                                 </div>
-                                <div v-else class="w-10 h-10 rounded-full bg-secondary text-primary font-bold flex items-center justify-center text-sm">
+                                <div v-else class="w-10 h-10 rounded-full bg-secondary text-primary font-bold flex items-center justify-center text-sm shadow-lg group-hover:scale-105 transition-transform">
                                     {{ getInitials($page.props.auth.user.name) }}
                                 </div>
                             </button>
@@ -151,10 +165,19 @@ onMounted(() => {
                             <div v-if="isProfileDesktopOpen" @click="isProfileDesktopOpen = false" class="fixed inset-0 z-40"></div>
                         </div>
                         <template v-else>
-                            <Link :href="route('login')" class="text-white/70 text-xs lg:text-sm hover:text-white transition-colors">Masuk</Link>
+                            <Link :href="route('login')" class="text-white/70 text-xs lg:text-sm hover:text-white transition-colors px-2">Masuk</Link>
                             <Link v-if="canRegister" :href="route('register')" class="bg-secondary text-primary px-5 py-2 rounded-xl text-sm font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg">Daftar</Link>
                         </template>
                     </template>
+
+                    <!-- Notification Button (Desktop) -->
+                    <button class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group" aria-label="Notifications">
+                        <svg class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <!-- Dot indicator -->
+                        <span class="absolute top-2.5 right-3 w-2 h-2 bg-secondary rounded-full border-2 border-primary animate-pulse"></span>
+                    </button>
                 </div>
             </div>
         </div>
