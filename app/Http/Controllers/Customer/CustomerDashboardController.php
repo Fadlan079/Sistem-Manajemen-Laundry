@@ -102,7 +102,7 @@ class CustomerDashboardController extends Controller
         $user = $request->user();
         $dateFilter = $request->query('date', 'semua');
 
-        $query = $user->orders()->with(['service', 'orderItems'])->latest();
+        $query = $user->orders()->with(['service', 'orderItems', 'payments'])->latest();
 
         // Apply date filter
         if ($dateFilter === 'hari_ini') {
@@ -113,34 +113,50 @@ class CustomerDashboardController extends Controller
             $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
         }
 
-        // Map status DB -> display label & stepper
-        $statusMap = [
-            'pending'  => ['label' => 'Diterima',   'step' => 'Diterima',    'type' => 'aktif'],
-            'diproses' => ['label' => 'Dicuci',     'step' => 'Dicuci',      'type' => 'aktif'],
-            'selesai'  => ['label' => 'Selesai',    'step' => 'Selesai',     'type' => 'riwayat'],
-            'diantar'  => ['label' => 'Diantar',    'step' => 'Diantar',     'type' => 'riwayat'],
-        ];
+        $orders = $query->get()->map(function ($order) {
+            $qty = $order->orderItems->sum('qty');
+            $isCalculated = $qty > 0;
+            $paymentStatus = $order->payments->first()?->status ?? 'UNPAID';
+            
+            $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
+            $dbStatus = $order->status;
+            
+            // Tentukan type (aktif atau riwayat)
+            $type = in_array($dbStatus, ['selesai', 'diantar']) ? 'riwayat' : 'aktif';
 
-        $orders = $query->get()->map(function ($order) use ($statusMap) {
-            $info   = $statusMap[$order->status] ?? ['label' => ucfirst($order->status), 'step' => 'Diterima', 'type' => 'aktif'];
-            $qty    = $order->orderItems->sum('qty');
+            // Penentuan UI Badge Status
+            if ($dbStatus === 'selesai' || $dbStatus === 'diantar') {
+                $badgeText = ucfirst($dbStatus);
+                $badgeColor = 'green';
+            } elseif (!$isCalculated && $dbStatus === 'pending') {
+                $badgeText = 'Menunggu Penjemputan';
+                $badgeColor = 'blue';
+            } elseif ($isCalculated && $paymentStatus === 'UNPAID') {
+                $badgeText = 'Menunggu Pembayaran';
+                $badgeColor = 'yellow';
+            } else {
+                $badgeText = ucfirst($dbStatus);
+                $badgeColor = 'blue';
+            }
 
             return [
-                'id'      => 'ORD-' . $order->id,
-                'dbId'    => $order->id,
-                'service' => $order->service->name ?? '-',
-                'date'    => $order->created_at->translatedFormat('d M Y, H:i'),
-                'status'  => $info['step'],
-                'items'   => $qty . ' item',
-                'price'   => (float) $order->total_price,
-                'type'    => $info['type'],
+                'dbId'        => $order->id,
+                'invoice'     => '#' . $invoice,
+                'service'     => $order->service->name ?? '-',
+                'date'        => $order->created_at->translatedFormat('l, d F Y, H:i'),
+                'shortDate'   => $order->created_at->translatedFormat('l, d F Y'),
+                'dbStatus'    => $dbStatus,
+                'isCalculated'=> $isCalculated,
+                'paymentStatus'=> $paymentStatus,
+                'type'        => $type,
+                'badgeText'   => $badgeText,
+                'badgeColor'  => $badgeColor,
             ];
         });
 
         return Inertia::render('dashboard/pelanggan/aktivitas', [
             'auth'        => ['user' => $user],
             'orders'      => $orders,
-            'dateFilter'  => $dateFilter,
         ]);
     }
 
@@ -170,9 +186,16 @@ class CustomerDashboardController extends Controller
         $payment       = $order->payments->first();
         $paymentStatus = $payment && $payment->status === 'paid' ? 'PAID' : 'UNPAID';
         $methodLabel   = ['cash' => 'Tunai', 'transfer' => 'Transfer Bank', 'e-wallet' => 'E-Wallet / QRIS'];
+        
         $qty           = $order->orderItems->sum('qty');
         $servicePrice  = (float) $order->orderItems->sum(fn($i) => $i->price * $i->qty);
+        // Delivery fee is initially the total price. But when updated, total_price is servicePrice + fee
         $fee           = (float) $order->total_price - $servicePrice;
+
+        $hasPickup   = $order->deliveries->where('type', 'pickup')->isNotEmpty();
+        $hasDelivery = $order->deliveries->where('type', 'delivery')->isNotEmpty();
+        
+        $isCalculated = $qty > 0; // If qty > 0, it means it has been updated by courier/admin
 
         return Inertia::render('dashboard/pelanggan/partials/detail-order', [
             'auth'  => ['user' => $request->user()],
@@ -180,12 +203,18 @@ class CustomerDashboardController extends Controller
                 'id'            => 'ORD-' . $order->id,
                 'dbId'          => $order->id,
                 'service'       => $order->service->name ?? '-',
+                'service_price' => (float) ($order->service->price ?? 0),
+                'items_qty'     => $qty,
                 'items'         => $qty . ' kg',
                 'price'         => $servicePrice,
                 'fee'           => max($fee, 0),
                 'total'         => (float) $order->total_price,
                 'date'          => $order->created_at->translatedFormat('d M Y, H:i'),
                 'status'        => $statusMap[$order->status] ?? 'Diterima',
+                'dbStatus'      => $order->status,
+                'hasPickup'     => $hasPickup,
+                'hasDelivery'   => $hasDelivery,
+                'isCalculated'  => $isCalculated,
                 'paymentStatus' => $paymentStatus,
                 'paymentMethod' => $methodLabel[$payment?->method ?? 'transfer'] ?? 'Transfer Bank',
                 'invoice'       => 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
@@ -196,18 +225,100 @@ class CustomerDashboardController extends Controller
 
     public function ulasanAktivitas(Request $request, $id)
     {
+        $order = \App\Models\Order::with('service')
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+            
+        $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
+
         return Inertia::render('dashboard/pelanggan/partials/ulasan', [
             'auth' => [
                 'user' => $request->user(),
             ],
-            'orderId' => $id
+            'order' => [
+                'dbId' => $order->id,
+                'invoice' => '#' . $invoice,
+                'service' => $order->service->name ?? '-',
+                'date' => $order->created_at->translatedFormat('l, d F Y')
+            ]
         ]);
     }
 
-    public function buatPesanan(Request $request, Service $service)
+    public function batalkanPesanan(Request $request, $id)
     {
+        $order = \App\Models\Order::where('user_id', $request->user()->id)
+            ->where('status', 'pending')
+            ->findOrFail($id);
+
+        $qty = $order->orderItems()->sum('qty');
+        if ($qty > 0) {
+            return redirect()->back()->with('error', 'Pesanan sudah diproses dan tidak dapat dibatalkan.');
+        }
+
+        $order->delete();
+        return redirect()->route('pelanggan.aktivitas')->with('success', 'Pesanan berhasil dibatalkan.');
+    }
+
+    public function lacakPesanan(Request $request)
+    {
+        return Inertia::render('dashboard/pelanggan/lacak-pesanan', [
+            'auth' => ['user' => $request->user()]
+        ]);
+    }
+
+    public function cariPesanan(Request $request)
+    {
+        $request->validate([
+            'invoice' => 'required|string',
+        ]);
+
+        $invoiceStr = trim($request->invoice);
+        // Format of Invoice is INV-YYYYMMDD-0004
+        $parts = explode('-', $invoiceStr);
+        $orderId = null;
+
+        if (count($parts) >= 3) {
+            $orderId = (int) end($parts);
+        } else {
+            // fallback: parse all digits
+            $orderId = (int) preg_replace('/[^0-9]/', '', $invoiceStr);
+        }
+
+        if (!$orderId) {
+            return redirect()->back()->with('error', 'Format invoice tidak valid.');
+        }
+
+        $order = \App\Models\Order::where('id', $orderId)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (!$order) {
+            return redirect()->back()->with('error', 'Pesanan tidak ditemukan atau bukan milik Anda.');
+        }
+
+        return redirect()->route('pelanggan.aktivitas.detail', $order->id);
+    }
+
+    public function buatPesanan(Request $request, Service $service = null)
+    {
+        // Jika tidak ada service yang dipilih, ambil yang pertama
+        if (!$service || !$service->exists) {
+            $service = Service::first();
+        }
+
+        // Jika masih kosong (tidak ada data service di DB)
+        if (!$service) {
+            return redirect()->route('dashboard')->with('error', 'Layanan tidak tersedia.');
+        }
+        $services = Service::all()->map(fn($s) => [
+            'id'   => $s->id,
+            'name' => $s->name,
+            'icon' => $s->icon ?? 'fas fa-tshirt',
+        ]);
+
         return Inertia::render('dashboard/pelanggan/buat-pesanan', [
             'auth'    => ['user' => $request->user()],
+            'services' => $services,
             'service' => [
                 'id'          => $service->id,
                 'name'        => $service->name,
@@ -223,46 +334,43 @@ class CustomerDashboardController extends Controller
     {
         $validated = $request->validate([
             'service_id'      => 'required|exists:services,id',
-            'kg'              => 'required|numeric|min:1|max:100',
             'delivery_type'   => 'required|in:antar_jemput,jemput,antar',
             'pickup_address'  => 'required|string|max:500',
-            'payment_method'  => 'required|in:transfer,e-wallet',
         ]);
 
         $user    = $request->user();
         $service = Service::findOrFail($validated['service_id']);
 
-        $servicePrice = (float) $service->price * (float) $validated['kg'];
-        // Fee: antar_jemput +10k, jemput/antar +5k
+        // Courier will update KG and total price, initially only delivery fee
         $deliveryFee  = match($validated['delivery_type']) {
             'antar_jemput' => 10000,
             default        => 5000,
         };
-        $totalPrice   = $servicePrice + $deliveryFee;
+        $totalPrice = $deliveryFee;
 
         // 1. Create Order
         $order = Order::create([
             'user_id'          => $user->id,
             'service_id'       => $service->id,
             'status'           => 'pending',
-            'total_price'      => $totalPrice,
+            'total_price'      => $totalPrice, // Will be updated by courier
             'pickup_address'   => $validated['pickup_address'],
             'delivery_address' => $user->address ?? $validated['pickup_address'],
         ]);
 
-        // 2. Create Order Item
+        // 2. Create Order Item (placeholder)
         OrderItem::create([
             'order_id'  => $order->id,
-            'item_name' => $validated['kg'] . ' kg - ' . $service->name,
-            'qty'       => (int) $validated['kg'],
+            'item_name' => 'Estimasi - ' . $service->name,
+            'qty'       => 0, // Courier will update
             'price'     => $service->price,
         ]);
 
-        // 3. Create Payment (pending until user confirms)
+        // 3. Create Payment (pending, method and amount placeholder)
         Payment::create([
             'order_id' => $order->id,
-            'amount'   => $totalPrice,
-            'method'   => $validated['payment_method'],
+            'amount'   => 0,
+            'method'   => 'cash', 
             'status'   => 'pending',
         ]);
 
@@ -285,7 +393,7 @@ class CustomerDashboardController extends Controller
         }
 
         return redirect()->route('pelanggan.aktivitas.detail', $order->id)
-            ->with('success', 'Pesanan berhasil dibuat! Silakan selesaikan pembayaran.');
+            ->with('success', 'Pesanan berhasil dibuat! Kurir kami akan segera menjemput & mengonfirmasi biaya.');
     }
 
     public function konfirmasiBayar(Request $request, $id)

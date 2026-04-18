@@ -1,7 +1,7 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import Navbar from '@/Components/navbar.vue';
-import Footer from '@/Components/footer.vue';
+
 </script>
 
 <template>
@@ -16,8 +16,5 @@ import Footer from '@/Components/footer.vue';
     <main class="flex-1">
       <slot />
     </main>
-
-    <Footer />
-
   </div>
 </template>

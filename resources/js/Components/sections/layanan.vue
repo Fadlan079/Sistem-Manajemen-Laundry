@@ -1,15 +1,41 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     services: {
         type: Array,
         default: () => []
     }
 });
 
-const active = ref(null);
+const visibleCount = ref(4);
+
+const expandedFeatures = ref([]);
+
+const toggleFeatures = (id) => {
+    const index = expandedFeatures.value.indexOf(id);
+    if (index > -1) {
+        expandedFeatures.value.splice(index, 1);
+    } else {
+        expandedFeatures.value.push(id);
+    }
+};
+
+const visibleServices = computed(() => {
+    return props.services.slice(0, visibleCount.value);
+});
+
+const loadMore = () => {
+    visibleCount.value += 8;
+};
+
+const showLess = () => {
+    visibleCount.value = 4;
+    // Optional: scroll back to the top of the grid smoothly
+    const section = document.getElementById('kategori');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+};
 
 const toggleFaq = (id) => {
     active.value = active.value === id ? null : id;
@@ -49,48 +75,64 @@ function formatRupiah(val) {
 
 <template>
     <div id="layanan" class="font-sans text-text bg-bg overflow-x-hidden">
-        <div id="kategori" class="py-24 px-8 max-w-7xl mx-auto">
+<div id="kategori" class="py-24 px-8 max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Pilih <span class="text-primary">Layanan Terbaik</span> Untuk Pakaian Anda</h2>
                 <p class="text-muted max-w-2xl mx-auto">Kami menyediakan berbagai kategori layanan profesional yang dikerjakan dengan hati dan teknologi terkini.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div v-for="(service, idx) in services" :key="service.id" 
+                <div v-for="(service, idx) in visibleServices" :key="service.id"
                     :class="getStyle(idx).card"
                     class="rounded-2xl p-8 hover:-translate-y-2 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden">
-                    
+
                     <div v-if="service.tag" class="absolute top-4 right-4 bg-secondary text-primary font-bold text-[10px] uppercase px-3 py-1 rounded-full animate-pulse">
                         {{ service.tag }}
                     </div>
 
-                    <div :class="getStyle(idx).iconBox" class="w-20 h-20 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <!-- Render FA Icon if stored, else fallback SVG -->
-                        <i v-if="service.icon" :class="[service.icon, 'text-4xl']"></i>
+                    <div :class="getStyle(idx).iconBox" class="w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i v-if="service.icon" :class="[service.icon, 'text-3xl']"></i>
                         <svg v-else class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     </div>
 
-                    <h3 :class="getStyle(idx).title" class="text-xl font-bold mb-3">{{ service.name }}</h3>
-                    <p :class="getStyle(idx).desc" class="text-sm mb-6">{{ service.description || 'Layanan cucilan profesional kami untuk Anda.' }}</p>
-                    
-                    <ul class="text-sm text-left w-full space-y-3 mb-8 flex-1">
-                        <li v-for="(feat, fIdx) in service.features" :key="fIdx" :class="getStyle(idx).listText" class="flex items-center gap-2">
-                            <svg :class="getStyle(idx).listIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 
-                            {{ feat }}
-                        </li>
-                    </ul>
+                    <h3 :class="getStyle(idx).title" class="text-md font-bold mb-3">{{ service.name }}</h3>
+                    <p :class="getStyle(idx).desc" class="text-xs mb-6">{{ service.description || 'Layanan cucilan profesional kami untuk Anda.' }}</p>
 
-                    <div :class="getStyle(idx).priceBorder" class="w-full pt-6 border-t">
+                    <div :class="getStyle(idx).priceBorder" class="w-full pb-6 mb-6 border-b">
                         <div :class="getStyle(idx).price" class="font-bold text-2xl mb-4">
                             {{ formatRupiah(service.price) }}<span v-if="service.unit" class="text-xs opacity-70 font-normal"> {{ service.unit }}</span>
                         </div>
                         <button @click="selectService(service)" :class="getStyle(idx).btn" class="w-full py-3 rounded-lg font-semibold transition-all">Pilih Layanan</button>
+                    </div>
+
+                    <div v-if="service.features && service.features.length > 0" class="w-full text-left">
+                        <button @click="toggleFeatures(service.id)" class="flex items-center justify-between w-full text-xs font-bold text-muted hover:text-primary transition-colors py-2 uppercase tracking-wide">
+                            Detail Fitur
+                            <i :class="['fa-solid transition-transform duration-300', expandedFeatures.includes(service.id) ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                        </button>
+                        <div v-show="expandedFeatures.includes(service.id)" class="mt-4 pb-2">
+                            <ul class="text-sm text-left w-full space-y-3">
+                                <li v-for="(feat, fIdx) in service.features" :key="fIdx" :class="getStyle(idx).listText" class="flex items-center gap-2">
+                                    <svg :class="getStyle(idx).listIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    {{ feat }}
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
                 <div v-if="services.length === 0" class="col-span-full py-12 text-center text-muted italic border-2 border-dashed border-border rounded-2xl">
                     Belum ada layanan yang ditawarkan.
                 </div>
+            </div>
+
+            <div v-if="services.length > 4" class="mt-12 flex flex-wrap items-center justify-center gap-4">
+                <button v-if="visibleCount > 4" @click="showLess" class="px-6 py-3 bg-white border-2 border-border text-muted font-bold rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm hover:shadow-md active:scale-95 group">
+                    <i class="fa-solid fa-arrow-up mr-2 group-hover:-translate-y-1 transition-transform"></i> Tampilkan Lebih Sedikit
+                </button>
+                <button v-if="visibleCount < services.length" @click="loadMore" class="px-8 py-3 bg-white border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm hover:shadow-md active:scale-95 group">
+                    Tampilkan Lebih Banyak <i class="fa-solid fa-arrow-down ml-2 group-hover:translate-y-1 transition-transform"></i>
+                </button>
             </div>
         </div>
 

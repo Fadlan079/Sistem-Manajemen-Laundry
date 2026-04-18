@@ -1,157 +1,107 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
-import DashboardLayout from '@/Layouts/dashboard.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/app.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
+    auth: Object,
     order: {
         type: Object,
         default: () => ({
-            id: 'ORD-12345',
-            service: 'Setrika', // Dinamis berdasarkan layanan
-            items: '5 kg',
-            date: '14 Apr 2026, 08:30 AM',
-            price: 35000,
-            fee: 2000,
-            total: 37000,
+            dbId: 0,
+            invoice: '#INV-00102',
+            service: 'Cuci Kiloan',
+            date: 'Rabu, 17 April 2024'
         })
     }
 });
 
-const rating = ref(0);
-const comment = ref('');
-const selectedCompliments = ref([]);
-const isDetailExpanded = ref(false); // State untuk expand detail
+const form = useForm({
+    rating: 0,
+    comment: ''
+});
 
-const compliments = [
-    { id: 1, label: 'Wangi & Bersih', icon: 'fas fa-sparkles' },
-    { id: 2, label: 'Rapih Banget', icon: 'fas fa-shirt' },
-    { id: 3, label: 'Selesai Cepat', icon: 'fas fa-bolt-lightning' },
-    { id: 4, label: 'Kurir Ramah', icon: 'fas fa-motorcycle' },
-    { id: 5, label: 'Layanan Mantap', icon: 'fas fa-thumbs-up' },
-];
-
-function toggleCompliment(id) {
-    if (selectedCompliments.value.includes(id)) {
-        selectedCompliments.value = selectedCompliments.value.filter(i => i !== id);
-    } else {
-        selectedCompliments.value.push(id);
-    }
-}
-
-function formatRupiah(val) {
-    return 'Rp' + new Intl.NumberFormat('id-ID').format(val);
+function submitReview() {
+    // Ensure routing handles it (assume endpoint exists or will be added)
+    // form.post(route('pelanggan.aktivitas.ulasan.post', props.order.dbId));
+    alert('Fungsi kirim ulasan berhasil diremulasikan untuk ' + form.rating + ' bintang.');
 }
 </script>
 
 <template>
     <Head title="Beri Ulasan" />
 
-    <DashboardLayout title="Beri Ulasan">
-        <div class="max-w-xl lg:max-w-4xl mx-auto pb-12 bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            
-            <div class="p-5 flex items-center justify-between border-b border-gray-50 bg-gray-50/30">
-                <Link :href="route('pelanggan.aktivitas')" class="text-gray-400 hover:text-[#E30613] transition-colors">
-                    <i class="fas fa-xmark text-xl"></i>
+    <AppLayout>
+        <div class="pt-20 lg:pt-28 max-w-xl mx-auto pb-32 px-4">
+
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-8">
+                <Link :href="route('pelanggan.aktivitas')" class="flex items-center text-[11px] font-black text-gray-400 hover:text-[#E30613] uppercase tracking-widest transition-colors mb-2 group">
+                    <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+                    Kembali ke Aktivitas
                 </Link>
-                <div class="text-center">
-                    <h1 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pesanan Selesai</h1>
-                    <p class="text-xs font-bold text-gray-900">{{ order.id }}</p>
-                </div>
-                <button class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-headset text-lg"></i>
-                </button>
             </div>
 
-            <div class="flex flex-col lg:flex-row">
-                
-                <div class="lg:w-1/2 p-8 lg:p-12 flex flex-col items-center justify-center lg:border-r lg:border-gray-50">
-                    <h2 class="text-2xl font-black text-gray-900 text-center mb-8 leading-tight">Bagaimana<br>kualitas layanan kami?</h2>
-
-                    <div class="relative mb-6">
-                        <div class="w-28 h-28 rounded-lg bg-green-50 border-4 border-white shadow-sm flex items-center justify-center">
-                            <i class="fas fa-concierge-bell text-4xl text-[#22C55E]"></i>
-                        </div>
+            <div class="space-y-6">
+                <!-- Invoice & Badge -->
+                <div class="flex flex-col gap-2">
+                    <p class="font-black text-gray-900 tracking-tight">{{ order.invoice }}</p>
+                    <div class="inline-flex w-max items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 text-[10px] font-bold uppercase tracking-wider">
+                        <i class="fas fa-check-circle"></i>
+                        Selesai
                     </div>
-                    
-                    <p class="font-black text-xl text-gray-800 mb-8 uppercase tracking-tighter">{{ order.service }}</p>
-
-                    <div class="flex gap-3 mb-4">
-                        <button v-for="i in 5" :key="i" @click="rating = i" class="transition-transform active:scale-90 outline-none">
-                            <i class="fa-star text-4xl transition-colors" 
-                               :class="i <= rating ? 'fas text-yellow-400' : 'far text-gray-200'"></i>
-                        </button>
-                    </div>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ rating > 0 ? 'Terima kasih atas penilaiannya!' : 'Ketuk bintang untuk menilai' }}</p>
                 </div>
 
-                <div class="lg:w-1/2 p-8 lg:bg-gray-50/20">
-                    <div class="w-full">
-                        <p class="font-black text-xs text-gray-500 uppercase tracking-widest mb-6">Apa yang membuat Anda terkesan?</p>
-                        
-                        <div class="grid grid-cols-3 gap-3 mb-8">
-                            <button 
-                                v-for="item in compliments" 
-                                :key="item.id"
-                                @click="toggleCompliment(item.id)"
-                                class="flex flex-col items-center gap-2 group outline-none"
-                            >
-                                <div class="w-12 h-12 rounded border-2 flex items-center justify-center text-lg transition-all"
-                                     :class="selectedCompliments.includes(item.id) ? 'bg-[#22C55E] border-[#22C55E] text-white' : 'bg-white border-gray-100 text-gray-300'">
-                                    <i :class="item.icon"></i>
-                                </div>
-                                <span class="text-[9px] font-black text-center leading-tight uppercase tracking-tighter"
-                                      :class="selectedCompliments.includes(item.id) ? 'text-[#22C55E]' : 'text-gray-400'">
-                                    {{ item.label }}
-                                </span>
-                            </button>
+                <!-- Card Body -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-[#f4f7f9] flex items-center justify-center rounded-lg border border-gray-100 px-2 py-3">
+                            <i class="fas fa-shopping-basket text-2xl text-[#829ab1]"></i>
+                        </div>
+
+                        <div class="flex-1">
+                            <h3 class="font-black text-gray-900 text-[15px]">{{ order.service }}</h3>
+                            <p class="text-[12px] font-medium text-gray-500 mt-1">
+                                {{ order.date }}
+                            </p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="w-full mb-6">
-                        <textarea 
-                            v-model="comment"
-                            placeholder="Tuliskan saran atau pujian Anda di sini..."
-                            class="w-full bg-white border border-gray-200 rounded-lg p-4 text-sm focus:ring-1 focus:ring-[#22C55E] focus:border-[#22C55E] transition-all outline-none min-h-[100px] resize-none shadow-sm"
+                <!-- Rating Section -->
+                <div class="pt-6 flex flex-col items-center">
+                    <h2 class="text-[17px] font-black text-gray-900 mb-6 tracking-tight">Bagaimana pengalaman Anda?</h2>
+
+                    <div class="flex gap-2 mb-6">
+                        <button v-for="i in 5" :key="i" @click="form.rating = i" type="button" class="transition-transform active:scale-95 outline-none">
+                            <i class="fa-star text-[42px] transition-colors"
+                               :class="i <= form.rating ? 'fas text-[#FFE800]' : 'fas text-gray-200'"></i>
+                        </button>
+                    </div>
+
+                    <div class="w-full">
+                        <textarea
+                            v-model="form.comment"
+                            placeholder="Tulis Ulasan (Opsional)"
+                            class="w-full bg-white border border-gray-200 rounded-xl p-4 text-[13px] font-medium text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] transition-all outline-none min-h-[120px] resize-none shadow-sm"
                         ></textarea>
                     </div>
-
-                    <div class="w-full bg-white border border-gray-100 rounded-lg overflow-hidden mb-6 shadow-sm">
-                        <div @click="isDetailExpanded = !isDetailExpanded" class="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50">
-                            <div>
-                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Pembayaran</span>
-                                <p class="text-base font-black text-gray-900 leading-tight">{{ formatRupiah(order.total) }}</p>
-                            </div>
-                            <div class="flex items-center gap-2 text-[#E30613] text-[10px] font-black uppercase tracking-tighter">
-                                {{ isDetailExpanded ? 'Tutup' : 'Detail' }}
-                                <i class="fas transition-transform duration-300" :class="isDetailExpanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                            </div>
-                        </div>
-
-                        <div v-show="isDetailExpanded" class="px-4 pb-4 pt-2 border-t border-gray-50 space-y-2 bg-gray-50/50">
-                            <div class="flex justify-between text-[11px] font-bold">
-                                <span class="text-gray-500 uppercase">Harga Layanan</span>
-                                <span class="text-gray-800">{{ formatRupiah(order.price) }}</span>
-                            </div>
-                            <div class="flex justify-between text-[11px] font-bold">
-                                <span class="text-gray-500 uppercase">Biaya Penanganan</span>
-                                <span class="text-gray-800">{{ formatRupiah(order.fee) }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-2">
-                        <button 
-                            class="w-full py-4 rounded font-black text-white text-xs uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98]"
-                            :class="rating > 0 ? 'bg-[#E30613] shadow-red-100' : 'bg-gray-200 cursor-not-allowed text-gray-400'"
-                            :disabled="rating === 0"
-                        >
-                            Kirim Ulasan Sekarang
-                        </button>
-                    </div>
                 </div>
 
+                <!-- Submit Button -->
+                <div class="pt-2">
+                    <button
+                        @click="submitReview"
+                        :disabled="form.rating === 0 || form.processing"
+                        class="w-full py-4 rounded-xl font-bold text-white text-[15px] tracking-wide shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                        :class="form.rating > 0 && !form.processing ? 'bg-[#E30613] hover:bg-black' : 'bg-gray-300 cursor-not-allowed shadow-none'"
+                    >
+                        <i v-if="form.processing" class="fas fa-spinner fa-spin mr-2"></i>
+                        Kirim
+                    </button>
+                </div>
             </div>
+
         </div>
-    </DashboardLayout>
+    </AppLayout>
 </template>

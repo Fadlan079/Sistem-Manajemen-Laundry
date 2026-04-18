@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\DeliveryController;
+use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerOrderController;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,14 @@ Route::get('/', function () {
         'canLogin'    => Route::has('login'),
         'canRegister' => Route::has('register'),
         'serviceList' => \App\Models\Service::where('status', 'tersedia')->get(),
+        'banners'     => \App\Models\Banner::where('is_active', true)
+                            ->orderBy('created_at', 'desc')
+                            ->get()
+                            ->map(fn($b) => [
+                                'id'        => $b->id,
+                                'image_url' => asset('storage/' . $b->image),
+                                'is_active' => $b->is_active,
+                            ]),
     ]);
 })->name('home');
 
@@ -71,6 +80,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('/pickup-delivery',              [DeliveryController::class, 'store'])->name('pickup.store');
         Route::put('/pickup-delivery/{delivery}',   [DeliveryController::class, 'update'])->name('pickup.update');
         Route::delete('/pickup-delivery/{delivery}',[DeliveryController::class, 'destroy'])->name('pickup.destroy');
+
+        // Banners
+        Route::post('/banners',            [BannerController::class, 'store'])->name('banners.store');
+        Route::put('/banners/{banner}',    [BannerController::class, 'update'])->name('banners.update');
+        Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     });
 
 
@@ -123,9 +137,12 @@ Route::middleware(['auth', 'verified'])
         Route::get('/aktivitas/{id}', [CustomerDashboardController::class, 'detailAktivitas'])->name('aktivitas.detail');
         Route::get('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'ulasanAktivitas'])->name('aktivitas.ulasan');
         Route::get('/pembayaran', [CustomerDashboardController::class, 'pembayaran'])->name('pembayaran');
-        Route::get('/pesan/{service}', [CustomerDashboardController::class, 'buatPesanan'])->name('pesan');
+        Route::get('/pesan/{service?}', [CustomerDashboardController::class, 'buatPesanan'])->name('pesan');
         Route::post('/pesan', [CustomerDashboardController::class, 'simpanPesanan'])->name('pesan.simpan');
         Route::post('/aktivitas/{id}/bayar', [CustomerDashboardController::class, 'konfirmasiBayar'])->name('aktivitas.bayar');
+        Route::post('/aktivitas/{id}/batal', [CustomerDashboardController::class, 'batalkanPesanan'])->name('aktivitas.batal');
+        Route::get('/lacak-pesanan', [CustomerDashboardController::class, 'lacakPesanan'])->name('lacak');
+        Route::post('/lacak-pesanan', [CustomerDashboardController::class, 'cariPesanan'])->name('lacak.post');
     });
 
 

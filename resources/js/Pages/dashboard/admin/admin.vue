@@ -1,6 +1,6 @@
 <script setup>
-import { Head, usePage, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, usePage, router, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 
 const user = computed(() => usePage().props.auth.user);
@@ -9,6 +9,7 @@ const props = defineProps({
     stats: Object,
     recentOrders: Array,
     orderChart: Array,
+    banners: { type: Array, default: () => [] },
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -86,6 +87,65 @@ const chartMax = computed(() => {
     const vals = (props.orderChart ?? []).map(m => m.value);
     return Math.max(...vals, 1);
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BANNER CRUD
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── Upload form ───────────────────────────────────────────────────────
+const bannerForm = useForm({
+    image: null,
+    is_active: true,
+});
+
+const previewUrl = ref(null);
+const fileInput  = ref(null);
+
+function onFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    bannerForm.image = file;
+    previewUrl.value = URL.createObjectURL(file);
+}
+
+function clearFile() {
+    bannerForm.image = null;
+    previewUrl.value = null;
+    if (fileInput.value) fileInput.value.value = '';
+}
+
+function submitBanner() {
+    bannerForm.post(route('admin.banners.store'), {
+        forceFormData: true,
+        onSuccess: () => {
+            clearFile();
+        },
+    });
+}
+
+// ── Toggle active ─────────────────────────────────────────────────────
+function toggleBanner(banner) {
+    router.put(
+        route('admin.banners.update', banner.id),
+        { is_active: !banner.is_active },
+        { preserveScroll: true }
+    );
+}
+
+// ── Delete ────────────────────────────────────────────────────────────
+const deletingId = ref(null);
+
+function deleteBanner(banner) {
+    if (!confirm(`Hapus banner ini? Tindakan tidak dapat dibatalkan.`)) return;
+    deletingId.value = banner.id;
+    router.delete(route('admin.banners.destroy', banner.id), {
+        preserveScroll: true,
+        onFinish: () => { deletingId.value = null; },
+    });
+}
+
+// ── Flash messages ────────────────────────────────────────────────────
+const flash = computed(() => usePage().props.flash ?? {});
 </script>
 
 <template>
@@ -93,6 +153,27 @@ const chartMax = computed(() => {
 
     <DashboardLayout title="Overview">
         <div class="space-y-10 pb-20">
+
+            <!-- ── Flash messages ─────────────────────────────────── -->
+            <transition name="toast">
+                <div
+                    v-if="flash.success"
+                    class="fixed top-5 right-5 z-50 flex items-center gap-3 bg-emerald-600 text-white text-sm font-semibold px-5 py-3 rounded-lg shadow-xl"
+                >
+                    <i class="fa-solid fa-circle-check"></i>
+                    {{ flash.success }}
+                </div>
+            </transition>
+            <transition name="toast">
+                <div
+                    v-if="flash.error"
+                    class="fixed top-5 right-5 z-50 flex items-center gap-3 bg-rose-600 text-white text-sm font-semibold px-5 py-3 rounded-lg shadow-xl"
+                >
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {{ flash.error }}
+                </div>
+            </transition>
+
             <!-- Header -->
             <header class="relative">
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -232,6 +313,197 @@ const chartMax = computed(() => {
                     </div>
                 </div>
             </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                  BANNER MANAGEMENT
+            ══════════════════════════════════════════════════════ -->
+            <div class="space-y-6">
+                <!-- Section header -->
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold italic font-serif text-text border-l-4 border-primary pl-4 uppercase tracking-tighter">
+                        Manajemen Banner Hero
+                    </h3>
+                    <span class="text-[10px] font-mono text-muted bg-container border border-border px-2 py-1 rounded">
+                        {{ banners.length }} banner · {{ banners.filter(b => b.is_active).length }} aktif
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- ── Upload card ─────────────────────────────────── -->
+                    <div class="lg:col-span-1 bg-surface border border-border rounded-xl p-6 space-y-5 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-text">Upload Banner Baru</p>
+                        </div>
+
+                        <form @submit.prevent="submitBanner" class="space-y-4" enctype="multipart/form-data">
+
+                            <!-- File drop zone -->
+                            <label
+                                for="banner-file-input"
+                                class="flex flex-col items-center justify-center w-full h-44 rounded-xl border-2 border-dashed border-border hover:border-primary cursor-pointer transition-colors relative overflow-hidden group bg-container/30"
+                            >
+                                <!-- Preview -->
+                                <img
+                                    v-if="previewUrl"
+                                    :src="previewUrl"
+                                    alt="Preview"
+                                    class="absolute inset-0 w-full h-full object-cover rounded-xl"
+                                />
+                                <!-- Overlay when preview exists -->
+                                <div
+                                    :class="[
+                                        'absolute inset-0 flex flex-col items-center justify-center gap-2 transition-opacity duration-200 rounded-xl',
+                                        previewUrl ? 'bg-black/50 opacity-0 group-hover:opacity-100' : 'bg-transparent opacity-100'
+                                    ]"
+                                >
+                                    <i class="fa-solid fa-image text-2xl" :class="previewUrl ? 'text-white' : 'text-muted/50'"></i>
+                                    <span class="text-[11px] font-semibold" :class="previewUrl ? 'text-white' : 'text-muted'">
+                                        {{ previewUrl ? 'Klik untuk ganti' : 'Klik atau drag gambar di sini' }}
+                                    </span>
+                                    <span class="text-[10px]" :class="previewUrl ? 'text-white/70' : 'text-muted/70'">JPG, PNG, WEBP — maks 4 MB</span>
+                                </div>
+
+                                <input
+                                    id="banner-file-input"
+                                    ref="fileInput"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    class="sr-only"
+                                    @change="onFileChange"
+                                />
+                            </label>
+
+                            <!-- Validation error -->
+                            <p v-if="bannerForm.errors.image" class="text-rose-500 text-[11px] font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                {{ bannerForm.errors.image }}
+                            </p>
+
+                            <!-- Active toggle -->
+                            <label class="flex items-center justify-between cursor-pointer group select-none">
+                                <span class="text-xs font-semibold text-text">Langsung Aktif</span>
+                                <div class="relative">
+                                    <input type="checkbox" v-model="bannerForm.is_active" class="sr-only peer" />
+                                    <div class="w-10 h-5 bg-border peer-checked:bg-primary rounded-full transition-colors"></div>
+                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                                </div>
+                            </label>
+
+                            <!-- Actions -->
+                            <div class="flex gap-2">
+                                <button
+                                    type="submit"
+                                    :disabled="!bannerForm.image || bannerForm.processing"
+                                    class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <i v-if="!bannerForm.processing" class="fa-solid fa-cloud-arrow-up"></i>
+                                    <i v-else class="fa-solid fa-spinner animate-spin"></i>
+                                    {{ bannerForm.processing ? 'Mengupload...' : 'Upload Banner' }}
+                                </button>
+
+                                <button
+                                    v-if="previewUrl"
+                                    type="button"
+                                    @click="clearFile"
+                                    class="px-3 py-2.5 border border-border text-muted text-xs rounded-lg hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 transition-all"
+                                    title="Batal"
+                                >
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ── Banner grid ──────────────────────────────────── -->
+                    <div class="lg:col-span-2 space-y-4">
+
+                        <!-- Empty state -->
+                        <div
+                            v-if="banners.length === 0"
+                            class="h-full min-h-[12rem] flex flex-col items-center justify-center gap-3 bg-container/30 border-2 border-dashed border-border rounded-xl text-center p-8"
+                        >
+                            <i class="fa-solid fa-images text-3xl text-muted/30"></i>
+                            <p class="text-muted text-sm font-medium">Belum ada banner. Upload gambar pertama Anda!</p>
+                        </div>
+
+                        <!-- Banner items -->
+                        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div
+                                v-for="banner in banners"
+                                :key="banner.id"
+                                class="relative group rounded-xl overflow-hidden border border-border shadow-sm bg-surface transition-all hover:shadow-md hover:border-primary/40"
+                                :class="{ 'opacity-60': !banner.is_active }"
+                            >
+                                <!-- Thumbnail -->
+                                <div class="relative h-36 bg-container overflow-hidden">
+                                    <img
+                                        :src="banner.image_url"
+                                        :alt="`Banner #${banner.id}`"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+
+                                    <!-- Status badge -->
+                                    <div class="absolute top-2 left-2">
+                                        <span
+                                            :class="[
+                                                'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                                                banner.is_active
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-500 text-white'
+                                            ]"
+                                        >
+                                            {{ banner.is_active ? 'AKTIF' : 'NONAKTIF' }}
+                                        </span>
+                                    </div>
+
+                                    <!-- ID badge -->
+                                    <div class="absolute top-2 right-2 text-[9px] font-mono font-bold bg-black/40 text-white px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                        #{{ String(banner.id).padStart(3, '0') }}
+                                    </div>
+                                </div>
+
+                                <!-- Actions row -->
+                                <div class="flex items-center justify-between px-3 py-2.5 gap-2">
+                                    <span class="text-[10px] text-muted font-mono truncate">{{ banner.created_at }}</span>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <!-- Toggle active -->
+                                        <button
+                                            @click="toggleBanner(banner)"
+                                            :title="banner.is_active ? 'Nonaktifkan' : 'Aktifkan'"
+                                            :class="[
+                                                'w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all',
+                                                banner.is_active
+                                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                            ]"
+                                        >
+                                            <i :class="banner.is_active ? 'fa-solid fa-toggle-on' : 'fa-solid fa-toggle-off'"></i>
+                                        </button>
+
+                                        <!-- Delete -->
+                                        <button
+                                            @click="deleteBanner(banner)"
+                                            :disabled="deletingId === banner.id"
+                                            title="Hapus banner"
+                                            class="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center text-xs transition-all disabled:opacity-40"
+                                        >
+                                            <i v-if="deletingId !== banner.id" class="fa-solid fa-trash"></i>
+                                            <i v-else class="fa-solid fa-spinner animate-spin"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ── /Banner Management ─────────────────────────────── -->
+
         </div>
     </DashboardLayout>
 </template>
@@ -243,4 +515,10 @@ const chartMax = computed(() => {
 .font-mono {
     font-family: 'Space Mono', monospace;
 }
+
+/* Toast animation */
+.toast-enter-active { transition: all 0.35s ease; }
+.toast-leave-active  { transition: all 0.25s ease; }
+.toast-enter-from    { opacity: 0; transform: translateY(-12px) translateX(8px); }
+.toast-leave-to      { opacity: 0; transform: translateX(16px); }
 </style>

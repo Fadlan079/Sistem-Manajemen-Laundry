@@ -1,64 +1,42 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import DashboardLayout from '@/Layouts/dashboard.vue';
+import AppLayout from '@/Layouts/app.vue';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
     auth: Object,
+    services: {
+        type: Array,
+        required: true
+    },
     service: {
         type: Object,
         required: true
     }
 });
 
-const PICKUP_FEE  = 5000;
-const ANJEMPUT_FEE = 10000;
-
 const form = useForm({
     service_id:     props.service.id,
-    kg:             1,
     delivery_type:  'jemput',   // 'jemput' | 'antar' | 'antar_jemput'
     pickup_address: props.auth?.user?.address ?? '',
-    payment_method: 'transfer',
 });
 
-// Computed totals
-const serviceTotal = computed(() => props.service.price * form.kg);
-const deliveryFee  = computed(() => form.delivery_type === 'antar_jemput' ? ANJEMPUT_FEE : PICKUP_FEE);
-const grandTotal   = computed(() => serviceTotal.value + deliveryFee.value);
-
-function formatRupiah(val) {
-    if (!val && val !== 0) return 'Rp0';
-    return 'Rp' + new Intl.NumberFormat('id-ID').format(val);
-}
-
 const deliveryOptions = [
+    {
+        value: 'antar_jemput',
+        label: 'Antar Jemput',
+        icon: 'fas fa-truck',
+    },
     {
         value: 'jemput',
         label: 'Jemput Saja',
         icon: 'fas fa-motorcycle',
-        desc: 'Kurir jemput cucian dari alamat Anda',
-        fee: PICKUP_FEE,
     },
     {
         value: 'antar',
         label: 'Antar Saja',
         icon: 'fas fa-box-open',
-        desc: 'Cucian diantar kembali ke alamat Anda',
-        fee: PICKUP_FEE,
     },
-    {
-        value: 'antar_jemput',
-        label: 'Antar & Jemput',
-        icon: 'fas fa-exchange-alt',
-        desc: 'Dijemput dan diantar kembali oleh kurir kami',
-        fee: ANJEMPUT_FEE,
-    },
-];
-
-const paymentMethods = [
-    { value: 'transfer', label: 'Transfer Bank',    icon: 'fas fa-university',  desc: 'BCA / BRI / Mandiri / BNI dan bank lainnya' },
-    { value: 'e-wallet', label: 'E-Wallet / QRIS',  icon: 'fas fa-qrcode',      desc: 'GoPay, OVO, Dana, ShopeePay, dll' },
 ];
 
 function submit() {
@@ -69,8 +47,8 @@ function submit() {
 <template>
     <Head title="Buat Pesanan" />
 
-    <DashboardLayout title="Buat Pesanan">
-        <div class="max-w-2xl mx-auto pb-16 px-4 sm:px-0 space-y-5">
+    <AppLayout>
+        <div class="pt-20 lg:pt-28 max-w-2xl mx-auto pb-16 px-4 sm:px-0 space-y-5">
 
             <!-- Back -->
             <Link href="/#layanan" class="flex items-center text-[11px] font-black text-gray-400 hover:text-[#E30613] uppercase tracking-widest transition-colors group">
@@ -78,122 +56,62 @@ function submit() {
                 Kembali ke Layanan
             </Link>
 
-            <!-- Service Header -->
-            <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                <div class="flex items-center gap-4 p-5 bg-gray-50 border-b border-gray-100">
-                    <div class="w-12 h-12 rounded bg-[#E30613]/10 text-[#E30613] flex items-center justify-center shrink-0">
-                        <i v-if="service.icon" :class="[service.icon, 'text-xl']"></i>
-                        <i v-else class="fas fa-tshirt text-xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Layanan Dipilih</p>
-                        <h1 class="text-base font-black text-gray-900">{{ service.name }}</h1>
-                        <p class="text-[11px] text-[#E30613] font-bold">{{ formatRupiah(service.price) }} <span class="text-gray-400 font-normal">{{ service.unit }}</span></p>
-                    </div>
+            <!-- Services Header & Options -->
+            <section class="space-y-3 pt-2">
+                <h2 class="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Pilih Layanan</h2>
+                <div class="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    <button v-for="srv in services" :key="srv.id" type="button" @click="form.service_id = srv.id" 
+                        class="relative flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all overflow-hidden"
+                        :class="form.service_id === srv.id ? 'border-[#E30613] bg-blue-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'">
+                        
+                        <div class="w-12 h-12 flex items-center justify-center text-4xl mb-2" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-500'">
+                            <i :class="srv.icon"></i>
+                        </div>
+                        
+                        <span class="text-xs font-bold text-center leading-tight whitespace-nowrap" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-700'">{{ srv.name }}</span>
+
+                        <!-- Checkmark Indicator -->
+                        <div v-if="form.service_id === srv.id" class="absolute -top-1 -right-1 w-6 h-6 bg-[#E30613] rounded-bl-xl rounded-tr text-white flex items-center justify-center shadow-sm">
+                            <i class="fas fa-check text-[10px]"></i>
+                        </div>
+                    </button>
                 </div>
-                <p v-if="service.description" class="px-5 py-3 text-sm text-gray-500">{{ service.description }}</p>
             </section>
 
-            <form @submit.prevent="submit" class="space-y-5">
-
-                <!-- KG Input -->
-                <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
-                    <h2 class="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em]">Berapa Kilogram Cucian?</h2>
-
-                    <div class="flex items-center gap-4">
-                        <button type="button" @click="form.kg > 1 && form.kg--"
-                            class="w-11 h-11 rounded border border-gray-200 bg-gray-50 text-gray-700 font-black text-xl flex items-center justify-center hover:bg-[#E30613] hover:text-white hover:border-[#E30613] transition-all active:scale-95">
-                            −
-                        </button>
-                        <input type="number" v-model.number="form.kg" min="1" max="100"
-                            class="flex-1 text-center text-3xl font-black text-gray-900 border border-gray-200 rounded py-3 focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all">
-                        <button type="button" @click="form.kg < 100 && form.kg++"
-                            class="w-11 h-11 rounded border border-gray-200 bg-gray-50 text-gray-700 font-black text-xl flex items-center justify-center hover:bg-[#E30613] hover:text-white hover:border-[#E30613] transition-all active:scale-95">
-                            +
-                        </button>
-                    </div>
-                    <p class="text-center text-xs text-gray-500">Minimal <span class="font-bold text-gray-800">1 kg</span> · Maks <span class="font-bold text-gray-800">100 kg</span></p>
-                    <div v-if="form.errors.kg" class="text-[11px] text-[#E30613] font-bold">{{ form.errors.kg }}</div>
-                </section>
+            <form @submit.prevent="submit" class="space-y-6">
 
                 <!-- Delivery Type -->
-                <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
-                    <h2 class="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em]">Metode Pengiriman</h2>
+                <section class="space-y-3">
+                    <h2 class="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Metode Pengambilan</h2>
 
-                    <div class="grid grid-cols-1 gap-2">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <label v-for="opt in deliveryOptions" :key="opt.value"
-                            class="flex items-center gap-4 p-4 rounded border-2 cursor-pointer transition-all"
-                            :class="form.delivery_type === opt.value ? 'border-[#E30613] bg-[#E30613]/5' : 'border-gray-100 hover:border-gray-200'">
+                            class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all"
+                            :class="form.delivery_type === opt.value ? 'border-[#E30613] bg-[#E30613] text-white shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'">
                             <input type="radio" v-model="form.delivery_type" :value="opt.value" class="sr-only">
-                            <div class="w-10 h-10 rounded flex items-center justify-center shrink-0"
-                                :class="form.delivery_type === opt.value ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-400'">
-                                <i :class="[opt.icon, 'text-sm']"></i>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2">
-                                    <p class="text-sm font-black text-gray-900">{{ opt.label }}</p>
-                                    <span class="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded">+{{ formatRupiah(opt.fee) }}</span>
-                                </div>
-                                <p class="text-[11px] text-gray-500">{{ opt.desc }}</p>
-                            </div>
-                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
-                                :class="form.delivery_type === opt.value ? 'border-[#E30613]' : 'border-gray-300'">
-                                <div v-if="form.delivery_type === opt.value" class="w-2 h-2 rounded-full bg-[#E30613]"></div>
-                            </div>
+                            <i :class="[opt.icon, 'text-xl']"></i>
+                            <span class="text-xs font-bold text-center leading-tight whitespace-nowrap">{{ opt.label }}</span>
                         </label>
                     </div>
 
                     <!-- Address (always required since all options involve courier) -->
-                    <div class="space-y-2 pt-1">
-                        <label class="text-xs font-black text-gray-700 uppercase tracking-wide">Alamat Pengiriman</label>
-                        <textarea v-model="form.pickup_address" rows="3" placeholder="Contoh: Jl. Ahmad Yani No. 12, Samarinda Kota"
-                            class="w-full border border-gray-200 rounded px-4 py-3 text-sm focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all resize-none"></textarea>
+                    <div class="space-y-2 mt-4 bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+                        <label class="text-xs font-black text-gray-700 uppercase tracking-wide">Alamat Penjemputan</label>
+                        <div class="relative">
+                            <i class="fas fa-map-marker-alt absolute top-3 left-4 text-gray-400"></i>
+                            <textarea v-model="form.pickup_address" rows="3" placeholder="Contoh: Jl. Ahmad Yani No. 12, Samarinda Kota"
+                                class="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all resize-none"></textarea>
+                        </div>
                         <div v-if="form.errors.pickup_address" class="text-[11px] text-[#E30613] font-bold">{{ form.errors.pickup_address }}</div>
                     </div>
                 </section>
 
-                <!-- Payment Method -->
-                <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
-                    <h2 class="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em]">Metode Pembayaran</h2>
-
-                    <div class="space-y-2">
-                        <label v-for="method in paymentMethods" :key="method.value"
-                            class="flex items-center gap-4 p-4 rounded border-2 cursor-pointer transition-all"
-                            :class="form.payment_method === method.value ? 'border-[#E30613] bg-[#E30613]/5' : 'border-gray-100 hover:border-gray-200'">
-                            <input type="radio" v-model="form.payment_method" :value="method.value" class="sr-only">
-                            <div class="w-10 h-10 rounded flex items-center justify-center shrink-0"
-                                :class="form.payment_method === method.value ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-400'">
-                                <i :class="[method.icon, 'text-sm']"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-black text-gray-900">{{ method.label }}</p>
-                                <p class="text-[11px] text-gray-500">{{ method.desc }}</p>
-                            </div>
-                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                                :class="form.payment_method === method.value ? 'border-[#E30613]' : 'border-gray-300'">
-                                <div v-if="form.payment_method === method.value" class="w-2 h-2 rounded-full bg-[#E30613]"></div>
-                            </div>
-                        </label>
-                    </div>
-                    <div v-if="form.errors.payment_method" class="text-[11px] text-[#E30613] font-bold">{{ form.errors.payment_method }}</div>
-                </section>
-
-                <!-- Price Summary -->
-                <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 space-y-3">
-                    <h2 class="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em]">Ringkasan Harga</h2>
-                    <div class="space-y-2">
-                        <div class="flex justify-between text-xs">
-                            <span class="text-gray-500 font-semibold">{{ service.name }} ({{ form.kg }} kg × {{ formatRupiah(service.price) }})</span>
-                            <span class="font-black text-gray-900">{{ formatRupiah(serviceTotal) }}</span>
-                        </div>
-                        <div class="flex justify-between text-xs">
-                            <span class="text-gray-500 font-semibold">Biaya Pengiriman ({{ deliveryOptions.find(o => o.value === form.delivery_type)?.label }})</span>
-                            <span class="font-black text-gray-900">{{ formatRupiah(deliveryFee) }}</span>
-                        </div>
-                        <div class="pt-3 border-t border-gray-100 flex justify-between items-center">
-                            <span class="text-xs font-black text-gray-900 uppercase tracking-widest">Total</span>
-                            <span class="text-2xl font-black text-[#E30613]">{{ formatRupiah(grandTotal) }}</span>
-                        </div>
+                <!-- Info Banner -->
+                <section class="bg-blue-50 rounded-lg border border-blue-100 p-4 flex gap-3 text-blue-800">
+                    <i class="fas fa-info-circle mt-0.5 opacity-80"></i>
+                    <div class="text-xs leading-relaxed space-y-1">
+                        <p class="font-bold">Total Harga Belum Ditentukan</p>
+                        <p class="opacity-90">Berat cucian (KG) dan total biaya akhir akan dikonfirmasi lebih lanjut oleh kurir kami saat proses penjemputan maupun setibanya di outlet. Pembayaran dilakukan setelahnya.</p>
                     </div>
                 </section>
 
@@ -204,17 +122,15 @@ function submit() {
 
                 <!-- Submit -->
                 <button type="submit"
-                    :disabled="form.processing || form.kg < 1"
-                    class="w-full py-4 rounded font-black text-white text-sm uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                    :class="form.processing || form.kg < 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#E30613] shadow-red-100 hover:bg-black'">
+                    :disabled="form.processing"
+                    class="w-full py-4 mt-6 rounded-xl font-bold text-white text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                    :class="form.processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#E30613] hover:bg-black hover:shadow-xl'">
                     <i v-if="form.processing" class="fas fa-spinner fa-spin"></i>
-                    <i v-else class="fas fa-check-circle"></i>
-                    {{ form.processing ? 'Memproses...' : 'Konfirmasi & Buat Pesanan' }}
+                    <span v-if="!form.processing">Lanjutkan</span>
                 </button>
-
             </form>
         </div>
-    </DashboardLayout>
+    </AppLayout>
 </template>
 
 <style scoped>
