@@ -65,7 +65,6 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         })->name('dashboard');
     });
 
-
 // ─────────────────────────────────────────────
 //  Kurir Dashboard
 // ─────────────────────────────────────────────
@@ -74,6 +73,7 @@ Route::middleware(['auth', 'verified', 'role:kurir'])
     ->prefix('kurir')
     ->name('kurir.')
     ->group(function () {
+        // Route ini akan menangani baik Overview maupun Tugas Jemput via query string (?tab=tugas)
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard/kurir/kurir');
         })->name('dashboard');
