@@ -1,18 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-    --color-bg: #FFFFFF;
-    --color-surface: #FFFFFF;
-    --color-container: #F9FAFB;
-
-    --color-border: #E5E7EB;
-
-    --color-text: #1F2937;
-    --color-muted: #6B7280;
-
+    /* Merah Terang Dashboard */
     --color-primary: #E30613;
     --color-primary-hover: #B7050F;
 
+    /* Kuning Terang Dashboard */
     --color-secondary: #FFE800;
 
     --color-success: #22C55E;

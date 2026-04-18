@@ -69,12 +69,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <aside 
+    <aside
         class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0"
         :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
     >
         <!-- Close Button (Mobile Only) -->
-        <button 
+        <button
             @click="emit('update:isOpen', false)"
             class="absolute top-4 right-4 lg:hidden p-2 rounded-lg bg-black/10 hover:bg-black/20 text-white transition-all"
         >
@@ -85,9 +85,9 @@ onMounted(() => {
 
         <!-- Sidebar Header / Logo -->
         <div class="px-8 py-8 border-b border-white/10 flex items-center gap-3">
-            <img 
-                src="/logo.png" 
-                alt="Logo" 
+            <img
+                src="/logo.png"
+                alt="Logo"
                 class="w-12 h-12 object-cover rounded-full"
             />
             <div class="flex flex-col">
@@ -102,16 +102,16 @@ onMounted(() => {
                 <h3 class="px-4 text-[11px] font-bold text-white/40 uppercase tracking-[2px] mb-3">
                     {{ category }}
                 </h3>
-                
+
                 <div class="space-y-1">
-                    <Link v-for="(link, index) in groupLinks" :key="index" :href="link.href" 
+                    <Link v-for="(link, index) in groupLinks" :key="index" :href="link.href"
                         class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition overflow-hidden group"
                         :class="[
                             link.active ? 'active-nav-item bg-black/20 text-white font-semibold shadow-inner' : 'text-white/70 hover:bg-black/10 hover:text-white'
                         ]">
-                        
+
                         <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md"></div>
-                        
+
                         <svg class="w-5 h-5 opacity-90 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon"/>
                         </svg>
@@ -122,8 +122,8 @@ onMounted(() => {
         </nav>
 
         <div class="p-6 space-y-3 border-t border-white/10 bg-black/5">
-            <Link 
-                :href="route('home')" 
+            <Link
+                :href="route('home')"
                 class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-3 px-4 rounded-xl transition border border-white/10"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,13 +151,13 @@ onMounted(() => {
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(72, 71, 71, 0.1);
+        border-radius: 10px;
 }
 </style>
