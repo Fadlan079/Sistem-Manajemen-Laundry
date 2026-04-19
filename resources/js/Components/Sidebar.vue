@@ -42,15 +42,6 @@ const allLinks = computed(() => ({
             { name: 'Tugas Jemput', href: '#', active: false, icon: 'M3 13h13v-2H3v2zm0 4h9v-2H3v2zm0-8h18V7H3v2zm13 8a2 2 0 100-4 2 2 0 000 4zm4 0a2 2 0 100-4 2 2 0 000 4z' },
         ]
     },
-    pelanggan: {
-        'Monitoring': [
-            { name: 'Beranda', href: route('pelanggan.pelanggan'), active: route().current('pelanggan.pelanggan'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-        ],
-        'Pesanan Saya': [
-            { name: 'Aktivitas', href: route('pelanggan.aktivitas'), active: route().current('pelanggan.aktivitas'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-            { name: 'Pembayaran', href: route('pelanggan.pembayaran'), active: route().current('pelanggan.pembayaran'), icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
-        ]
-    }
 }));
 
 const linksGroup = computed(() => allLinks.value[role.value] || allLinks.value.admin);
@@ -132,11 +123,11 @@ onMounted(() => {
                 Lihat Landing Page
             </Link>
 
-            <button class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm transition transform hover:-translate-y-0.5 active:scale-95">
+            <button v-if="role === 'operator'" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm transition transform hover:-translate-y-0.5 active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>New Order</span>
+                <span>Buat Pesanan</span>
             </button>
 
             <!-- <div class="pt-2">

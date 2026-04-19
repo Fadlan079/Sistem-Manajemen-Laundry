@@ -137,7 +137,7 @@ Route::middleware(['auth', 'verified', 'role:operator'])
     ->group(function () {
         Route::get('/dashboard', function () {
             return Inertia::render('dashboard/operator/operator');
-        })->name('dashboard');  
+        })->name('dashboard');
 
         Route::get('/PesananMasuk', function () {
             return Inertia::render('dashboard/operator/PesananMasuk');
@@ -171,7 +171,6 @@ Route::middleware(['auth', 'verified'])
     ->prefix('pelanggan')
     ->name('pelanggan.')
     ->group(function () {
-        Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('pelanggan');
         Route::get('/aktivitas', [CustomerDashboardController::class, 'aktivitas'])->name('aktivitas');
         Route::get('/aktivitas/{id}', [CustomerDashboardController::class, 'detailAktivitas'])->name('aktivitas.detail');
         Route::get('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'ulasanAktivitas'])->name('aktivitas.ulasan');

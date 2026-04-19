@@ -470,7 +470,7 @@ onMounted(() => {
                             </button>
                             <transition enter-active-class="transition ease-out duration-200" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
                                 <div v-if="isProfileDesktopOpen" class="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-2xl py-2 z-50 text-gray-800 border border-gray-100 overflow-hidden">
-                                     <Link :href="route('dashboard')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-chart-pie mr-2 text-gray-400"></i> Dashboard</Link>
+                                     <Link v-if="$page.props.auth.user.role !== 'pelanggan'" :href="route('dashboard')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-chart-pie mr-2 text-gray-400"></i> Dashboard</Link>
                                      <Link :href="route('profile.edit')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-user-circle mr-2 text-gray-400"></i> Akun Saya</Link>
                                      <div class="border-t border-gray-100 my-1"></div>
                                      <button @click="logout" class="w-full text-left px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"><i class="fas fa-sign-out-alt mr-2"></i> Keluar</button>

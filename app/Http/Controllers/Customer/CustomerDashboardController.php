@@ -15,88 +15,6 @@ use App\Models\Review;
 
 class CustomerDashboardController extends Controller
 {
-    public function index(Request $request)
-    {
-        $serviceId = $request->query('service_id');
-        $user = $request->user();
-
-        $selectedService = null;
-        if ($serviceId) {
-            $selectedService = \App\Models\Service::find($serviceId);
-        }
-
-        // Active Order
-        $activeOrderData = $user->orders()
-            ->with(['service', 'orderItems'])
-            ->whereIn('status', ['pending', 'diproses'])
-            ->latest()
-            ->first();
-
-        $activeOrder = null;
-        if ($activeOrderData) {
-            $progress = $activeOrderData->status == 'pending' ? 10 : 50;
-            $itemsCount = $activeOrderData->orderItems->sum('qty') ?? 0;
-            $eta = $activeOrderData->created_at->addDays(2)->format('d M, H:i');
-            
-            $activeOrder = [
-                'id' => 'ORD-' . $activeOrderData->id,
-                'service' => $activeOrderData->service->name ?? '-',
-                'weight' => $itemsCount . ' Item/Kg',
-                'status' => ucfirst($activeOrderData->status),
-                'progress' => $progress,
-                'eta' => $eta
-            ];
-        }
-
-        // Pending Bill
-        $pendingOrderData = $user->orders()
-            ->whereHas('payments', function ($query) {
-                $query->where('status', 'pending');
-            })
-            ->latest()
-            ->first();
-
-        $pendingBill = null;
-        if ($pendingOrderData) {
-            $pendingBill = [
-                'id' => 'ORD-' . $pendingOrderData->id,
-                'total' => $pendingOrderData->total_price,
-            ];
-        }
-
-        // Recent Orders
-        $recentOrdersData = $user->orders()
-            ->with('service')
-            ->latest()
-            ->take(5)
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'id' => 'ORD-' . $order->id,
-                    'service' => $order->service->name ?? '-',
-                    'date' => $order->created_at->format('d M'),
-                    'status' => ucfirst($order->status),
-                ];
-            });
-
-        $totalLaundry = $user->orders()->count();
-        $poinReward = $totalLaundry * 50;
-
-        return Inertia::render('dashboard/pelanggan/pelanggan', [
-            'auth' => [
-                'user' => $user,
-            ],
-            'selectedServiceId' => $serviceId,
-            'selectedService' => $selectedService,
-            'activeOrder' => $activeOrder,
-            'pendingBill' => $pendingBill,
-            'recentOrders' => $recentOrdersData,
-            'stats' => [
-                'totalLaundry' => $totalLaundry,
-                'poinReward' => $poinReward,
-            ]
-        ]);
-    }
 
     public function aktivitas(Request $request)
     {
@@ -118,10 +36,10 @@ class CustomerDashboardController extends Controller
             $qty = $order->orderItems->sum('qty');
             $isCalculated = $qty > 0;
             $paymentStatus = $order->payments->first()?->status ?? 'UNPAID';
-            
+
             $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
             $dbStatus = $order->status;
-            
+
             // Tentukan type (aktif atau riwayat)
             $type = in_array($dbStatus, ['selesai', 'diantar']) ? 'riwayat' : 'aktif';
 
@@ -189,7 +107,7 @@ class CustomerDashboardController extends Controller
         $payment       = $order->payments->first();
         $paymentStatus = $payment && $payment->status === 'paid' ? 'PAID' : 'UNPAID';
         $methodLabel   = ['cash' => 'Tunai', 'transfer' => 'Transfer Bank', 'e-wallet' => 'E-Wallet / QRIS'];
-        
+
         $qty           = $order->orderItems->sum('qty');
         $servicePrice  = (float) $order->orderItems->sum(fn($i) => $i->price * $i->qty);
         // Delivery fee is initially the total price. But when updated, total_price is servicePrice + fee
@@ -197,7 +115,7 @@ class CustomerDashboardController extends Controller
 
         $hasPickup   = $order->deliveries->where('type', 'pickup')->isNotEmpty();
         $hasDelivery = $order->deliveries->where('type', 'delivery')->isNotEmpty();
-        
+
         $isCalculated = $qty > 0; // If qty > 0, it means it has been updated by courier/admin
 
         return Inertia::render('dashboard/pelanggan/partials/detail-order', [
@@ -443,7 +361,7 @@ class CustomerDashboardController extends Controller
         Payment::create([
             'order_id' => $order->id,
             'amount'   => 0,
-            'method'   => 'cash', 
+            'method'   => 'cash',
             'status'   => 'pending',
         ]);
 
