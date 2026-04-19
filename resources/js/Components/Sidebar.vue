@@ -28,10 +28,28 @@ const allLinks = computed(() => ({
     },
     operator: {
         'Monitoring': [
-            { name: 'Overview', href: route('operator.dashboard'), active: route().current('operator.dashboard'), icon: '...' },
+            {
+                name: 'Overview',
+                href: route('operator.dashboard'),
+                active: route().current('operator.dashboard'),
+                icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'
+            },
         ],
         'Tugas': [
-            { name: 'Pesanan Masuk', href: '#', active: false, icon: '...' },
+            {
+                name: 'Pesanan',
+                href: route('operator.pesanan.masuk'),
+                active: route().current('operator.pesanan.masuk'),
+                icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
+            },
+        ],
+        'Manajemen': [
+            {
+                name: 'Daftar Layanan',
+                href: route('operator.layanan'),
+                active: route().current('operator.layanan'),
+                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
+            },
         ]
     },
     kurir: {
