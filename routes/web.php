@@ -207,7 +207,8 @@ Route::get('/search/services', function (\Illuminate\Http\Request $request) {
         return response()->json([]);
     }
 
-    $results = \App\Models\Service::where('status', 'tersedia')
+    // 1. Search Services
+    $services = \App\Models\Service::where('status', 'tersedia')
         ->where(function ($query) use ($q) {
             $query->where('name', 'like', "%{$q}%")
                   ->orWhere('category', 'like', "%{$q}%");
@@ -216,6 +217,7 @@ Route::get('/search/services', function (\Illuminate\Http\Request $request) {
         ->limit(6)
         ->get()
         ->map(fn($s) => [
+            'type'      => 'service',
             'id'        => $s->id,
             'name'      => $s->name,
             'category'  => $s->category,
@@ -223,6 +225,45 @@ Route::get('/search/services', function (\Illuminate\Http\Request $request) {
             'unit'      => $s->unit,
             'image_url' => $s->image ? asset('storage/' . $s->image) : null,
         ]);
+
+    // 2. Search Orders (if logged in & query indicates invoice/number)
+    $orders = collect();
+    if (auth()->check()) {
+        $orderId = null;
+        if (stripos($q, 'inv') !== false) {
+            $parts = explode('-', $q);
+            if (count($parts) >= 3) {
+                $orderId = (int) end($parts);
+            } else {
+                $orderId = (int) preg_replace('/[^0-9]/', '', $q);
+            }
+        } elseif (is_numeric($q)) {
+            $orderId = (int) $q;
+        }
+
+        // Jika menemukan angka dari query, lakukan pencarian order id
+        if ($orderId > 0) {
+            $orders = \App\Models\Order::with('service')
+                ->where('user_id', auth()->id())
+                ->where('id', 'like', "%{$orderId}%")
+                ->limit(3)
+                ->get()
+                ->map(function($o) {
+                    $invoice = 'INV-' . $o->created_at->format('Ymd') . '-' . str_pad($o->id, 4, '0', STR_PAD_LEFT);
+                    return [
+                        'type'    => 'order',
+                        'id'      => $o->id,
+                        'name'    => 'Pesanan ' . ($o->service->name ?? ''),
+                        'invoice' => '#' . $invoice,
+                        'status'  => ucfirst($o->status),
+                        'date'    => $o->created_at->format('d M Y'),
+                    ];
+                });
+        }
+    }
+
+    // Return combined results: orders first, then services
+    $results = $orders->merge($services)->take(8);
 
     return response()->json($results);
 })->name('services.search');

@@ -68,6 +68,18 @@ function downloadQR() {
         document.body.removeChild(link);
     }
 }
+
+const isCopied = ref(false);
+function copyInvoice() {
+    navigator.clipboard.writeText(props.order.invoice).then(() => {
+        isCopied.value = true;
+        setTimeout(() => {
+            isCopied.value = false;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy!', err);
+    });
+}
 </script>
 
 <template>
@@ -243,8 +255,8 @@ function downloadQR() {
                                 <button @click="downloadQR" class="text-blue-500 hover:text-blue-700 transition-colors" title="Unduh QR Code">
                                     <i class="fas fa-qrcode"></i>
                                 </button>
-                                <button class="text-gray-400 hover:text-[#E30613] transition-colors" title="Salin Teks">
-                                    <i class="far fa-copy"></i>
+                                <button @click="copyInvoice" :class="[isCopied ? 'text-green-500' : 'text-gray-400 hover:text-[#E30613]', 'transition-colors']" :title="isCopied ? 'Tersalin!' : 'Salin Teks'">
+                                    <i :class="isCopied ? 'fas fa-check' : 'far fa-copy'"></i>
                                 </button>
                             </div>
                         </div>

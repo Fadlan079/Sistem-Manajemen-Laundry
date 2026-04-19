@@ -101,7 +101,11 @@ const selectResult = (item) => {
     searchResults.value = [];
     isSearchOpen.value = false;
     isSearchOpenMobile.value = false;
-    router.visit(route('pelanggan.pesan', { service: item.id }));
+    if (item.type === 'order') {
+        router.visit(route('pelanggan.aktivitas.detail', { id: item.id }));
+    } else {
+        router.visit(route('pelanggan.pesan', { service: item.id }));
+    }
 };
 
 const closeSearch = () => {
@@ -229,7 +233,6 @@ onMounted(() => {
                     >
                 </div>
 
-                <!-- Dropdown Mobile — di-Teleport ke body agar bebas dari stacking context nav -->
                 <Teleport to="body">
                     <transition
                         enter-active-class="transition ease-out duration-200"
@@ -244,7 +247,7 @@ onMounted(() => {
                             :style="mobileDropdownStyle"
                             class="search-dropdown-teleport bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
                         >
-                            <!-- Loading skeleton -->
+
                             <div v-if="isSearchLoading && searchResults.length === 0" class="px-4 py-3 space-y-3">
                                 <div v-for="i in 3" :key="i" class="flex items-center gap-3 animate-pulse">
                                     <div class="w-9 h-9 bg-gray-200 rounded-xl shrink-0"></div>
@@ -255,38 +258,49 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Results -->
                             <template v-else>
                                 <div class="px-3 py-2 border-b border-gray-50 flex items-center gap-1.5">
                                     <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <span class="text-[10px] text-gray-400 font-medium">{{ searchResults.length }} layanan ditemukan</span>
+                                    <span class="text-[10px] text-gray-400 font-medium">{{ searchResults.length }} hasil ditemukan</span>
                                 </div>
                                 <ul>
                                     <li
                                         v-for="(item, idx) in searchResults"
-                                        :key="item.id"
+                                        :key="item.type + '-' + item.id"
                                         @click="selectResult(item)"
                                         :class="['flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0', highlightIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50']"
                                     >
-                                        <!-- Icon / Image -->
-                                        <div class="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100">
-                                            <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
-                                            <i v-else class="fas fa-shirt text-primary/60 text-sm"></i>
-                                        </div>
-                                        <!-- Text -->
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-xs font-semibold text-gray-800 truncate" v-html="highlightMatch(item.name, searchQueryMobile)"></p>
-                                            <p class="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
-                                                <span class="inline-block px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQueryMobile)"></span>
-                                            </p>
-                                        </div>
-                                        <!-- Price -->
-                                        <div class="text-right shrink-0">
-                                            <span class="text-xs font-bold text-primary">{{ formatPrice(item.price) }}</span>
-                                            <span v-if="item.unit" class="block text-[10px] text-gray-400">/{{ item.unit }}</span>
-                                        </div>
-                                        <!-- Arrow -->
-                                        <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                        <template v-if="item.type === 'order'">
+                                            <div class="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100">
+                                                <i class="fas fa-file-invoice text-blue-500 text-sm"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-black text-gray-800 truncate" v-html="highlightMatch(item.invoice, searchQueryMobile)"></p>
+                                                <p class="text-[10px] text-gray-500 truncate mt-0.5">{{ item.name }} &bull; {{ item.date }}</p>
+                                            </div>
+                                            <div class="text-right shrink-0">
+                                                <span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[9px] font-bold uppercase tracking-wide border border-blue-200">{{ item.status }}</span>
+                                            </div>
+                                        </template>
+
+                                        <template v-else>
+                                            <div class="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100">
+                                                <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
+                                                <i v-else class="fas fa-shirt text-primary/60 text-sm"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-semibold text-gray-800 truncate" v-html="highlightMatch(item.name, searchQueryMobile)"></p>
+                                                <p class="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                                                    <span class="inline-block px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQueryMobile)"></span>
+                                                </p>
+                                            </div>
+                                            <div class="text-right shrink-0">
+                                                <span class="text-xs font-bold text-primary">{{ formatPrice(item.price) }}</span>
+                                                <span v-if="item.unit" class="block text-[10px] text-gray-400">/{{ item.unit }}</span>
+                                            </div>
+                                        </template>
+
+                                        <svg class="w-3.5 h-3.5 text-gray-300 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                     </li>
                                 </ul>
                                 <div class="px-3 py-2 bg-gray-50 border-t border-gray-100">
@@ -300,12 +314,11 @@ onMounted(() => {
                     </transition>
                 </Teleport>
 
-                <!-- NOTIFICATION -->
                 <button class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl relative active:scale-95 transition-transform" aria-label="Notifications">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                     </svg>
-                    <span class="absolute top-2.5 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-primary"></span>
+                    <span class="absolute top-2.5 right-3 w-2 h-2 bg-secondary rounded-full border-2 border-primary"></span>
                 </button>
             </div>
 
@@ -318,6 +331,7 @@ onMounted(() => {
                 <div class="flex items-center gap-8 text-[13px] font-medium tracking-wide">
                     <Link :href="route('home')" @click="activeSection = 'beranda'" :class="[activeSection === 'beranda' ? 'text-secondary' : 'text-white/70 hover:text-white']">Beranda</Link>
                     <Link :href="route('pelanggan.aktivitas')" @click="activeSection = 'aktivitas'" :class="[activeSection === 'aktivitas' ? 'text-secondary' : 'text-white/70 hover:text-white']">Aktivitas</Link>
+                    <Link :href="route('pelanggan.lacak')" @click="activeSection = 'lacak'" :class="[activeSection === 'lacak' ? 'text-secondary' : 'text-white/70 hover:text-white']">Lacak Pesanan</Link>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -382,35 +396,54 @@ onMounted(() => {
                                 <template v-else>
                                     <!-- Header -->
                                     <div class="px-4 pt-3 pb-2 flex items-center justify-between">
-                                        <span class="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Rekomendasi Layanan</span>
+                                        <span class="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Pencarian Teratas</span>
                                         <span class="text-[10px] text-primary font-bold">{{ searchResults.length }} hasil</span>
                                     </div>
                                     <ul class="pb-1">
                                         <li
                                             v-for="(item, idx) in searchResults"
-                                            :key="item.id"
+                                            :key="item.type + '-' + item.id"
                                             @click="selectResult(item)"
                                             :class="['group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0', highlightIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50']"
                                         >
-                                            <!-- Icon / Image -->
-                                            <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100 group-hover:border-primary/20 transition-colors">
-                                                <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
-                                                <i v-else class="fas fa-shirt text-primary/60"></i>
-                                            </div>
-                                            <!-- Text -->
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-semibold text-gray-800 truncate group-hover:text-primary transition-colors" v-html="highlightMatch(item.name, searchQuery)"></p>
-                                                <p class="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
-                                                    <span class="inline-block px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQuery)"></span>
-                                                </p>
-                                            </div>
-                                            <!-- Price -->
-                                            <div class="text-right shrink-0">
-                                                <span class="text-sm font-bold text-primary">{{ formatPrice(item.price) }}</span>
-                                                <span v-if="item.unit" class="block text-[10px] text-gray-400 mt-0.5">/{{ item.unit }}</span>
-                                            </div>
+                                            <template v-if="item.type === 'order'">
+                                                <!-- Icon Order -->
+                                                <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100 group-hover:border-blue-200 transition-colors">
+                                                    <i class="fas fa-file-invoice text-blue-500"></i>
+                                                </div>
+                                                <!-- Text Order -->
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-black text-gray-800 truncate group-hover:text-blue-600 transition-colors" v-html="highlightMatch(item.invoice, searchQuery)"></p>
+                                                    <p class="text-xs text-gray-500 mt-0.5">{{ item.name }} &bull; {{ item.date }}</p>
+                                                </div>
+                                                <!-- Status Badge Order -->
+                                                <div class="text-right shrink-0">
+                                                    <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-bold uppercase tracking-wide border border-blue-200">{{ item.status }}</span>
+                                                </div>
+                                            </template>
+                                            
+                                            <template v-else>
+                                                <!-- Icon / Image Service -->
+                                                <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100 group-hover:border-primary/20 transition-colors">
+                                                    <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
+                                                    <i v-else class="fas fa-shirt text-primary/60"></i>
+                                                </div>
+                                                <!-- Text Service -->
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-semibold text-gray-800 truncate group-hover:text-primary transition-colors" v-html="highlightMatch(item.name, searchQuery)"></p>
+                                                    <p class="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
+                                                        <span class="inline-block px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQuery)"></span>
+                                                    </p>
+                                                </div>
+                                                <!-- Price Service -->
+                                                <div class="text-right shrink-0">
+                                                    <span class="text-sm font-bold text-primary">{{ formatPrice(item.price) }}</span>
+                                                    <span v-if="item.unit" class="block text-[10px] text-gray-400 mt-0.5">/{{ item.unit }}</span>
+                                                </div>
+                                            </template>
+
                                             <!-- Arrow chevron -->
-                                            <svg class="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                            <svg class="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                         </li>
                                     </ul>
                                     <!-- Footer -->
@@ -451,7 +484,6 @@ onMounted(() => {
                         </template>
                     </template>
 
-                    <!-- Notification Button (Desktop) -->
                     <button class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group" aria-label="Notifications">
                         <svg class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>

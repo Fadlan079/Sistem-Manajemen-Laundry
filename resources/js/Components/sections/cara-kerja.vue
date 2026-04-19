@@ -15,8 +15,8 @@
                         <div class="w-20 h-20 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary mb-6 group-hover:bg-secondary group-hover:text-primary transition-colors duration-300 ring-4 ring-white">
                             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                         </div>
-                        <h4 class="text-lg font-bold text-gray-900 mb-2">1. Booking / Order</h4>
-                        <p class="text-sm text-gray-500 leading-relaxed">Pilih layanan di aplikasi atau hubungi kami via WhatsApp.</p>
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">1. Buat Pesanan</h4>
+                        <p class="text-sm text-gray-500 leading-relaxed">Pilih layanan di aplikasi atau hubungi kami melalui WhatsApp.</p>
                     </div>
 
                     <div class="group flex flex-col items-center text-center bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all duration-300">

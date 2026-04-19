@@ -71,7 +71,7 @@ onUnmounted(() => {
             <div class="grid grid-cols-2 lg:flex lg:flex-wrap items-center justify-start gap-3 lg:gap-4">
             <Link :href="route('pelanggan.pesan')" class="flex items-center justify-center gap-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 bg-secondary text-primary text-xs sm:text-sm lg:text-base font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-lg">
                 <svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                <span class="whitespace-nowrap">Order Sekarang</span>
+                <span class="whitespace-nowrap">Pesan Sekarang</span>
             </Link>
 
             <Link :href="route('pelanggan.lacak')" class="flex items-center justify-center gap-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 border-2 border-white/30 text-xs sm:text-sm lg:text-base font-bold rounded-xl hover:bg-white/10 hover:border-white transition-all text-white">
