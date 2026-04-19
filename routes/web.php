@@ -196,4 +196,35 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// ─────────────────────────────────────────────
+//  Public Search API for Services (navbar autocomplete)
+// ─────────────────────────────────────────────
+
+Route::get('/search/services', function (\Illuminate\Http\Request $request) {
+    $q = trim($request->query('q', ''));
+
+    if (strlen($q) < 1) {
+        return response()->json([]);
+    }
+
+    $results = \App\Models\Service::where('status', 'tersedia')
+        ->where(function ($query) use ($q) {
+            $query->where('name', 'like', "%{$q}%")
+                  ->orWhere('category', 'like', "%{$q}%");
+        })
+        ->select('id', 'name', 'category', 'price', 'unit', 'image')
+        ->limit(6)
+        ->get()
+        ->map(fn($s) => [
+            'id'        => $s->id,
+            'name'      => $s->name,
+            'category'  => $s->category,
+            'price'     => $s->price,
+            'unit'      => $s->unit,
+            'image_url' => $s->image ? asset('storage/' . $s->image) : null,
+        ]);
+
+    return response()->json($results);
+})->name('services.search');
+
 require __DIR__.'/auth.php';
