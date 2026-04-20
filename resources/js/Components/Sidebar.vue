@@ -83,7 +83,7 @@ onMounted(() => {
 
 <template>
     <aside
-        class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0"
+        class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl"
         :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
     >
         <!-- Close Button (Mobile Only) -->
@@ -101,7 +101,7 @@ onMounted(() => {
             <img
                 src="/logo.png"
                 alt="Logo"
-                class="w-12 h-12 object-cover rounded-full"
+                class="w-12 h-12 object-cover rounded-full shadow-md shadow-black/20"
             />
             <div class="flex flex-col">
                 <span class="font-bold text-xl tracking-tight leading-none text-white">HiWash</span>
@@ -120,7 +120,7 @@ onMounted(() => {
                     <Link v-for="(link, index) in groupLinks" :key="index" :href="link.href"
                         class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition overflow-hidden group"
                         :class="[
-                            link.active ? 'active-nav-item bg-black/20 text-white font-semibold shadow-inner' : 'text-white/70 hover:bg-black/10 hover:text-white'
+                            link.active ? 'active-nav-item bg-black/30 text-white font-semibold shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]' : 'text-white/70 hover:bg-black/10 hover:text-white'
                         ]">
 
                         <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md"></div>
@@ -137,7 +137,7 @@ onMounted(() => {
         <div class="p-6 space-y-3 border-t border-white/10 bg-black/5">
             <Link
                 :href="route('home')"
-                class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-3 px-4 rounded-xl transition border border-white/10"
+                class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-3 px-4 rounded-xl transition border border-white/10 shadow-sm hover:shadow-md"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -145,7 +145,7 @@ onMounted(() => {
                 Lihat Landing Page
             </Link>
 
-            <button v-if="role === 'operator'" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm transition transform hover:-translate-y-0.5 active:scale-95">
+            <button v-if="role === 'operator'" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>

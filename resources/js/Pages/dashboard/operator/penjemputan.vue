@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const searchStr = ref(props.filters.search || '');
+const dateFilter = ref(props.filters.date || '');
 
 const tabs = computed(() => [
     { id: 'semua', name: 'Semua', count: props.stats.semua, active: props.filters.tab === 'semua' },
@@ -32,12 +33,22 @@ const debounce = (cb, delay) => {
 watch(searchStr, debounce((value) => {
     router.get(route('operator.penjemputan'), {
         tab: props.filters.tab,
-        search: value
+        search: value,
+        date: dateFilter.value
     }, { preserveState: true, preserveScroll: true, replace: true });
 }, 300));
 
+// Handle date filter change
+watch(dateFilter, (value) => {
+    router.get(route('operator.penjemputan'), {
+        tab: props.filters.tab,
+        search: searchStr.value,
+        date: value
+    }, { preserveState: true, preserveScroll: true, replace: true });
+});
+
 const selectTab = (tabId) => {
-    router.get(route('operator.penjemputan'), { tab: tabId, search: searchStr.value }, { preserveState: true, preserveScroll: true });
+    router.get(route('operator.penjemputan'), { tab: tabId, search: searchStr.value, date: dateFilter.value }, { preserveState: true, preserveScroll: true });
 };
 
 // Modal Assign Kurir State
@@ -77,6 +88,8 @@ const submitAssignCourier = () => {
 // Modal Selesai (External)
 const showCompleteModal = ref(false);
 const selectedDeliveryForComplete = ref(null);
+const imagePreviewUrl = ref(null);
+
 const completeForm = useForm({
     kg: '',
     notes: '',
@@ -84,19 +97,20 @@ const completeForm = useForm({
 });
 
 const openCompleteModal = (order) => {
-    if (order.is_external) {
-        selectedDeliveryForComplete.value = order;
-        completeForm.reset();
-        showCompleteModal.value = true;
-    } else {
-        if (confirm('Tandai pesanan ini sudah dijemput?')) {
-            router.put(route('operator.penjemputan.dijemput', order.id), {}, { preserveScroll: true });
-        }
-    }
+    selectedDeliveryForComplete.value = order;
+    completeForm.reset();
+    completeForm.kg = order.kg || '';
+    completeForm.notes = order.notes || '';
+    imagePreviewUrl.value = order.proof_image || null;
+    showCompleteModal.value = true;
 };
 
 const handleProofImageChange = (e) => {
-    completeForm.proof_image = e.target.files[0];
+    const file = e.target.files[0];
+    if (file) {
+        completeForm.proof_image = file;
+        imagePreviewUrl.value = URL.createObjectURL(file);
+    }
 };
 
 const submitCompleteForm = () => {
@@ -118,7 +132,13 @@ const refreshData = () => {
     router.reload({ only: ['deliveries', 'stats'] });
 };
 
-// Data Dummy Pesanan
+// Utility to highlight search term in text
+function highlight(text, query) {
+    if (!query || !text) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return String(text).replace(regex, '<mark class="bg-yellow-200 text-yellow-900 rounded px-0.5">$1</mark>');
+}
 
 </script>
 
@@ -129,7 +149,7 @@ const refreshData = () => {
         <div class="space-y-6 pb-20">
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6">
-                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col hover:shadow-md transition-shadow">
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="text-sm font-medium text-muted">Total Hari Ini</h3>
                         <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -148,7 +168,7 @@ const refreshData = () => {
                     </div>
                 </div>
 
-                <button @click="selectTab('belum-diassign')" class="bg-surface border border-border rounded-lg p-5 flex flex-col hover:border-amber-400 hover:shadow-md transition-all text-left group">
+                <button @click="selectTab('belum-diassign')" class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:border-amber-400 hover:shadow-md transition-all text-left group">
                     <div class="flex items-center justify-between mb-3 w-full">
                         <h3 class="text-sm font-medium text-muted group-hover:text-amber-600 transition-colors">Belum Di-assign</h3>
                         <div class="w-8 h-8 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center">
@@ -161,7 +181,7 @@ const refreshData = () => {
                     </div>
                 </button>
 
-                <button @click="selectTab('terlama')" class="bg-surface border border-border rounded-lg p-5 flex flex-col hover:border-rose-400 hover:shadow-md transition-all text-left group">
+                <button @click="selectTab('terlama')" class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:border-rose-400 hover:shadow-md transition-all text-left group">
                     <div class="flex items-center justify-between mb-3 w-full">
                         <h3 class="text-sm font-medium text-muted group-hover:text-rose-600 transition-colors">Terlambat</h3>
                         <div class="w-8 h-8 rounded-md flex items-center justify-center" :class="stats.terlama > 0 ? 'bg-rose-100 text-rose-600' : 'bg-container text-muted'">
@@ -174,7 +194,7 @@ const refreshData = () => {
                     </div>
                 </button>
 
-                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col hover:shadow-md transition-shadow">
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="text-sm font-medium text-muted">Selesai Hari Ini</h3>
                         <div class="w-8 h-8 rounded-md bg-emerald-50 text-emerald-500 flex items-center justify-center">
@@ -194,20 +214,35 @@ const refreshData = () => {
                 <div class="flex items-center overflow-x-auto hide-scrollbar gap-1 w-full lg:w-auto">
                     <button v-for="(tab, index) in tabs" :key="index" @click="selectTab(tab.id)"
                         class="px-4 py-2.5 text-sm font-medium transition-all rounded-md flex items-center gap-2 whitespace-nowrap"
-                        :class="tab.active ? 'bg-container text-text shadow-sm' : 'text-muted hover:text-text hover:bg-container/50'">
+                        :class="tab.active ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-primary hover:bg-primary/5'">
                         {{ tab.name }}
                         <span v-if="tab.count !== null"
                             class="px-2 py-0.5 rounded-full text-[11px]"
-                            :class="tab.alert ? 'bg-rose-100 text-rose-600' : (tab.active ? 'bg-surface text-text border border-border' : 'bg-surface border border-border text-muted')">
+                            :class="tab.alert && !tab.active ? 'bg-rose-100 text-rose-600' : (tab.active ? 'bg-white/20 text-white border border-white/20' : 'bg-container text-muted border border-border')">
                             {{ tab.count }}
                         </span>
                     </button>
                 </div>
 
-                <div class="w-full lg:max-w-xs relative text-sm">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-muted"></i>
-                    <input type="text" v-model="searchStr" placeholder="Cari nomor invoice / pelanggan..."
-                        class="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-muted/60 text-text" />
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                    <!-- Date Filter -->
+                    <div class="w-full sm:w-auto relative text-sm">
+                        <input type="date" v-model="dateFilter"
+                            class="w-full sm:w-[150px] px-3 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-text" />
+                        <button v-if="dateFilter" @click="dateFilter = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 bg-surface pl-1">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Search Box -->
+                    <div class="w-full sm:max-w-xs relative text-sm">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-muted"></i>
+                        <input type="text" v-model="searchStr" placeholder="Cari INV-..., nama, atau no. HP..."
+                            class="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-muted/60 text-text" />
+                        <span v-if="searchStr" class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                            {{ deliveries.total }} hasil
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -217,13 +252,14 @@ const refreshData = () => {
                 </div>
 
                 <template v-for="order in deliveries.data" :key="order.id">
-                    <div class="flex flex-col lg:flex-row lg:items-center justify-between border border-border rounded-lg bg-surface p-4 hover:shadow-md transition-shadow gap-4">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between border rounded-lg bg-surface p-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-4"
+                        :class="searchStr && (order.name.toLowerCase().includes(searchStr.toLowerCase()) || order.invoice?.toLowerCase().includes(searchStr.toLowerCase()) || order.phone?.includes(searchStr)) ? 'border-yellow-300 ring-1 ring-yellow-300' : 'border-border'">
 
                         <div class="flex-1">
-                            <div class="flex items-center gap-2.5 mb-1">
-                                <span class="font-medium text-primary text-sm">#{{ order.order_id }}</span>
-                                <span class="font-semibold text-text text-base truncate max-w-[200px]" :title="order.name">{{ order.name }}</span>
-                                <span v-if="order.isLate" class="bg-rose-100 text-rose-600 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide ml-2">
+                            <div class="flex items-center gap-2.5 mb-1 flex-wrap">
+                                <span class="font-medium text-primary text-xs font-mono" v-html="highlight(order.invoice, searchStr)"></span>
+                                <span class="font-semibold text-text text-base truncate max-w-[200px]" :title="order.name" v-html="highlight(order.name, searchStr)"></span>
+                                <span v-if="order.isLate" class="bg-rose-100 text-rose-600 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide">
                                     {{ order.lateText || 'Terlambat' }}
                                 </span>
                             </div>
@@ -231,8 +267,12 @@ const refreshData = () => {
                                 <div class="flex items-center gap-1.5" :class="{'text-rose-600 font-medium': order.isLate}">
                                     <i class="fa-regular fa-clock"></i> {{ order.time }}
                                 </div>
+                                <div v-if="order.phone && order.phone !== '-'" class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-phone text-xs"></i>
+                                    <span v-html="highlight(order.phone, searchStr)"></span>
+                                </div>
                                 <div class="flex items-center gap-1.5" :title="order.address">
-                                    <i class="fa-solid fa-location-dot"></i> <span class="truncate max-w-[250px]">{{ order.address }}</span>
+                                    <i class="fa-solid fa-location-dot"></i> <span class="truncate max-w-[200px]">{{ order.address }}</span>
                                 </div>
                             </div>
                         </div>
@@ -297,104 +337,181 @@ const refreshData = () => {
         </div>
 
         <div v-if="showAssignModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="showAssignModal = false"></div>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showAssignModal = false"></div>
 
-            <div class="bg-surface border border-border rounded-lg shadow-xl w-full max-w-sm overflow-hidden z-10">
-                <div class="p-5 border-b border-border">
-                    <h3 class="font-semibold text-text text-base">Assign Kurir Penjemputan</h3>
+            <div class="bg-surface border-2 border-text shadow-md w-full max-w-sm relative z-10 rounded-none overflow-hidden font-sans">
+                <!-- Ticket Header -->
+                <div class="p-4 border-b-2 border-text bg-container flex justify-between items-center">
+                    <h3 class="font-bold text-text text-xs uppercase tracking-widest">Penugasan Kurir</h3>
                 </div>
-                <div class="p-5 space-y-4">
-                    <div class="bg-container rounded-md p-3">
-                        <div class="text-sm font-medium text-text">{{ selectedDeliveryForAssign?.name }}</div>
-                        <div class="text-xs text-muted mt-1">Invoice: #{{ selectedDeliveryForAssign?.order_id }}</div>
-                    </div>
 
-                    <div class="flex gap-4 mb-4">
-                        <label class="flex items-center gap-2 text-sm text-text cursor-pointer">
-                            <input type="radio" :value="false" v-model="isExternalCourier" class="text-primary focus:ring-primary">
-                            Kurir Internal
-                        </label>
-                        <label class="flex items-center gap-2 text-sm text-text cursor-pointer">
-                            <input type="radio" :value="true" v-model="isExternalCourier" class="text-primary focus:ring-primary">
-                            Kurir Eksternal
-                        </label>
-                    </div>
-
-                    <div v-if="!isExternalCourier">
-                        <label class="block text-sm font-medium text-text mb-2">Pilih Kurir</label>
-                        <select v-model="selectedCourierId" class="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-text">
-                            <option value="">-- Pilih Kurir --</option>
-                            <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
-                                {{ courier.name }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <div v-else class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-text mb-2">Nama Driver</label>
-                            <input type="text" v-model="externalCourierName" placeholder="Contoh: Budi Driver Lepasan" class="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-text" />
+                <div class="p-5 space-y-6">
+                    <!-- Ticket Details Section -->
+                    <div class="border-2 border-dashed border-border p-3 bg-container/30 space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] uppercase font-bold text-muted tracking-tight">Pelanggan</span>
+                            <span class="text-xs font-mono font-bold text-text text-right">{{ selectedDeliveryForAssign?.name }}</span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-text mb-2">No. HP Driver</label>
-                            <input type="text" v-model="externalCourierPhone" placeholder="Contoh: 08123456789" class="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-text" />
+                        <div class="flex justify-between items-center border-t border-dashed border-border pt-2">
+                            <span class="text-[10px] uppercase font-bold text-muted tracking-tight">No. Invoice</span>
+                            <span class="text-xs font-mono font-bold text-primary">{{ selectedDeliveryForAssign?.invoice }}</span>
                         </div>
                     </div>
+
+                    <div class="space-y-4">
+                        <div class="flex p-1 bg-container border border-border">
+                            <button 
+                                @click="isExternalCourier = false"
+                                class="flex-1 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors"
+                                :class="!isExternalCourier ? 'bg-text text-surface' : 'text-muted hover:text-text'"
+                            >
+                                Internal
+                            </button>
+                            <button 
+                                @click="isExternalCourier = true"
+                                class="flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors"
+                                :class="isExternalCourier ? 'bg-text text-surface' : 'text-muted hover:text-text'"
+                            >
+                                Eksternal
+                            </button>
+                        </div>
+
+                        <div v-if="!isExternalCourier" class="space-y-2">
+                            <label class="block text-[10px] font-bold text-text uppercase tracking-widest">Pilih Personel</label>
+                            <select v-model="selectedCourierId" class="w-full bg-surface border-2 border-border rounded-none px-3 py-2 text-sm focus:border-text focus:ring-0 outline-none text-text font-mono">
+                                <option value="">-- PILIH KURIR --</option>
+                                <option v-for="courier in couriers" :key="courier.id" :value="courier.id">
+                                    {{ courier.name.toUpperCase() }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-else class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">Nama Driver</label>
+                                <input type="text" v-model="externalCourierName" placeholder="NAMA LENGKAP" class="w-full bg-surface border-2 border-border rounded-none px-3 py-2 text-sm focus:border-text focus:ring-0 outline-none text-text font-mono placeholder:text-muted/40 uppercase" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">Kontak (WA/TELP)</label>
+                                <input type="text" v-model="externalCourierPhone" placeholder="08XX-XXXX-XXXX" class="w-full bg-surface border-2 border-border rounded-none px-3 py-2 text-sm focus:border-text focus:ring-0 outline-none text-text font-mono placeholder:text-muted/40" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="p-4 flex justify-end gap-3 border-t border-border bg-surface">
-                    <button @click="showAssignModal = false" class="px-4 py-2 text-sm font-medium text-muted hover:text-text transition-colors">Batal</button>
-                    <button @click="submitAssignCourier" :disabled="(!isExternalCourier && !selectedCourierId) || (isExternalCourier && (!externalCourierName || !externalCourierPhone))"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-primary hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed">
-                        Simpan
+
+                <!-- Ticket Footer -->
+                <div class="p-4 flex gap-2 border-t-2 border-text bg-container">
+                    <button 
+                        @click="showAssignModal = false" 
+                        class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-text border-2 border-transparent transition-colors"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        @click="submitAssignCourier" 
+                        :disabled="(!isExternalCourier && !selectedCourierId) || (isExternalCourier && (!externalCourierName || !externalCourierPhone))"
+                        class="flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-all bg-primary hover:bg-primary-hover text-surface disabled:opacity-50 disabled:cursor-not-allowed border-2 border-primary"
+                    >
+                        Konfirmasi
                     </button>
                 </div>
             </div>
         </div>
 
-        <div v-if="showCompleteModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="showCompleteModal = false"></div>
+<div v-if="showCompleteModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showCompleteModal = false"></div>
 
-            <div class="bg-surface border border-border rounded-lg shadow-xl w-full max-w-sm overflow-hidden z-10">
-                <div class="p-5 border-b border-border">
-                    <h3 class="font-semibold text-text text-base">Selesaikan Penjemputan</h3>
+    <div class="bg-surface border-2 border-text shadow-md w-full max-w-sm relative z-10 rounded-none overflow-hidden font-sans">
+        <!-- Ticket Header -->
+        <div class="p-4 border-b-2 border-text bg-container flex justify-between items-center">
+            <h3 class="font-bold text-text text-xs uppercase tracking-widest">Penyelesaian Sesi</h3>
+            <span class="text-[10px] font-mono text-muted">{{ selectedDeliveryForComplete?.invoice }}</span>
+        </div>
+
+        <form @submit.prevent="submitCompleteForm">
+            <div class="p-5 space-y-6 max-h-[75vh] overflow-y-auto hide-scrollbar">
+                <!-- Summary Card -->
+                <div class="border-2 border-dashed border-border p-3 bg-container/30 space-y-2 font-mono text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-[10px] font-bold text-muted uppercase tracking-tight">Nama Pelanggan</span>
+                        <span class="font-bold text-text truncate max-w-[150px] text-right">{{ selectedDeliveryForComplete?.name }}</span>
+                    </div>
+                    <div class="flex justify-between border-t border-dashed border-border pt-2">
+                        <span class="text-[10px] font-bold text-muted uppercase tracking-tight">Personel Penjemput</span>
+                        <span class="font-bold text-primary">{{ selectedDeliveryForComplete?.courier?.replace('Eksternal: ', '').toUpperCase() }}</span>
+                    </div>
                 </div>
-                <form @submit.prevent="submitCompleteForm">
-                    <div class="p-5 space-y-4">
-                        <div class="bg-container rounded-md p-3">
-                            <div class="text-sm font-medium text-text">{{ selectedDeliveryForComplete?.name }}</div>
-                            <div class="text-xs text-muted mt-1">Invoice: #{{ selectedDeliveryForComplete?.order_id }}</div>
-                            <div class="text-xs text-primary font-medium mt-1">
-                                Kurir Eksternal: {{ selectedDeliveryForComplete?.courier?.replace('Eksternal: ', '') }}
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">
+                            Berat Aktual (KG) <span class="text-primary">*</span>
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="0.5"
+                                v-model="completeForm.kg"
+                                required
+                                placeholder="0.0"
+                                class="w-full bg-surface border-2 border-border rounded-none px-3 py-2.5 text-sm focus:border-text focus:ring-0 outline-none text-text font-mono transition-colors"
+                            />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted uppercase">KG</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">Catatan Tambahan</label>
+                        <textarea
+                            v-model="completeForm.notes"
+                            rows="2"
+                            placeholder="TULIS CATATAN DISINI..."
+                            class="w-full bg-surface border-2 border-border rounded-none px-3 py-2 text-sm focus:border-text focus:ring-0 outline-none text-text font-mono transition-colors resize-none placeholder:text-muted/40"
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">Upload Bukti</label>
+                        
+                        <div v-if="imagePreviewUrl" class="mb-3 border-2 border-text p-1 relative group">
+                            <img :src="imagePreviewUrl" alt="Proof Preview" class="w-full h-32 object-cover object-center" />
+                            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
+                                <button type="button" @click="imagePreviewUrl = null; completeForm.proof_image = null" class="bg-rose-500 text-white text-[10px] uppercase font-bold px-3 py-1.5 border-2 border-transparent hover:border-white transition-all">Hapus Foto</button>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-text mb-2">Berat Pakaian (KG)<span class="text-rose-500">*</span></label>
-                            <input type="number" step="0.1" min="0.5" v-model="completeForm.kg" required placeholder="Contoh: 5.5" class="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-text" />
-                            <p class="text-[11px] text-muted mt-1">Minimal 0.5 KG</p>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-text mb-2">Catatan Kurir</label>
-                            <textarea v-model="completeForm.notes" rows="2" placeholder="Catatan opsional..." class="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-text"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-text mb-2">Bukti Foto Penjemputan</label>
-                            <input type="file" accept="image/*" @change="handleProofImageChange" class="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors" />
+                        <div v-if="!imagePreviewUrl" class="border-2 border-dashed border-border p-2 bg-container hover:border-text transition-colors">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleProofImageChange"
+                                class="w-full text-[10px] text-muted font-mono file:mr-3 file:py-1.5 file:px-3 file:rounded-none file:border-2 file:border-text file:text-[9px] file:font-bold file:uppercase file:bg-text file:text-surface hover:file:bg-muted transition-colors cursor-pointer"
+                            />
                         </div>
                     </div>
-                    <div class="p-4 flex justify-end gap-3 border-t border-border bg-surface">
-                        <button type="button" @click="showCompleteModal = false" class="px-4 py-2 text-sm font-medium text-muted hover:text-text transition-colors">Batal</button>
-                        <button type="submit" :disabled="completeForm.processing"
-                            class="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center min-w-[90px]">
-                            <i v-if="completeForm.processing" class="fas fa-spinner fa-spin mr-2"></i>
-                            <span v-else>Selesai</span>
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <!-- Ticket Footer -->
+            <div class="p-4 flex gap-2 border-t-2 border-text bg-container">
+                <button
+                    type="button"
+                    @click="showCompleteModal = false"
+                    class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-text border-2 border-transparent transition-colors">
+                    Batal
+                </button>
+                <button
+                    type="submit"
+                    :disabled="completeForm.processing"
+                    class="flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-all bg-emerald-600 hover:bg-emerald-700 text-surface border-2 border-emerald-600 disabled:opacity-50">
+                    <i v-if="completeForm.processing" class="fas fa-spinner fa-spin mr-2"></i>
+                    <span v-else>Selesaikan</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
     </DashboardLayout>
 </template>
 

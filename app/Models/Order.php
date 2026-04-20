@@ -13,6 +13,7 @@ class Order extends Model
         'total_price',
         'pickup_address',
         'delivery_address',
+        'notes',
     ];
 
     public function user()

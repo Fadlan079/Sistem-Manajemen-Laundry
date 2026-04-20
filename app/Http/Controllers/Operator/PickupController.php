@@ -16,16 +16,39 @@ class PickupController extends Controller
     {
         $tab = $request->input('tab', 'semua');
         $search = $request->input('search', '');
+        $dateFilter = $request->input('date', '');
 
         // Base query for deliveries that are pickup tasks and not yet completed
-        $query = Delivery::with(['order.user', 'courier'])
+        $query = Delivery::with(['order.user', 'courier', 'order.orderItems'])
             ->where('type', 'pickup')
             ->where('status', '!=', 'selesai');
 
+        if ($dateFilter) {
+            $query->whereHas('order', function ($q) use ($dateFilter) {
+                $q->whereDate('created_at', $dateFilter);
+            });
+        }
+
         if ($search) {
-            $query->where(function ($q) use ($search) {
+            // Detect if it's an INV-format search
+            $isInvoiceSearch = stripos($search, 'INV-') !== false;
+            
+            $query->where(function ($q) use ($search, $isInvoiceSearch) {
+                // Search by customer name
                 $q->whereHas('order.user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                  // Search by phone
+                  ->orWhereHas('order.user', fn($u) => $u->where('phone', 'like', "%{$search}%"))
+                  // Search by order ID (raw number)
                   ->orWhereHas('order', fn($o) => $o->where('id', 'like', "%{$search}%"));
+                
+                // If it looks like an invoice code, parse and search by order ID
+                if ($isInvoiceSearch) {
+                    $parts = explode('-', $search);
+                    $orderId = (int) end($parts);
+                    if ($orderId > 0) {
+                        $q->orWhereHas('order', fn($o) => $o->where('id', $orderId));
+                    }
+                }
             });
         }
 
@@ -62,7 +85,7 @@ class PickupController extends Controller
         // Prefer oldest first for pickups so they hit their SLA faster
         $query->orderBy('created_at', 'asc');
 
-        $deliveries = $query->paginate(15)->withQueryString()->through(function ($d) {
+        $deliveries = $query->paginate(10)->withQueryString()->through(function ($d) {
             $orderDate = $d->order->created_at;
             $now = Carbon::now();
             $ageInHours = $orderDate->diffInHours($now);
@@ -83,6 +106,7 @@ class PickupController extends Controller
             return [
                 'id' => $d->id,
                 'order_id' => str_pad($d->order_id, 5, '0', STR_PAD_LEFT),
+                'invoice' => 'INV-' . $d->order->created_at->format('Ymd') . '-' . str_pad($d->order_id, 4, '0', STR_PAD_LEFT),
                 'name' => $d->order->user->name ?? 'Pelanggan anonim',
                 'time' => $d->scheduled_at ? $d->scheduled_at->format('H:i') : $d->created_at->format('d M, H:i'),
                 'address' => $d->order->pickup_address ?? '-',
@@ -92,7 +116,10 @@ class PickupController extends Controller
                 'courierTime' => ($d->courier || $d->external_courier_name) ? ($d->scheduled_at ? $d->scheduled_at->format('H:i') : $d->updated_at->format('H:i')) : null,
                 'isLate' => $isLate,
                 'lateText' => $lateText,
-                'phone' => $d->order->user->phone ?? '-', // For hubungi
+                'phone' => $d->order->user->phone ?? '-',
+                'kg' => $d->order->orderItems->first()->qty ?? '',
+                'notes' => $d->notes ?? '',
+                'proof_image' => $d->proof_image ? asset('storage/' . $d->proof_image) : null,
             ];
         });
 
@@ -105,7 +132,8 @@ class PickupController extends Controller
             'couriers' => $couriers,
             'filters' => [
                 'tab' => $tab,
-                'search' => $search
+                'search' => $search,
+                'date' => $dateFilter,
             ]
         ]);
     }

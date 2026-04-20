@@ -503,7 +503,7 @@ onMounted(() => {
     ></div>
 
     <!-- ── Bottom Nav (Mobile) ──────────────────────────────── -->
-    <nav :class="[
+    <nav v-show="!route().current('pelanggan.pesan') && !route().current('pelanggan.aktivitas.detail')" :class="[
         'lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-lg border-t border-white/5 pb-safe shadow-[0_-4px_25px_rgba(0,0,0,0.4)] transition-transform duration-500 ease-in-out',
         isBottomNavVisible ? 'translate-y-0' : 'translate-y-full'
     ]">
