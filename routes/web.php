@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerOrderController;
 use App\Http\Controllers\Operator\PickupController;
+use App\Http\Controllers\Operator\PengantaranController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -147,6 +148,10 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         Route::get('/penjemputan', [PickupController::class, 'index'])->name('penjemputan');
         Route::put('/penjemputan/{delivery}/assign', [PickupController::class, 'assignCourier'])->name('penjemputan.assign');
         Route::put('/penjemputan/{delivery}/dijemput', [PickupController::class, 'markAsPickedUp'])->name('penjemputan.dijemput');
+
+        Route::get('/pengantaran', [PengantaranController::class, 'index'])->name('pengantaran');
+        Route::put('/pengantaran/{delivery}/assign', [PengantaranController::class, 'assignCourier'])->name('pengantaran.assign');
+        Route::put('/pengantaran/{delivery}/diantar', [PengantaranController::class, 'markAsDelivered'])->name('pengantaran.diantar');
 
         Route::get('/layanan', function () {
             return Inertia::render('dashboard/operator/layanan');

@@ -49,6 +49,12 @@ const allLinks = computed(() => ({
                 icon: 'M3 7h13v10H3V7zm13 3h3l2 3v4h-5v-7zM5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z'
             },
             {
+                name: 'Pengantaran',
+                href: route('operator.pengantaran'),
+                active: route().current('operator.pengantaran'),
+                icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'
+            },
+            {
                 name: 'Pembayaran',
                 href: '',
                 active: false,
