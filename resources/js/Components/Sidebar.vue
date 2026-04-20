@@ -56,8 +56,8 @@ const allLinks = computed(() => ({
             },
             {
                 name: 'Pembayaran',
-                href: '',
-                active: false,
+                href: route('operator.pembayaran'),
+                active: route().current('operator.pembayaran'),
                 icon: 'M2 5a2 2 0 012-2h16a2 2 0 012 2v3H2V5zm0 5h20v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7zm4 3h4v2H6v-2z'
             },
         ]

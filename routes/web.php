@@ -11,6 +11,7 @@ use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerOrderController;
 use App\Http\Controllers\Operator\PickupController;
 use App\Http\Controllers\Operator\PengantaranController;
+use App\Http\Controllers\Operator\PembayaranController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -152,6 +153,9 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         Route::get('/pengantaran', [PengantaranController::class, 'index'])->name('pengantaran');
         Route::put('/pengantaran/{delivery}/assign', [PengantaranController::class, 'assignCourier'])->name('pengantaran.assign');
         Route::put('/pengantaran/{delivery}/diantar', [PengantaranController::class, 'markAsDelivered'])->name('pengantaran.diantar');
+        
+        Route::get('/pembayaran', [PembayaranController::class, 'index'])->name('pembayaran');
+        Route::put('/pembayaran/{order}', [PembayaranController::class, 'processPayment'])->name('pembayaran.process');
 
         Route::get('/layanan', function () {
             return Inertia::render('dashboard/operator/layanan');
