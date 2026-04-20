@@ -126,7 +126,7 @@ const submitCompleteForm = () => {
             completeForm.reset();
         }
     });
-};
+};  
 
 const refreshData = () => {
     router.reload({ only: ['deliveries', 'stats'] });
@@ -360,14 +360,14 @@ function highlight(text, query) {
 
                     <div class="space-y-4">
                         <div class="flex p-1 bg-container border border-border">
-                            <button 
+                            <button
                                 @click="isExternalCourier = false"
                                 class="flex-1 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors"
                                 :class="!isExternalCourier ? 'bg-text text-surface' : 'text-muted hover:text-text'"
                             >
                                 Internal
                             </button>
-                            <button 
+                            <button
                                 @click="isExternalCourier = true"
                                 class="flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors"
                                 :class="isExternalCourier ? 'bg-text text-surface' : 'text-muted hover:text-text'"
@@ -401,14 +401,14 @@ function highlight(text, query) {
 
                 <!-- Ticket Footer -->
                 <div class="p-4 flex gap-2 border-t-2 border-text bg-container">
-                    <button 
-                        @click="showAssignModal = false" 
+                    <button
+                        @click="showAssignModal = false"
                         class="flex-1 py-2 text-xs font-bold uppercase tracking-wider text-muted hover:text-text border-2 border-transparent transition-colors"
                     >
                         Batal
                     </button>
-                    <button 
-                        @click="submitAssignCourier" 
+                    <button
+                        @click="submitAssignCourier"
                         :disabled="(!isExternalCourier && !selectedCourierId) || (isExternalCourier && (!externalCourierName || !externalCourierPhone))"
                         class="flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-all bg-primary hover:bg-primary-hover text-surface disabled:opacity-50 disabled:cursor-not-allowed border-2 border-primary"
                     >
@@ -473,7 +473,7 @@ function highlight(text, query) {
 
                     <div>
                         <label class="block text-[10px] font-bold text-text uppercase tracking-widest mb-1.5">Upload Bukti</label>
-                        
+
                         <div v-if="imagePreviewUrl" class="mb-3 border-2 border-text p-1 relative group">
                             <img :src="imagePreviewUrl" alt="Proof Preview" class="w-full h-32 object-cover object-center" />
                             <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
