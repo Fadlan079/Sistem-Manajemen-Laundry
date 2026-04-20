@@ -44,6 +44,7 @@ function batalkanPesanan() {
 function getStepIndex() {
     let current = 'Dibuat';
     if (props.order.dbStatus === 'pending') current = 'Dibuat';
+    else if (props.order.dbStatus === 'dijemput') current = 'Dijemput';
     else if (props.order.dbStatus === 'diproses') current = 'Diproses';
     else if (props.order.dbStatus === 'diantar') current = 'Diantar';
     else if (props.order.dbStatus === 'selesai') current = 'Selesai';
@@ -125,6 +126,11 @@ function copyInvoice() {
                 <div v-if="!order.isCalculated && order.dbStatus === 'pending'" class="mt-14 space-y-4">
                     <div class="flex items-center gap-2 justify-center bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] w-max mx-auto uppercase tracking-widest">
                         <i class="fas fa-info-circle"></i> Menunggu Penjemputan
+                    </div>
+                </div>
+                <div v-else-if="!order.isCalculated && order.dbStatus === 'dijemput'" class="mt-14 space-y-4">
+                    <div class="flex items-center gap-2 justify-center bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] w-max mx-auto uppercase tracking-widest">
+                        <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Di Jalan
                     </div>
                 </div>
                 <div v-else-if="order.isCalculated && order.paymentStatus === 'UNPAID'" class="mt-14 space-y-4">

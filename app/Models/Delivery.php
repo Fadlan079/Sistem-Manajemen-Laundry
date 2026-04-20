@@ -9,10 +9,13 @@ class Delivery extends Model
     protected $fillable = [
         'order_id',
         'courier_id',
+        'external_courier_name',
+        'external_courier_phone',
         'status',
         'type',
         'scheduled_at',
         'notes',
+        'proof_image',
         'current_lat',
         'current_lng',
     ];

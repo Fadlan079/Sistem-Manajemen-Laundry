@@ -42,13 +42,17 @@ const allLinks = computed(() => ({
                 active: route().current('operator.pesanan.masuk'),
                 icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
             },
-        ],
-        'Manajemen': [
             {
-                name: 'Daftar Layanan',
-                href: route('operator.layanan'),
-                active: route().current('operator.layanan'),
-                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
+                name: 'Penjemputan',
+                href: route('operator.penjemputan'),
+                active: route().current('operator.penjemputan'),
+                icon: 'M3 7h13v10H3V7zm13 3h3l2 3v4h-5v-7zM5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z'
+            },
+            {
+                name: 'Pembayaran',
+                href: '',
+                active: false,
+                icon: 'M2 5a2 2 0 012-2h16a2 2 0 012 2v3H2V5zm0 5h20v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7zm4 3h4v2H6v-2z'
             },
         ]
     },
