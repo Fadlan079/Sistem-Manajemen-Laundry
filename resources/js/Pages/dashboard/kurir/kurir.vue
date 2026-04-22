@@ -2,26 +2,27 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
-import TugasJemput from './TugasJemput.vue';
+import Riwayat from './riwayat.vue';
 
 const user = computed(() => usePage().props.auth.user);
 
 const activeTab = computed(() => {
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
-        return params.get('tab') || 'overview';
+        return params.get('tab') || 'tugas-saya';
     }
-    return 'overview';
+    return 'tugas-saya';
 });
 </script>
 
 <template>
-    <Head :title="activeTab === 'tugas' ? 'Pickups' : 'Dashboard Kurir'" />
+    <Head :title="activeTab === 'riwayat' ? 'Riwayat - Dashboard Kurir' : 'Tugas Saya - Dashboard Kurir'" />
 
-    <DashboardLayout :title="activeTab === 'tugas' ? 'Tugas Jemput' : 'Overview'">
+    <DashboardLayout :title="activeTab === 'riwayat' ? 'Riwayat' : 'Tugas Saya'">
+
         
-        <div v-if="activeTab === 'tugas'">
-            <TugasJemput />
+        <div v-if="activeTab === 'riwayat'">
+            <Riwayat />
         </div>
 
         <div v-else class="flex flex-col lg:flex-row gap-8 animate-in fade-in duration-700">

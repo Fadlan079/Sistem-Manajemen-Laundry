@@ -63,11 +63,19 @@ const allLinks = computed(() => ({
         ]
     },
     kurir: {
-        'Monitoring': [
-            { name: 'Overview', href: route('kurir.dashboard'), active: route().current('kurir.dashboard'), icon: 'M4 6h16M4 12h16m-7 6h7' },
-        ],
-        'Logistik': [
-            { name: 'Tugas Jemput', href: '#', active: false, icon: 'M3 13h13v-2H3v2zm0 4h9v-2H3v2zm0-8h18V7H3v2zm13 8a2 2 0 100-4 2 2 0 000 4zm4 0a2 2 0 100-4 2 2 0 000 4z' },
+        'Menu': [
+            {
+                name: 'Tugas Saya',
+                href: route('kurir.dashboard'),
+                active: route().current('kurir.dashboard') && !page.url.includes('tab=riwayat'),
+                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
+            },
+            {
+                name: 'Riwayat',
+                href: route('kurir.dashboard') + '?tab=riwayat',
+                active: page.url.includes('tab=riwayat'),
+                icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
+            },
         ]
     },
 }));
