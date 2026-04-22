@@ -233,6 +233,7 @@ const chartPriceData = computed(() => ({
                 </button>
             </header>
 
+
             <!-- Stats -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div v-for="(stat, i) in statCards" :key="i"
@@ -405,27 +406,26 @@ const chartPriceData = computed(() => ({
                 </div>
 
                 <!-- Pagination -->
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4">
+                <div v-if="services.links && services.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
                     <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
                         Menampilkan {{ services.from ?? 0 }}–{{ services.to ?? 0 }} dari {{ services.total }} layanan
                     </p>
-                    <div class="flex gap-2">
-                        <template v-for="link in services.links" :key="link.label">
-                            <button v-if="link.label === '&laquo; Previous'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-left text-xs"></i>
-                            </button>
-                            <button v-else-if="link.label === 'Next &raquo;'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </button>
-                            <button v-else @click="link.url && router.get(link.url, {}, { preserveState: true })"
-                                :class="link.active ? 'bg-primary text-white border-primary' : 'border-border text-text hover:bg-container'"
-                                class="w-8 h-8 flex items-center justify-center border font-bold text-xs rounded-sm transition">
-                                {{ link.label }}
-                            </button>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <template v-for="(link, key) in services.links" :key="key">
+                            <button
+                                @click="link.url && router.get(link.url, { search: search, category: categoryFilter }, { preserveState: true, preserveScroll: true })"
+                                :disabled="!link.url"
+                                v-html="link.label"
+                                :class="[
+                                    link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container',
+                                    'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors',
+                                    !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    key === 0 ? 'rounded-l-md' : '',
+                                    key === services.links.length - 1 ? 'rounded-r-md' : '',
+                                ]"
+                            ></button>
                         </template>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </div>

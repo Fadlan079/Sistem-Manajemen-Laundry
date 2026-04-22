@@ -174,21 +174,7 @@ const flash = computed(() => usePage().props.flash ?? {});
                 </div>
             </transition>
 
-            <!-- Header -->
-            <header class="relative">
-                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div class="space-y-4">
-                        <h1 class="text-4xl md:text-5xl font-bold tracking-tighter text-text leading-none">
-                            Dashboard <span class="text-muted font-medium">Status</span>
-                        </h1>
-                        <p class="text-muted font-medium max-w-xl">
-                            Selamat datang kembali,
-                            <span class="text-text font-bold">{{ user?.name || 'Administrator' }}</span>.
-                            Pantau performa operasional laundry Anda secara real-time.
-                        </p>
-                    </div>
-                </div>
-            </header>
+
 
             <!-- Stat Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

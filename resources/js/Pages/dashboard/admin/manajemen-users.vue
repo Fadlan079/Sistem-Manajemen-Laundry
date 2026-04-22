@@ -199,12 +199,12 @@ const barOptions = {
                     <h1 class="text-4xl font-black tracking-tighter text-text uppercase">
                         Manajemen <span class="text-muted font-medium">User</span>
                     </h1>
-                    <p class="text-muted font-medium italic">Kelola hak akses dan informasi personil HiWash Laundry.</p>
+                    <p class="text-muted font-medium italic">Kelola akun administrator, operator, kurir, dan pelanggan.</p>
                 </div>
                 <button @click="openCreate"
                     class="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-sm font-black uppercase tracking-widest text-xs shadow-lg transition-all transform hover:-translate-y-1 flex items-center gap-3">
-                    <i class="fa-solid fa-plus"></i>
-                    Tambah Pengguna Baru
+                    <i class="fa-solid fa-user-plus"></i>
+                    Tambah User
                 </button>
             </header>
 
@@ -378,34 +378,26 @@ const barOptions = {
                 </div>
 
                 <!-- Pagination -->
-                <div class="flex items-center justify-between px-2 pt-4">
+                <div v-if="users.links && users.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
                     <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
                         Menampilkan {{ users.from ?? 0 }}–{{ users.to ?? 0 }} dari {{ users.total }} pengguna
                     </p>
-                    <div class="flex gap-2">
-                        <template v-for="link in users.links" :key="link.label">
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <template v-for="(link, key) in users.links" :key="key">
                             <button
-                                v-if="link.label === '&laquo; Previous'"
-                                @click="link.url && router.get(link.url, {}, { preserveState: true })"
+                                @click="link.url && router.get(link.url, { search: search, role: roleFilter }, { preserveState: true, preserveScroll: true })"
                                 :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-left text-xs"></i>
-                            </button>
-                            <button
-                                v-else-if="link.label === 'Next &raquo;'"
-                                @click="link.url && router.get(link.url, {}, { preserveState: true })"
-                                :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </button>
-                            <button v-else
-                                @click="link.url && router.get(link.url, {}, { preserveState: true })"
-                                :class="link.active ? 'bg-primary text-white border-primary' : 'border-border text-text hover:bg-container'"
-                                class="w-8 h-8 flex items-center justify-center border font-bold text-xs rounded-sm transition">
-                                {{ link.label }}
-                            </button>
+                                v-html="link.label"
+                                :class="[
+                                    link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container',
+                                    'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors',
+                                    !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    key === 0 ? 'rounded-l-md' : '',
+                                    key === users.links.length - 1 ? 'rounded-r-md' : '',
+                                ]"
+                            ></button>
                         </template>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </div>
