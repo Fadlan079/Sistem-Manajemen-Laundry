@@ -12,6 +12,7 @@ use App\Http\Controllers\Customer\CustomerOrderController;
 use App\Http\Controllers\Operator\PickupController;
 use App\Http\Controllers\Operator\PengantaranController;
 use App\Http\Controllers\Operator\PembayaranController;
+use App\Http\Controllers\Operator\PesananMasukController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -142,9 +143,9 @@ Route::middleware(['auth', 'verified', 'role:operator'])
             return Inertia::render('dashboard/operator/operator');
         })->name('dashboard');
 
-        Route::get('/PesananMasuk', function () {
-            return Inertia::render('dashboard/operator/PesananMasuk');
-        })->name('pesanan.masuk');
+        Route::get('/PesananMasuk', [PesananMasukController::class, 'index'])->name('pesanan.masuk');
+        Route::post('/PesananMasuk', [PesananMasukController::class, 'store'])->name('pesanan.masuk.store');
+        Route::put('/PesananMasuk/{order}', [PesananMasukController::class, 'update'])->name('pesanan.masuk.update');
 
         Route::get('/penjemputan', [PickupController::class, 'index'])->name('penjemputan');
         Route::put('/penjemputan/{delivery}/assign', [PickupController::class, 'assignCourier'])->name('penjemputan.assign');

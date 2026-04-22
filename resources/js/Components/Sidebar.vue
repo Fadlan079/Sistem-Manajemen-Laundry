@@ -151,12 +151,12 @@ onMounted(() => {
                 Lihat Landing Page
             </Link>
 
-            <button v-if="role === 'operator'" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95">
+            <Link v-if="role === 'operator'" :href="route('operator.pesanan.masuk', { action: 'add' })" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 <span>Buat Pesanan</span>
-            </button>
+            </Link>
 
             <!-- <div class="pt-2">
                 <Link :href="route('logout')" method="post" as="button" class="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg text-red-300 hover:text-red-100 text-[13px] transition group">

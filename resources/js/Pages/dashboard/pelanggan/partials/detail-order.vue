@@ -3,6 +3,7 @@ import { Head, Link, usePage, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/app.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
+import html2pdf from 'html2pdf.js';
 
 const props = defineProps({
     auth: Object,
@@ -125,6 +126,118 @@ function copyInvoice() {
     }).catch(err => {
         console.error('Failed to copy!', err);
     });
+}
+
+const isPrintLoading = ref(false);
+async function cetakNota() {
+    isPrintLoading.value = true;
+
+    // Get QR code canvas data URL
+    const qrCanvas = document.querySelector('#invoiceQR canvas');
+    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
+
+    const o = props.order;
+    const totalText = estimatedTotalCostText.value;
+    const serviceText = estimatedServiceCostText.value;
+    const now = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const html = `
+    <div style="font-family: 'Courier New', Courier, monospace; max-width: 320px; margin: 0 auto; padding: 20px; background: white; color: #111;">
+
+      <!-- Header -->
+      <div style="text-align: center; border-bottom: 2px dashed #ddd; padding-bottom: 14px; margin-bottom: 14px;">
+        <div style="font-size: 22px; font-weight: 900; letter-spacing: -1px; color: #E30613;">Hi Wash</div>
+        <div style="font-size: 9px; color: #666; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin-top: 2px;">Laundry & Dry Cleaning</div>
+        <div style="font-size: 8px; color: #888; margin-top: 6px; line-height: 1.5;">Jl. Contoh No.1, Kota Anda<br/>Telp: 0812-3456-7890</div>
+      </div>
+
+      <!-- Invoice number & date -->
+      <div style="border-bottom: 1px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-bottom: 4px;">
+          <span style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">No. Invoice</span>
+          <span style="font-weight: 900; color: #E30613;">${o.invoice}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-bottom: 4px;">
+          <span style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Pelanggan</span>
+          <span style="font-weight: bold; color: #111;">${o.customerName ?? o.customer ?? '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555;">
+          <span style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Dicetak</span>
+          <span style="font-weight: bold; color: #111;">${now}</span>
+        </div>
+      </div>
+
+      <!-- Service detail -->
+      <div style="border-bottom: 1px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+        <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 6px;">Detail Layanan</div>
+        <div style="font-size: 10px; font-weight: bold; color: #111; margin-bottom: 4px;">${o.service}</div>
+        ${o.pickup_address ? `<div style="font-size: 8px; color: #555; margin-top: 4px;"><span style="font-weight:bold;">Alamat Jemput:</span> ${o.pickup_address}</div>` : ''}
+        ${o.pickup_date_text ? `<div style="font-size: 8px; color: #555; margin-top: 3px;"><span style="font-weight:bold;">Jadwal Jemput:</span> ${o.pickup_date_text}</div>` : ''}
+        ${o.laundry_notes ? `<div style="font-size: 8px; color: #E30613; margin-top: 4px; font-style: italic;">Catatan: ${o.laundry_notes}</div>` : ''}
+      </div>
+
+      <!-- Cost breakdown -->
+      <div style="border-bottom: 2px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+        <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 6px;">Rincian Biaya</div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #444; margin-bottom: 4px;">
+          <span>Biaya Layanan</span>
+          <span style="font-weight: bold;">${serviceText}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #444; margin-bottom: 4px;">
+          <span>Ongkos Kirim</span>
+          <span style="font-weight: bold;">${formatRupiah(o.fee)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; color: #111; margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee;">
+          <span>TOTAL</span>
+          <span style="color: #E30613;">${totalText}</span>
+        </div>
+      </div>
+
+      <!-- Payment status -->
+      <div style="border-bottom: 1px dashed #ddd; padding-bottom: 10px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 9px;">
+          <span style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #555;">Metode Bayar</span>
+          <span style="font-weight: bold; color: #111;">${o.paymentMethod ?? '-'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 4px;">
+          <span style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #555;">Status Bayar</span>
+          <span style="font-weight: 900; color: ${o.paymentStatus === 'PAID' ? '#16a34a' : '#E30613'}">${o.paymentStatus === 'PAID' ? 'LUNAS' : 'BELUM BAYAR'}</span>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      ${qrDataUrl ? `
+      <div style="text-align: center; margin-bottom: 14px;">
+        <img src="${qrDataUrl}" style="width: 90px; height: 90px;" />
+        <div style="font-size: 8px; color: #888; margin-top: 4px; letter-spacing: 1px;">Scan untuk verifikasi</div>
+      </div>` : ''}
+
+      <!-- Footer -->
+      <div style="text-align: center; font-size: 8px; color: #aaa; line-height: 1.8;">
+        <div style="font-weight: 900; color: #555; margin-bottom: 2px;">Terima kasih atas kepercayaan Anda!</div>
+        <div>Nota ini adalah bukti pembayaran yang sah.</div>
+        <div style="margin-top: 4px; letter-spacing: 2px;">★ HI WASH ★</div>
+      </div>
+    </div>
+    `;
+
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    document.body.appendChild(el);
+
+    await html2pdf()
+        .set({
+            margin: [5, 5],
+            filename: `Nota-${o.invoice}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: [80, 200], orientation: 'portrait' },
+        })
+        .from(el)
+        .save();
+
+    document.body.removeChild(el);
+    isPrintLoading.value = false;
 }
 
 const estimatedKG = computed(() => {
@@ -456,8 +569,11 @@ const estimatedTotalCostText = computed(() => {
                         <p class="text-[10px] font-bold text-gray-500 mb-1">Metode Pembayaran</p>
                         <p class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ order.paymentMethod }}</p>
                     </div>
-                    <button class="w-full bg-gray-900 py-3 rounded-lg font-bold text-white text-xs mt-2 flex justify-center items-center gap-2 hover:bg-black transition-colors">
-                        <i class="fas fa-print"></i> Cetak Nota Lengkap
+                    <button @click="cetakNota" :disabled="isPrintLoading"
+                        class="w-full bg-gray-900 py-3 rounded-lg font-bold text-white text-xs mt-2 flex justify-center items-center gap-2 hover:bg-black transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                        <i v-if="isPrintLoading" class="fas fa-spinner fa-spin"></i>
+                        <i v-else class="fas fa-file-pdf"></i>
+                        {{ isPrintLoading ? 'Membuat PDF...' : 'Unduh Nota PDF' }}
                     </button>
                 </div>
             </section>
