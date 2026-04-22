@@ -14,6 +14,7 @@ use App\Http\Controllers\Operator\PengantaranController;
 use App\Http\Controllers\Operator\PembayaranController;
 use App\Http\Controllers\Operator\PesananMasukController;
 use App\Http\Controllers\Operator\OperatorDashboardController;
+use App\Http\Controllers\Kurir\KurirDashboardController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -170,10 +171,11 @@ Route::middleware(['auth', 'verified', 'role:kurir'])
     ->prefix('kurir')
     ->name('kurir.')
     ->group(function () {
-        // Route ini akan menangani baik Overview maupun Tugas Jemput via query string (?tab=tugas)
-        Route::get('/dashboard', function () {
-            return Inertia::render('dashboard/kurir/kurir');
-        })->name('dashboard');
+        Route::get('/dashboard', [KurirDashboardController::class, 'index'])->name('dashboard');
+        Route::put('/deliveries/{delivery}/selesai', [KurirDashboardController::class, 'markAsCompleted'])->name('deliveries.selesai');
+        
+        // Return view for detail order
+        Route::get('/pesanan/{id}', [KurirDashboardController::class, 'detail'])->name('detail');
     });
 
 
