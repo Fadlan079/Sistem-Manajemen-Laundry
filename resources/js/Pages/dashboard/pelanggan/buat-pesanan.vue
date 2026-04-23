@@ -43,9 +43,9 @@ onMounted(() => {
 });
 
 const deliveryOptions = [
-    { value: 'antar_jemput', label: 'Antar Jemput', fee: 10000, icon: 'fas fa-truck' },
-    { value: 'jemput',       label: 'Jemput Saja',  fee: 5000, icon: 'fas fa-motorcycle' },
-    { value: 'antar',        label: 'Antar Saja',   fee: 5000, icon: 'fas fa-box-open' },
+    { value: 'antar_jemput', label: 'Antar Jemput', fee: 10000, icon: 'fas fa-truck', description: 'Kurir menjemput cucian kotor & mengantar cucian bersih.' },
+    { value: 'jemput',       label: 'Jemput Saja',  fee: 5000, icon: 'fas fa-motorcycle', description: 'Kurir menjemput cucian kotor, Anda ambil sendiri ke outlet.' },
+    { value: 'antar',        label: 'Antar Saja',   fee: 5000, icon: 'fas fa-box-open', description: 'Anda antar ke outlet, kurir mengantar cucian bersih.' },
 ];
 
 const weightOptions = [
@@ -244,33 +244,64 @@ function submit() {
             </Link>
 
             <!-- Services Header & Options -->
-            <section class="space-y-3 pt-2">
-                <h2 class="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Pilih Layanan</h2>
-                <div class="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    <button v-for="srv in services" :key="srv.id" type="button" @click="form.service_id = srv.id"
-                        class="relative flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all overflow-hidden"
-                        :class="form.service_id === srv.id ? 'border-[#E30613] bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'">
+<section class="space-y-4 pt-2">
+    <h2 class="text-sm font-semibold text-gray-900 border-b pb-2">
+        Pilih Layanan
+    </h2>
 
-                        <div class="w-12 h-12 rounded-lg mb-2 flex items-center justify-center bg-gray-100 border border-gray-200">
-                            <i class="fas fa-tshirt text-2xl" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-400'"></i>
-                        </div>
+    <!-- Horizontal Scroll Container -->
+    <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <button
+            v-for="srv in services"
+            :key="srv.id"
+            type="button"
+            @click="form.service_id = srv.id"
+            class="min-w-[140px] flex-shrink-0 border rounded-lg p-3 text-left transition-all"
+            :class="form.service_id === srv.id
+                ? 'border-[#E30613] bg-red-50'
+                : 'border-gray-200 bg-white hover:border-gray-300'"
+        >
 
-                        <span class="text-xs font-bold text-center leading-tight whitespace-nowrap" :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-700'">{{ srv.name }}</span>
-                        <span class="text-[10px] mt-0.5 font-medium" :class="form.service_id === srv.id ? 'text-red-500' : 'text-gray-500'">{{ formatRupiah(srv.price) }}{{ srv.unit }}</span>
+            <!-- Top: Title -->
+            <div class="flex items-start justify-between">
+                <h3 class="text-sm font-semibold leading-tight"
+                    :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-800'">
+                    {{ srv.name }}
+                </h3>
 
-                        <!-- Checkmark Indicator -->
-                        <div v-if="form.service_id === srv.id" class="absolute -top-1 -right-1 w-6 h-6 bg-[#E30613] rounded-bl-xl rounded-tr text-white flex items-center justify-center shadow-sm">
-                            <i class="fas fa-check text-[10px]"></i>
-                        </div>
-                    </button>
-                </div>
+                <i v-if="form.service_id === srv.id"
+                    class="fas fa-check text-[11px] text-[#E30613]"></i>
+            </div>
 
-                <div class="pt-3">
-                    <label class="text-[11px] font-black text-gray-500 uppercase tracking-wide mb-1.5 block">Catatan Layanan (Opsional)</label>
-                    <textarea v-model="form.laundry_notes" rows="2" placeholder="Cth: Baju putih tolong dipisah, noda di kerah kemeja..."
-                        class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all resize-none text-gray-800 shadow-sm"></textarea>
-                </div>
-            </section>
+            <!-- Optional Description -->
+            <p class="text-[11px] text-gray-500 mt-1 line-clamp-2">
+                {{ srv.description || 'Layanan laundry profesional' }}
+            </p>
+
+            <!-- Price -->
+            <div class="mt-3 text-sm font-semibold text-gray-900">
+                {{ formatRupiah(srv.price) }}
+                <span class="text-[11px] text-gray-400 font-normal">
+                    /{{ srv.unit }}
+                </span>
+            </div>
+        </button>
+    </div>
+
+    <!-- Notes -->
+    <div class="pt-2">
+        <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+            Catatan Layanan (Opsional)
+        </label>
+
+        <textarea
+            v-model="form.laundry_notes"
+            rows="2"
+            placeholder="Contoh: Pisahkan baju putih, fokus noda kerah..."
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all text-gray-800"
+        ></textarea>
+    </div>
+</section>
 
             <form @submit.prevent="submit" class="space-y-6">
 
@@ -291,7 +322,8 @@ function submit() {
 
                             <div class="flex-1">
                                 <h3 class="text-[13px] font-bold leading-tight" :class="form.delivery_type === opt.value ? 'text-[#E30613]' : 'text-gray-700'">{{ opt.label }}</h3>
-                                <p class="text-[11px] mt-0.5" :class="form.delivery_type === opt.value ? 'text-red-500 font-medium' : 'text-gray-500'">Ongkir: {{ formatRupiah(opt.fee) }}</p>
+                                <p class="text-[10px] mt-0.5 leading-snug" :class="form.delivery_type === opt.value ? 'text-red-500/80' : 'text-gray-400'">{{ opt.description }}</p>
+                                <p class="text-[11px] mt-1" :class="form.delivery_type === opt.value ? 'text-red-600 font-bold' : 'text-gray-500'">Ongkir: {{ formatRupiah(opt.fee) }}</p>
                             </div>
 
                             <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"

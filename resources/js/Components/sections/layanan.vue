@@ -9,36 +9,45 @@ const props = defineProps({
     }
 });
 
-const visibleCount = ref(4);
-
+const currentIndex = ref(1); // Default to middle item (index 1)
+const popularIndex = ref(1); // Default to middle item (index 1)
 const expandedFeatures = ref([]);
 
-const toggleFeatures = (id) => {
-    const index = expandedFeatures.value.indexOf(id);
-    if (index > -1) {
-        expandedFeatures.value.splice(index, 1);
-    } else {
-        expandedFeatures.value.push(id);
+const popularServicesAll = computed(() => {
+    return [...props.services]
+        .sort((a, b) => (b.orders_count || 0) - (a.orders_count || 0));
+});
+
+const nextSlide = () => {
+    if (currentIndex.value + 1 < props.services.length) {
+        currentIndex.value += 1;
     }
 };
 
-const visibleServices = computed(() => {
-    return props.services.slice(0, visibleCount.value);
-});
-
-const loadMore = () => {
-    visibleCount.value += 8;
+const prevSlide = () => {
+    if (currentIndex.value > 0) {
+        currentIndex.value -= 1;
+    }
 };
 
-const showLess = () => {
-    visibleCount.value = 4;
-    // Optional: scroll back to the top of the grid smoothly
-    const section = document.getElementById('kategori');
-    if (section) section.scrollIntoView({ behavior: 'smooth' });
+const nextPopular = () => {
+    if (popularIndex.value + 1 < popularServicesAll.value.length) {
+        popularIndex.value += 1;
+    }
 };
 
-const toggleFaq = (id) => {
-    active.value = active.value === id ? null : id;
+const prevPopular = () => {
+    if (popularIndex.value > 0) {
+        popularIndex.value -= 1;
+    }
+};
+
+const toggleFeatures = (id) => {
+    if (expandedFeatures.value.includes(id)) {
+        expandedFeatures.value = [];
+    } else {
+        expandedFeatures.value = [id];
+    }
 };
 
 // Styles mapped to index to retain the beautiful original aesthetic
@@ -75,123 +84,181 @@ function formatRupiah(val) {
 
 <template>
     <div id="layanan" class="font-sans text-text bg-bg overflow-x-hidden">
-<div id="kategori" class="py-24 px-8 max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Pilih <span class="text-primary">Layanan Terbaik</span> Untuk Pakaian Anda</h2>
-                <p class="text-muted max-w-2xl mx-auto">Kami menyediakan berbagai kategori layanan profesional yang dikerjakan dengan hati dan teknologi terkini.</p>
+        <div id="kategori" class="py-12 md:py-24 max-w-7xl mx-auto overflow-hidden">
+            
+            <div v-if="popularServicesAll.length > 0" class="mb-16 md:mb-24 px-4 md:px-8">
+                <div class="text-center mb-8 md:mb-16">
+                    <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-[8px] md:text-xs font-bold uppercase tracking-widest mb-2 md:mb-4 inline-block">Populer</span>
+                    <h2 class="text-xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Layanan <span class="text-primary">Terfavorit</span></h2>
+                    <p class="text-muted text-[10px] md:text-sm max-w-2xl mx-auto">Pilihan terbaik untuk hasil pencucian yang maksimal dan cepat.</p>
+                </div>
+
+                <div class="max-w-5xl mx-auto relative group/pop">
+                    <div class="absolute top-1/2 -left-2 -right-2 md:-left-8 md:-right-8 flex justify-between items-center z-30 pointer-events-none -translate-y-1/2">
+                        <button @click="prevPopular" 
+                            :disabled="popularIndex === 0"
+                            class="w-8 h-8 md:w-10 md:h-10 bg-white border border-border shadow-lg rounded-full flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed pointer-events-auto">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <button @click="nextPopular" 
+                            :disabled="popularIndex === popularServicesAll.length - 1"
+                            class="w-8 h-8 md:w-10 md:h-10 bg-white border border-border shadow-lg rounded-full flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed pointer-events-auto">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-visible md:px-4">
+                        <div class="flex transition-transform duration-500 ease-out" 
+                            :style="{ 
+                                transform: `translateX(calc(-${popularIndex} * var(--card-width) + (100% - var(--card-width)) / 2))` 
+                            }"
+                            style="--card-width: 85%; @media (min-width: 768px) { --card-width: 33.333% }">
+                            
+                            <div v-for="(service, idx) in popularServicesAll" :key="'pop-' + service.id"
+                                class="w-[85%] md:w-1/3 flex-shrink-0 px-1.5 md:px-4 py-8 transition-all duration-500">
+                                
+                                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-300 flex flex-col h-full">
+
+                                    <!-- Image -->
+                                    <div class="w-full h-40 bg-gray-100 overflow-hidden">
+                                        <img 
+                                            v-if="service.image_url" 
+                                            :src="service.image_url" 
+                                            :alt="service.name"
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
+                                            <i class="fas fa-box text-2xl"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="p-4 flex flex-col flex-1">
+
+                                        <h3 class="text-sm md:text-base font-semibold text-gray-900 mb-1 line-clamp-1">
+                                            {{ service.name }}
+                                        </h3>
+
+                                        <p class="text-xs md:text-sm text-gray-500 line-clamp-2 mb-3">
+                                            {{ service.description || 'Layanan laundry profesional.' }}
+                                        </p>
+
+                                        <div class="mt-auto">
+                                            <div class="text-base md:text-lg font-bold text-gray-900">
+                                                {{ formatRupiah(service.price) }}
+                                                <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
+                                                    /{{ service.unit }}
+                                                </span>
+                                            </div>
+
+                                            <button 
+                                                @click="selectService(service)"
+                                                class="mt-3 w-full py-2 text-xs md:text-sm font-semibold bg-primary text-white rounded-md hover:bg-primary-hover transition"
+                                            >
+                                                Pilih Layanan
+                                            </button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div v-for="(service, idx) in visibleServices" :key="service.id"
-                    :class="getStyle(idx).card"
-                    class="rounded-2xl p-8 hover:-translate-y-2 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden">
+            <div class="relative pt-12 border-t border-gray-100 px-4 md:px-8">
+                <div class="text-center mb-8 md:mb-12">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Katalog <span class="text-primary">Layanan</span></h2>
+                    <p class="text-muted text-[10px] md:text-sm max-w-2xl mx-auto">Temukan berbagai pilihan layanan lainnya untuk kebutuhan Anda.</p>
+                </div>
 
-                    <div v-if="service.tag" class="absolute top-4 right-4 bg-secondary text-primary font-bold text-[10px] uppercase px-3 py-1 rounded-full animate-pulse">
-                        {{ service.tag }}
-                    </div>
-
-                    <div :class="getStyle(idx).iconBox" class="w-16 h-16 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform border border-transparent group-hover:border-primary/20">
-                        <img v-if="service.image_url" :src="service.image_url" :alt="service.name" class="w-full h-full object-cover">
-                        <svg v-else class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-
-                    <h3 :class="getStyle(idx).title" class="text-md font-bold mb-3">{{ service.name }}</h3>
-                    <p :class="getStyle(idx).desc" class="text-xs mb-6">{{ service.description || 'Layanan cucilan profesional kami untuk Anda.' }}</p>
-
-                    <div :class="getStyle(idx).priceBorder" class="w-full pb-6 mb-6 border-b">
-                        <div :class="getStyle(idx).price" class="font-bold text-2xl mb-4">
-                            {{ formatRupiah(service.price) }}<span v-if="service.unit" class="text-xs opacity-70 font-normal"> {{ service.unit }}</span>
-                        </div>
-                        <button @click="selectService(service)" :class="getStyle(idx).btn" class="w-full py-3 rounded-lg font-semibold transition-all">Pilih Layanan</button>
-                    </div>
-
-                    <div v-if="service.features && service.features.length > 0" class="w-full text-left">
-                        <button @click="toggleFeatures(service.id)" class="flex items-center justify-between w-full text-xs font-bold text-muted hover:text-primary transition-colors py-2 uppercase tracking-wide">
-                            Detail Fitur
-                            <i :class="['fa-solid transition-transform duration-300', expandedFeatures.includes(service.id) ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                <div class="max-w-4xl mx-auto relative group/all md:px-4">
+                    <div class="absolute top-1/2 -left-2 -right-2 md:-left-8 md:-right-8 flex justify-between items-center z-30 pointer-events-none -translate-y-1/2">
+                        <button @click="prevSlide" 
+                            :disabled="currentIndex === 0"
+                            class="w-8 h-8 md:w-10 md:h-10 bg-white border border-border shadow-lg rounded-full flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed pointer-events-auto">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
                         </button>
-                        <div v-show="expandedFeatures.includes(service.id)" class="mt-4 pb-2">
-                            <ul class="text-sm text-left w-full space-y-3">
-                                <li v-for="(feat, fIdx) in service.features" :key="fIdx" :class="getStyle(idx).listText" class="flex items-center gap-2">
-                                    <svg :class="getStyle(idx).listIcon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    {{ feat }}
-                                </li>
-                            </ul>
+                        <button @click="nextSlide" 
+                            :disabled="currentIndex === services.length - 1"
+                            class="w-8 h-8 md:w-10 md:h-10 bg-white border border-border shadow-lg rounded-full flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed pointer-events-auto">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-visible">
+                        <div class="flex transition-transform duration-500 ease-out"
+                             :style="{ 
+                                transform: `translateX(calc(-${currentIndex} * var(--card-width-all) + (100% - var(--card-width-all)) / 2))` 
+                             }"
+                             style="--card-width-all: 85%; @media (min-width: 768px) { --card-width-all: 33.333% }">
+                             
+                            <div v-for="(service, idx) in services" :key="'all-' + service.id"
+                                class="w-[85%] md:w-1/3 flex-shrink-0 px-1.5 md:px-4 py-6 transition-all duration-500">
+                                
+                                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-300 flex flex-col h-full">
+
+                                    <!-- Image -->
+                                    <div class="w-full h-40 bg-gray-100 overflow-hidden">
+                                        <img 
+                                            v-if="service.image_url" 
+                                            :src="service.image_url" 
+                                            :alt="service.name"
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
+                                            <i class="fas fa-box text-2xl"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="p-4 flex flex-col flex-1">
+
+                                        <h3 class="text-sm md:text-base font-semibold text-gray-900 mb-1 line-clamp-1">
+                                            {{ service.name }}
+                                        </h3>
+
+                                        <p class="text-xs md:text-sm text-gray-500 line-clamp-2 mb-3">
+                                            {{ service.description || 'Layanan laundry profesional.' }}
+                                        </p>
+
+                                        <div class="mt-auto">
+                                            <div class="text-base md:text-lg font-bold text-gray-900">
+                                                {{ formatRupiah(service.price) }}
+                                                <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
+                                                    /{{ service.unit }}
+                                                </span>
+                                            </div>
+
+                                            <button 
+                                                @click="selectService(service)"
+                                                class="mt-3 w-full py-2 text-xs md:text-sm font-semibold bg-primary text-white rounded-md hover:bg-primary-hover transition"
+                                            >
+                                                Pilih Layanan
+                                            </button>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="services.length === 0" class="col-span-full py-12 text-center text-muted italic border-2 border-dashed border-border rounded-2xl">
+                <div v-if="services.length === 0" class="py-12 text-center text-muted italic border-2 border-dashed border-border rounded-2xl mt-8">
                     Belum ada layanan yang ditawarkan.
                 </div>
-            </div>
-
-            <div v-if="services.length > 4" class="mt-12 flex flex-wrap items-center justify-center gap-4">
-                <button v-if="visibleCount > 4" @click="showLess" class="px-6 py-3 bg-white border-2 border-border text-muted font-bold rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm hover:shadow-md active:scale-95 group">
-                    <i class="fa-solid fa-arrow-up mr-2 group-hover:-translate-y-1 transition-transform"></i> Tampilkan Lebih Sedikit
-                </button>
-                <button v-if="visibleCount < services.length" @click="loadMore" class="px-8 py-3 bg-white border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm hover:shadow-md active:scale-95 group">
-                    Tampilkan Lebih Banyak <i class="fa-solid fa-arrow-down ml-2 group-hover:translate-y-1 transition-transform"></i>
-                </button>
-            </div>
-        </div>
-
-        <div id="area" class="py-24 px-8 bg-white border-y border-gray-100">
-            <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-
-                <div class="lg:w-1/2">
-                    <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-8 border border-primary/20">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    </div>
-                    <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-6 tracking-tight">Area Layanan & <span class="text-primary">Operasional</span></h2>
-                    <p class="text-gray-500 mb-8 leading-relaxed text-lg">Kami melayani dengan sepenuh hati untuk wilayah <span class="font-bold text-gray-900">Samarinda</span> dan sekitarnya. Kenyamanan Anda adalah prioritas kami.</p>
-
-                    <div class="space-y-6">
-                        <div class="flex items-start gap-4">
-                            <div class="w-6 h-6 bg-secondary/20 text-secondary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-gray-900">Wilayah Cakupan</h4>
-                                <p class="text-sm text-gray-500 mt-1">Samarinda Kota, Samarinda Ulu, Samarinda Ilir, dan sekitarnya.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-4">
-                            <div class="w-6 h-6 bg-secondary/20 text-secondary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-gray-900">Estimasi Pickup</h4>
-                                <p class="text-sm text-gray-500 mt-1">Kurir kami akan sampai dalam waktu 30–60 menit setelah pemesanan.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-4">
-                            <div class="w-6 h-6 bg-secondary/20 text-secondary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-gray-900">Ongkir Fleksibel</h4>
-                                <p class="text-sm text-gray-500 mt-1">Gratis biaya antar jemput untuk radius 3km dari outlet kami.</p>
-                            </div>
-                        </div>
-                    </div>
+                
+                <div class="mt-8 flex justify-center gap-1.5">
+                    <button v-for="(s, i) in services" :key="i"
+                        @click="currentIndex = i"
+                        :class="i === currentIndex ? 'bg-primary w-5 md:w-6' : 'bg-gray-200 w-1.5 md:w-2 hover:bg-gray-300'"
+                        class="h-1.5 md:h-2 rounded-full transition-all duration-300">
+                    </button>
                 </div>
-
-                <div class="lg:w-1/2 w-full">
-                    <div class="bg-white p-3 rounded-3xl shadow-2xl border border-gray-100 relative">
-
-                        <div class="w-full h-80 sm:h-96 bg-gray-100 rounded-2xl overflow-hidden relative border border-gray-200">
-                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.67834773323!2d117.14464117472343!3d-0.4799365995153566!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2df67ff6ee82193d%3A0x72bbf60022c3f827!2sHiWash%20Laundry%20Dr.%20Sutomo!5e0!3m2!1sid!2sid!4v1776516347085!5m2!1sid!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                        </div>
-
-                        <div class="absolute bottom-6 right-6 bg-primary text-white text-[11px] font-bold px-4 py-2 rounded-lg uppercase tracking-widest shadow-lg flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                            Pusat Operasional
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
         </div>
     </div>
 </template>

@@ -51,7 +51,7 @@ Route::get('/', function () {
     return Inertia::render('home', [
         'canLogin'      => Route::has('login'),
         'canRegister'   => Route::has('register'),
-        'serviceList'   => \App\Models\Service::where('status', 'tersedia')->get()->map(fn($s) => [
+        'serviceList'   => \App\Models\Service::withCount('orders')->where('status', 'tersedia')->get()->map(fn($s) => [
             'id'          => $s->id,
             'name'        => $s->name,
             'category'    => $s->category,
@@ -62,6 +62,7 @@ Route::get('/', function () {
             'features'    => $s->features,
             'unit'        => $s->unit,
             'tag'         => $s->tag,
+            'orders_count'=> $s->orders_count,
         ]),
         'banners'       => \App\Models\Banner::where('is_active', true)
                             ->orderBy('created_at', 'desc')

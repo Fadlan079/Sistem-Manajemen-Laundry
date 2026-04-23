@@ -41,12 +41,15 @@ class CustomerDashboardController extends Controller
             $dbStatus = $order->status;
 
             // Tentukan type (aktif atau riwayat)
-            $type = in_array($dbStatus, ['selesai', 'diantar']) ? 'riwayat' : 'aktif';
+            $type = in_array($dbStatus, ['selesai']) ? 'riwayat' : 'aktif';
 
             // Penentuan UI Badge Status
-            if ($dbStatus === 'selesai' || $dbStatus === 'diantar') {
+            if ($dbStatus === 'selesai') {
                 $badgeText = ucfirst($dbStatus);
                 $badgeColor = 'green';
+            } elseif ($dbStatus === 'diantar') {
+                $badgeText = 'Sedang Diantar';
+                $badgeColor = 'blue';
             } elseif (!$isCalculated && $dbStatus === 'pending') {
                 $badgeText = 'Menunggu Penjemputan';
                 $badgeColor = 'blue';
@@ -92,7 +95,7 @@ class CustomerDashboardController extends Controller
 
     public function detailAktivitas(Request $request, $id)
     {
-        $order = Order::with(['service', 'orderItems', 'payments', 'review', 'deliveries'])
+        $order = Order::with(['service', 'orderItems', 'payments', 'review', 'deliveries.courier'])
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
@@ -163,6 +166,29 @@ class CustomerDashboardController extends Controller
                     'comment' => $order->review->comment,
                     'date'    => $order->review->created_at->translatedFormat('d M Y, H:i'),
                 ] : null,
+                'delivery_type_label' => ($hasPickup && $hasDelivery) ? 'Antar Jemput' : ($hasPickup ? 'Jemput Saja' : ($hasDelivery ? 'Antar Saja' : 'Tanpa Pengantaran')),
+                'pickup_courier' => (function() use ($order) {
+                    $d = $order->deliveries->where('type', 'pickup')->first();
+                    if (!$d) return null;
+                    $c = $d->courier;
+                    if (!$c && !$d->external_courier_name) return null;
+                    return [
+                        'name' => $c ? $c->name : $d->external_courier_name,
+                        'phone' => $c ? $c->phone : $d->external_courier_phone,
+                        'status' => $d->status,
+                    ];
+                })(),
+                'delivery_courier' => (function() use ($order) {
+                    $d = $order->deliveries->where('type', 'delivery')->first();
+                    if (!$d) return null;
+                    $c = $d->courier;
+                    if (!$c && !$d->external_courier_name) return null;
+                    return [
+                        'name' => $c ? $c->name : $d->external_courier_name,
+                        'phone' => $c ? $c->phone : $d->external_courier_phone,
+                        'status' => $d->status,
+                    ];
+                })(),
             ],
         ]);
     }

@@ -176,6 +176,31 @@ async function cetakNota() {
         ${o.laundry_notes ? `<div style="font-size: 8px; color: #E30613; margin-top: 4px; font-style: italic;">Catatan: ${o.laundry_notes}</div>` : ''}
       </div>
 
+      <!-- Courier info -->
+      ${o.pickup_courier || o.delivery_courier ? `
+      <div style="border-bottom: 1px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+        <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 6px;">Informasi Kurir</div>
+        ${o.pickup_courier ? `
+          <div style="font-size: 9px; color: #111; margin-bottom: 4px;">
+            <div style="font-weight: bold; color: #555; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">Kurir Jemput</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+              <span>${o.pickup_courier.name}</span>
+              <span style="font-weight: bold; color: #16a34a;">${o.pickup_courier.phone}</span>
+            </div>
+          </div>
+        ` : ''}
+        ${o.delivery_courier ? `
+          <div style="font-size: 9px; color: #111; margin-bottom: 4px; ${o.pickup_courier ? 'margin-top: 8px;' : ''}">
+            <div style="font-weight: bold; color: #555; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">Kurir Antar</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+              <span>${o.delivery_courier.name}</span>
+              <span style="font-weight: bold; color: #2563eb;">${o.delivery_courier.phone}</span>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+      ` : ''}
+
       <!-- Cost breakdown -->
       <div style="border-bottom: 2px dashed #ddd; padding-bottom: 10px; margin-bottom: 10px;">
         <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 6px;">Rincian Biaya</div>
@@ -184,7 +209,7 @@ async function cetakNota() {
           <span style="font-weight: bold;">${serviceText}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 9px; color: #444; margin-bottom: 4px;">
-          <span>Ongkos Kirim</span>
+          <span>Ongkos Kirim <span style="font-size: 7px; color: #888;">(${o.delivery_type_label})</span></span>
           <span style="font-weight: bold;">${formatRupiah(o.fee)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; color: #111; margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee;">
@@ -388,6 +413,36 @@ const estimatedTotalCostText = computed(() => {
                         </div>
                     </div>
 
+                    <!-- Kurir Jemput Section -->
+                    <div v-if="order.pickup_courier" class="flex gap-4 items-center text-xs border-b border-gray-50 pb-4">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0">
+                            <i class="fas fa-truck-loading"></i>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Penjemputan</span>
+                            <span class="font-black text-gray-900 block text-[13px]">{{ order.pickup_courier.name }}</span>
+                            <span class="font-bold text-emerald-600 block mt-0.5">{{ order.pickup_courier.phone }}</span>
+                        </div>
+                        <a :href="'tel:' + order.pickup_courier.phone" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm active:scale-95">
+                            Hubungi
+                        </a>
+                    </div>
+
+                    <!-- Kurir Antar Section -->
+                    <div v-if="order.delivery_courier" class="flex gap-4 items-center text-xs border-b border-gray-50 pb-4">
+                        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 border border-blue-100 shrink-0">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Pengantaran</span>
+                            <span class="font-black text-gray-900 block text-[13px]">{{ order.delivery_courier.name }}</span>
+                            <span class="font-bold text-blue-600 block mt-0.5">{{ order.delivery_courier.phone }}</span>
+                        </div>
+                        <a :href="'tel:' + order.delivery_courier.phone" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm active:scale-95">
+                            Hubungi
+                        </a>
+                    </div>
+
                     <!-- Nomor Invoice & QR (Pusat & Besar) -->
                     <div class="bg-gray-50/50 p-8 rounded-2xl border border-gray-100 flex flex-col items-center justify-center space-y-5">
                         <div class="relative">
@@ -441,7 +496,7 @@ const estimatedTotalCostText = computed(() => {
 
                         <!-- Ongkos Kirim -->
                         <div class="flex justify-between text-xs pt-1">
-                            <span class="text-gray-600">Ongkos Kirim</span>
+                            <span class="text-gray-600">Ongkos Kirim <span class="font-medium text-[10px] text-gray-400">({{ order.delivery_type_label }})</span></span>
                             <span class="font-bold text-gray-800">{{ formatRupiah(order.fee) }}</span>
                         </div>
 
@@ -597,6 +652,21 @@ const estimatedTotalCostText = computed(() => {
                     </p>
                     <p class="text-[10px] text-gray-400 font-medium mt-3 text-right">{{ order.review.date }}</p>
                 </div>
+            </section>
+
+            <!-- Add review button if finished but not reviewed -->
+            <section v-else-if="order.dbStatus === 'selesai'" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 text-center space-y-4">
+                <div class="w-12 h-12 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center mx-auto border border-yellow-100">
+                    <i class="fas fa-star text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-sm">Bagaimana Layanan Kami?</h3>
+                    <p class="text-[11px] text-gray-500 mt-1">Berikan penilaian Anda untuk membantu kami meningkatkan kualitas layanan.</p>
+                </div>
+                <Link :href="route('pelanggan.aktivitas.ulasan', order.dbId)"
+                    class="inline-block w-full py-3 rounded-lg bg-[#E30613] text-white font-bold text-xs hover:bg-black transition-colors shadow-md uppercase tracking-widest">
+                    Beri Ulasan Sekarang
+                </Link>
             </section>
 
         </div>
