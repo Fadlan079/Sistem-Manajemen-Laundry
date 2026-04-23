@@ -34,6 +34,11 @@ class ServiceController extends Controller
             'estimate'    => $s->estimate,
             'status'      => $s->status,
             'description' => $s->description,
+            'image_url'   => $s->image ? asset('storage/' . $s->image) : null,
+            'image'       => $s->image,
+            'features'    => $s->features,
+            'unit'        => $s->unit,
+            'tag'         => $s->tag,
             'orders_count'=> $s->orders_count,
         ]);
 
@@ -98,7 +103,15 @@ class ServiceController extends Controller
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],
             'description' => 'nullable|string',
+            'image'       => 'nullable|image|max:2048',
+            'features'    => 'nullable|array',
+            'unit'        => 'nullable|string|max:20',
+            'tag'         => 'nullable|string|max:50',
         ]);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('services', 'public');
+        }
 
         Service::create($validated);
 
@@ -114,7 +127,18 @@ class ServiceController extends Controller
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],
             'description' => 'nullable|string',
+            'image'       => 'nullable|image|max:2048',
+            'features'    => 'nullable|array',
+            'unit'        => 'nullable|string|max:20',
+            'tag'         => 'nullable|string|max:50',
         ]);
+
+        if ($request->hasFile('image')) {
+            if ($service->image) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($service->image);
+            }
+            $validated['image'] = $request->file('image')->store('services', 'public');
+        }
 
         $service->update($validated);
 
@@ -125,6 +149,10 @@ class ServiceController extends Controller
     {
         if ($service->orders()->exists()) {
             return back()->with('error', 'Layanan tidak dapat dihapus karena masih memiliki pesanan terkait.');
+        }
+
+        if ($service->image) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($service->image);
         }
 
         $service->delete();

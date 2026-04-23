@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Banner;
 use App\Models\Payment;
 use App\Models\User;
 use Carbon\Carbon;
@@ -89,6 +90,12 @@ class AdminDashboardController extends Controller
             ],
             'recentOrders' => $recentOrders,
             'orderChart'   => $months,
+            'banners'      => Banner::orderBy('created_at', 'desc')->get()->map(fn($b) => [
+                'id'        => $b->id,
+                'image_url' => asset('storage/' . $b->image),
+                'is_active' => $b->is_active,
+                'created_at'=> $b->created_at->format('d M Y'),
+            ]),
         ]);
     }
 }

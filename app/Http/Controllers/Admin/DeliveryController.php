@@ -17,7 +17,8 @@ class DeliveryController extends Controller
     {
         $search = $request->input('search', '');
         $status = $request->input('status', '');
-        $type   = $request->input('type', '');
+        $tab    = $request->input('tab', 'pickup');
+        $date   = $request->input('date', '');
 
         $query = Delivery::with(['order.user', 'courier'])
             ->when($search, fn($q) => $q->where(fn($q2) =>
@@ -25,7 +26,8 @@ class DeliveryController extends Controller
                    ->orWhereHas('courier', fn($c) => $c->where('name', 'like', "%{$search}%"))
             ))
             ->when($status, fn($q) => $q->where('status', $status))
-            ->when($type,   fn($q) => $q->where('type', $type))
+            ->when($date, fn($q) => $q->whereDate('created_at', $date))
+            ->where('type', $tab)
             ->latest();
 
         $deliveries = $query->paginate(10)->withQueryString()->through(fn($d) => [
@@ -91,7 +93,7 @@ class DeliveryController extends Controller
         return Inertia::render('dashboard/admin/pickup', [
             'deliveries'  => $deliveries,
             'stats'       => $stats,
-            'filters'     => ['search' => $search, 'status' => $status, 'type' => $type],
+            'filters'     => ['search' => $search, 'status' => $status, 'tab' => $tab, 'date' => $date],
             'orderList'   => $orderList,
             'courierList' => $courierList,
             'chartData'   => [

@@ -14,6 +14,7 @@ class Order extends Model
         'total_price',
         'pickup_address',
         'delivery_address',
+        'notes',
     ];
 
     public function user()
@@ -44,5 +45,10 @@ class Order extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function review()
+    {
+        return $this->hasOne(Review::class);
     }
 }

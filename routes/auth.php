@@ -33,6 +33,9 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+
+    Route::post('resend-verification-email', [EmailVerificationNotificationController::class, 'resendGuest'])
+        ->name('verification.resend.guest');
 });
 
 Route::middleware('auth')->group(function () {

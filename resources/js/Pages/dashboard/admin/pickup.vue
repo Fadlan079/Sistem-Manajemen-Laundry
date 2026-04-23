@@ -40,69 +40,23 @@ watch(isChartExpanded, (newValue) => {
     localStorage.setItem('pickup-chart-expanded', newValue.toString());
 });
 
-// Form and Modal State
-const showingModal = ref(false);
-const isEditing = ref(false);
-const currentDeliveryId = ref(null);
+const search       = ref(props.filters?.search ?? '');
+const statusFilter = ref(props.filters?.status ?? '');
+const tab          = ref(props.filters?.tab    ?? 'pickup');
+const dateFilter   = ref(props.filters?.date   ?? '');
 
-const form = useForm({
-    order_id: '',
-    courier_id: '',
-    type: 'pickup',
-    status: 'dijemput',
-    scheduled_at: '',
-    notes: '',
+let searchTimeout = null;
+watch([search, statusFilter, tab, dateFilter], () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        router.get(route('admin.pickup'), {
+            search: search.value,
+            status: statusFilter.value,
+            tab:    tab.value,
+            date:   dateFilter.value,
+        }, { preserveState: true, preserveScroll: true, replace: true });
+    }, 350);
 });
-
-const searchForm = useForm({
-    search: props.filters?.search || '',
-    status: props.filters?.status || '',
-    type: props.filters?.type || '',
-});
-
-const submitSearch = () => {
-    router.get(route('admin.pickup'), searchForm.data(), { preserveState: true, preserveScroll: true });
-};
-
-const openCreateModal = () => {
-    isEditing.value = false;
-    form.reset();
-    showingModal.value = true;
-};
-
-const openEditModal = (delivery) => {
-    isEditing.value = true;
-    currentDeliveryId.value = delivery.id;
-    form.order_id = delivery.order_id;
-    form.courier_id = delivery.courier_id ?? '';
-    form.type = delivery.type;
-    form.status = delivery.status;
-    form.scheduled_at = delivery.scheduled_at_raw ?? '';
-    form.notes = delivery.notes ?? '';
-    showingModal.value = true;
-};
-
-const closeModal = () => {
-    showingModal.value = false;
-};
-
-const saveDelivery = () => {
-    if (isEditing.value) {
-        form.put(route('admin.pickup.update', currentDeliveryId.value), {
-            onSuccess: () => closeModal(),
-        });
-    } else {
-        form.post(route('admin.pickup.store'), {
-            onSuccess: () => closeModal(),
-        });
-    }
-};
-
-const deleteDelivery = (id) => {
-    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-        router.delete(route('admin.pickup.destroy', id));
-    }
-};
 
 // Statistik Logistik
 const pickupStats = computed(() => [
@@ -237,12 +191,34 @@ const getTypeClass = (type) => {
                     </h1>
                     <p class="text-muted font-medium italic">Pantau penugasan penjemputan dan pengiriman pakaian pelanggan.</p>
                 </div>
-                
-                <button @click="openCreateModal" class="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-sm font-black uppercase tracking-widest text-xs shadow-lg transition-all transform hover:-translate-y-1 flex items-center gap-3">
-                    <i class="fa-solid fa-plus"></i>
-                    Tugas & Rute Baru
-                </button>
             </header>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-border">
+                <button
+                    @click="tab = 'pickup'"
+                    :class="[
+                        'px-6 py-4 text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap',
+                        tab === 'pickup' 
+                            ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                            : 'text-muted hover:text-text hover:bg-container'
+                    ]"
+                >
+                    <i class="fa-solid fa-truck-pickup mr-2"></i> Penjemputan
+                </button>
+                <button
+                    @click="tab = 'delivery'"
+                    :class="[
+                        'px-6 py-4 text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap',
+                        tab === 'delivery' 
+                            ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                            : 'text-muted hover:text-text hover:bg-container'
+                    ]"
+                >
+                    <i class="fa-solid fa-box-open mr-2"></i> Pengiriman
+                </button>
+            </div>
+
 
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -325,22 +301,39 @@ const getTypeClass = (type) => {
 
             <!-- Main Table Section -->
             <div class="space-y-4">
-                <div class="flex flex-col md:flex-row gap-4 justify-between items-end">
+                <div class="flex flex-col md:flex-row gap-3 justify-between items-end">
+                    <!-- Search -->
                     <div class="w-full md:max-w-md relative group">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
-                        <input type="text" v-model="searchForm.search" @keyup.enter="submitSearch" placeholder="Cari alamat, nama pelanggan, atau kurir..." 
+                        <input v-model="search" type="text" placeholder="Cari alamat, nama pelanggan, atau kurir..." 
                             class="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm">
                     </div>
 
-                    <div class="flex gap-2">
-                        <button class="px-4 py-3 border border-border bg-surface text-muted hover:text-text rounded-sm transition flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
-                            <i class="fa-solid fa-filter"></i> Filter
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-3 items-end w-full md:w-auto">
+                        <!-- Date Filter -->
+                        <div class="relative w-full sm:w-auto">
+                            <i class="fa-solid fa-calendar-days absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-xs"></i>
+                            <input type="date" v-model="dateFilter"
+                                class="w-full sm:w-[175px] pl-9 pr-8 py-3 border border-border bg-surface text-text rounded-sm text-sm outline-none focus:border-primary transition" />
+                            <button v-if="dateFilter" @click="dateFilter = ''"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 transition-colors">
+                                <i class="fa-solid fa-times text-xs"></i>
+                            </button>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <select v-model="statusFilter"
+                            class="w-full sm:w-auto px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
+                            <option value="">Semua Status</option>
+                            <option value="dijemput">Menunggu Penugasan</option>
+                            <option value="diantar">Sedang Diperjalanan</option>
+                            <option value="selesai">Selesai</option>
+                            <option value="terlambat">Terlambat</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="bg-surface border border-border rounded-sm shadow-xl overflow-hidden">
-                    <div class="overflow-x-auto">
+                <div class="bg-surface border border-border rounded-sm shadow-xl overflow-x-auto">
                         <table class="w-full text-left border-collapse min-w-[900px]">
                             <thead>
                                 <tr class="bg-container/50 border-b border-border">
@@ -349,10 +342,15 @@ const getTypeClass = (type) => {
                                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Ditugaskan Kepada</th>
                                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Detail Jadwal</th>
                                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Status Tugas</th>
-                                    <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
+                                <tr v-if="deliveries.data.length === 0">
+                                    <td colspan="5" class="px-6 py-12 text-center text-muted italic text-sm">
+                                        <i class="fa-solid fa-inbox text-2xl mb-2 block opacity-40"></i>
+                                        Tidak ada tugas ditemukan.
+                                    </td>
+                                </tr>
                                 <tr v-for="task in deliveries.data" :key="task.id" class="hover:bg-container/30 transition-colors group">
                                     <td class="px-6 py-4">
                                         <div class="flex flex-col">
@@ -399,111 +397,36 @@ const getTypeClass = (type) => {
                                             </span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-right">
-                                        <div class="flex justify-end gap-2">
-                                            <button @click="openEditModal(task)" class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-text hover:text-white transition-all">
-                                                <i class="fa-solid fa-pen-to-square text-xs"></i>
-                                            </button>
-                                            <button @click="deleteDelivery(task.id)" class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-rose-500 hover:border-rose-500 hover:text-white transition-all">
-                                                <i class="fa-solid fa-trash text-xs"></i>
-                                            </button>
-                                        </div>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4">
-                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest text-center sm:text-left">
-                        Menampilkan {{ deliveries.from || 0 }} - {{ deliveries.to || 0 }} dari {{ deliveries.total }} tugas
+                <!-- Pagination -->
+                <div v-if="deliveries.links && deliveries.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
+                        Menampilkan {{ deliveries.from ?? 0 }}–{{ deliveries.to ?? 0 }} dari {{ deliveries.total }} tugas
                     </p>
-                    <div class="flex gap-2">
-                        <Link v-for="(link, idx) in deliveries.links" :key="idx" :href="link.url || '#'"
-                            v-html="link.label"
-                            class="w-8 h-8 flex items-center justify-center border border-border rounded-sm shadow-sm transition text-xs font-bold"
-                            :class="[
-                                link.active ? 'bg-primary text-white' : 'text-muted hover:text-text',
-                                !link.url ? 'opacity-50 cursor-not-allowed' : ''
-                            ]"
-                            :disabled="!link.url"
-                        />
-                    </div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <template v-for="(link, key) in deliveries.links" :key="key">
+                            <button
+                                @click="link.url && router.get(link.url, { search: search, status: statusFilter, tab: tab, date: dateFilter }, { preserveState: true, preserveScroll: true })"
+                                :disabled="!link.url"
+                                v-html="link.label"
+                                :class="[
+                                    link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container',
+                                    'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors',
+                                    !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    key === 0 ? 'rounded-l-md' : '',
+                                    key === deliveries.links.length - 1 ? 'rounded-r-md' : '',
+                                ]"
+                            ></button>
+                        </template>
+                    </nav>
                 </div>
             </div>
         </div>
     </DashboardLayout>
-
-    <Modal :show="showingModal" @close="closeModal">
-        <form @submit.prevent="saveDelivery" class="p-6">
-            <h2 class="text-lg font-black text-text mb-6 tracking-tighter uppercase">{{ isEditing ? 'Edit Data Logistik' : 'Tambah Data Logistik' }}</h2>
-
-            <div class="space-y-4">
-                <div>
-                    <InputLabel for="order_id" value="Siklus Order" />
-                    <select id="order_id" v-model="form.order_id" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required :disabled="isEditing">
-                        <option value="" disabled>Pilih Siklus Order...</option>
-                        <option v-for="order in orderList" :key="order.id" :value="order.id">
-                            {{ order.label }}
-                        </option>
-                    </select>
-                    <InputError :message="form.errors.order_id" class="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel for="courier_id" value="Kurir (Opsional)" />
-                    <select id="courier_id" v-model="form.courier_id" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all">
-                        <option value="">Belum Ditugaskan</option>
-                        <option v-for="courier in courierList" :key="courier.id" :value="courier.id">
-                            {{ courier.name }}
-                        </option>
-                    </select>
-                    <InputError :message="form.errors.courier_id" class="mt-2" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel for="type" value="Tipe Logistik" />
-                        <select id="type" v-model="form.type" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required>
-                            <option value="pickup">Pickup (Jemput)</option>
-                            <option value="delivery">Delivery (Antar)</option>
-                        </select>
-                        <InputError :message="form.errors.type" class="mt-2" />
-                    </div>
-
-                    <div>
-                        <InputLabel for="status" value="Status Logistik" />
-                        <select id="status" v-model="form.status" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all" required>
-                            <option value="dijemput">Menunggu / Dijemput</option>
-                            <option value="diantar">Sedang Diantar/Perjalanan</option>
-                            <option value="selesai">Selesai</option>
-                        </select>
-                        <InputError :message="form.errors.status" class="mt-2" />
-                    </div>
-                </div>
-
-                <div>
-                    <InputLabel for="scheduled_at" value="Jadwal (Opsional)" />
-                    <TextInput id="scheduled_at" v-model="form.scheduled_at" type="datetime-local" class="mt-1 block w-full" />
-                    <InputError :message="form.errors.scheduled_at" class="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel for="notes" value="Catatan Logistik" />
-                    <textarea id="notes" v-model="form.notes" class="border-border focus:border-primary focus:ring-primary rounded-sm shadow-sm w-full mt-1 bg-surface text-text text-sm transition-all h-24 px-3 py-2"></textarea>
-                    <InputError :message="form.errors.notes" class="mt-2" />
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end gap-3">
-                <SecondaryButton @click="closeModal">Batal</SecondaryButton>
-                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Simpan Data Logistik
-                </PrimaryButton>
-            </div>
-        </form>
-    </Modal>
 </template>
 
 <style scoped>

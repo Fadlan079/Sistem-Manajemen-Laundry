@@ -67,6 +67,10 @@ function openEdit(s) {
     form.estimate    = s.estimate;
     form.status      = s.status;
     form.description = s.description ?? '';
+    form.image       = null;
+    form.features    = s.features ?? [];
+    form.unit        = s.unit ?? '/kg';
+    form.tag         = s.tag ?? '';
     form.clearErrors();
     showFormModal.value = true;
 }
@@ -86,14 +90,20 @@ function closeModals() {
 // ── Inertia Form ─────────────────────────────────────────────────
 const form = useForm({
     name: '', category: 'Kiloan', price: '', estimate: '', status: 'tersedia', description: '',
+    image: null, features: [], unit: '/kg', tag: '', _method: 'post'
 });
+
+function addFeature() { form.features.push(''); }
+function removeFeature(idx) { form.features.splice(idx, 1); }
 
 function submitForm() {
     if (editingService.value) {
-        form.put(route('admin.services.update', editingService.value.id), {
+        form._method = 'put';
+        form.post(route('admin.services.update', editingService.value.id), {
             onSuccess: closeModals,
         });
     } else {
+        form._method = 'post';
         form.post(route('admin.services.store'), {
             onSuccess: closeModals,
         });
@@ -223,6 +233,7 @@ const chartPriceData = computed(() => ({
                 </button>
             </header>
 
+
             <!-- Stats -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div v-for="(stat, i) in statCards" :key="i"
@@ -338,9 +349,15 @@ const chartPriceData = computed(() => ({
                             </tr>
                             <tr v-for="s in services.data" :key="s.id" class="hover:bg-container/30 transition-colors group">
                                 <td class="px-6 py-4">
-                                    <div>
-                                        <p class="font-bold text-text group-hover:text-primary transition-colors">{{ s.name }}</p>
-                                        <p v-if="s.description" class="text-[11px] text-muted mt-0.5 line-clamp-1">{{ s.description }}</p>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200">
+                                            <img v-if="s.image_url" :src="s.image_url" alt="" class="w-full h-full object-cover">
+                                            <i v-else class="fas fa-image text-gray-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-text group-hover:text-primary transition-colors">{{ s.name }}</p>
+                                            <p v-if="s.description" class="text-[11px] text-muted mt-0.5 line-clamp-1">{{ s.description }}</p>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -389,27 +406,26 @@ const chartPriceData = computed(() => ({
                 </div>
 
                 <!-- Pagination -->
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4">
+                <div v-if="services.links && services.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
                     <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
                         Menampilkan {{ services.from ?? 0 }}–{{ services.to ?? 0 }} dari {{ services.total }} layanan
                     </p>
-                    <div class="flex gap-2">
-                        <template v-for="link in services.links" :key="link.label">
-                            <button v-if="link.label === '&laquo; Previous'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-left text-xs"></i>
-                            </button>
-                            <button v-else-if="link.label === 'Next &raquo;'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </button>
-                            <button v-else @click="link.url && router.get(link.url, {}, { preserveState: true })"
-                                :class="link.active ? 'bg-primary text-white border-primary' : 'border-border text-text hover:bg-container'"
-                                class="w-8 h-8 flex items-center justify-center border font-bold text-xs rounded-sm transition">
-                                {{ link.label }}
-                            </button>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <template v-for="(link, key) in services.links" :key="key">
+                            <button
+                                @click="link.url && router.get(link.url, { search: search, category: categoryFilter }, { preserveState: true, preserveScroll: true })"
+                                :disabled="!link.url"
+                                v-html="link.label"
+                                :class="[
+                                    link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container',
+                                    'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors',
+                                    !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    key === 0 ? 'rounded-l-md' : '',
+                                    key === services.links.length - 1 ? 'rounded-r-md' : '',
+                                ]"
+                            ></button>
                         </template>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -482,8 +498,51 @@ const chartPriceData = computed(() => ({
                             <!-- Description -->
                             <div>
                                 <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Deskripsi</label>
-                                <textarea v-model="form.description" rows="3" placeholder="Deskripsi singkat layanan..."
+                                <textarea v-model="form.description" rows="2" placeholder="Deskripsi singkat layanan..."
                                     class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition resize-none"></textarea>
+                            </div>
+
+                            <!-- Image & Unit & Tag -->
+                            <div class="grid grid-cols-3 gap-4 border-t border-border pt-4">
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Gambar Layanan</label>
+                                    <input @change="e => form.image = e.target.files[0]" type="file" accept="image/*"
+                                        class="w-full px-4 py-2 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-xs font-medium transition file:mr-3 file:py-1 file:px-2 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:bg-primary file:text-white hover:file:bg-primary-hover" />
+                                    <p v-if="form.errors.image" class="mt-1 text-xs text-rose-600">{{ form.errors.image }}</p>
+                                    <p v-if="editingService && editingService.image_url" class="mt-2 text-[10px] text-muted font-bold text-blue-500 hover:underline">
+                                        <a :href="editingService.image_url" target="_blank">Lihat Gambar Saat Ini</a>
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Satuan Harga</label>
+                                    <input v-model="form.unit" type="text" placeholder="/kg"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Label Tag (Opsional)</label>
+                                    <input v-model="form.tag" type="text" placeholder="Cepat"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                </div>
+                            </div>
+
+                            <!-- Features List -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-muted">Daftar Kelebihan / Fitur</label>
+                                    <button type="button" @click="addFeature" class="text-[10px] bg-container hover:bg-border text-text px-2 py-1 rounded-sm font-bold transition">
+                                        + Tambah Fitur
+                                    </button>
+                                </div>
+                                <div class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                    <div v-for="(feat, idx) in form.features" :key="idx" class="flex items-center gap-2">
+                                        <input v-model="form.features[idx]" type="text" placeholder="Fitur unggulan..."
+                                            class="w-full px-3 py-2 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
+                                        <button type="button" @click="removeFeature(idx)" class="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-sm hover:bg-rose-600 hover:text-white transition">
+                                            <i class="fa-solid fa-xmark text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <p v-if="form.features.length === 0" class="text-xs text-muted italic">Belum ada fitur ditambahkan.</p>
+                                </div>
                             </div>
 
                             <!-- Actions -->

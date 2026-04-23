@@ -18,19 +18,34 @@ class OrderController extends Controller
     {
         $search = $request->input('search', '');
         $status = $request->input('status', '');
+        $date   = $request->input('date', '');
 
         $query = Order::with(['user', 'service', 'payments'])
-            ->when($search, fn($q) => $q->where(fn($q2) =>
-                $q2->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"))
-                   ->orWhereHas('service', fn($s) => $s->where('name', 'like', "%{$search}%"))
-                   ->orWhere('id', 'like', "%{$search}%")
-            ))
+            ->when($search, function ($q) use ($search) {
+                // Support searching by invoice format "INV-20260422-0001", partial, or name
+                // Extract the trailing numeric ID from the invoice string if present
+                $numericId = null;
+                if (preg_match('/-(\d{4})$/', $search, $m)) {
+                    $numericId = (int) $m[1];
+                } elseif (is_numeric($search)) {
+                    $numericId = (int) $search;
+                }
+
+                $q->where(function ($q2) use ($search, $numericId) {
+                    $q2->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                       ->orWhereHas('service', fn($s) => $s->where('name', 'like', "%{$search}%"));
+                    if ($numericId !== null) {
+                        $q2->orWhere('id', $numericId);
+                    }
+                });
+            })
+            ->when($date, fn($q) => $q->whereDate('created_at', $date))
             ->when($status, fn($q) => $q->where('status', $status))
             ->latest();
 
         $orders = $query->paginate(10)->withQueryString()->through(fn($o) => [
             'id'             => $o->id,
-            'invoice'        => 'ORD-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
+            'invoice'        => 'INV-' . $o->created_at->format('Ymd') . '-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
             'customer'       => $o->user?->name ?? '-',
             'customer_email' => $o->user?->email ?? '-',
             'service'        => $o->service?->name ?? '-',
@@ -102,7 +117,7 @@ class OrderController extends Controller
         return Inertia::render('dashboard/admin/manajemen-order', [
             'orders'      => $orders,
             'stats'       => $stats,
-            'filters'     => ['search' => $search, 'status' => $status],
+            'filters'     => ['search' => $search, 'status' => $status, 'date' => $date],
             'services'    => $serviceList,
             'customers'   => $customerList,
             'chartData'   => [

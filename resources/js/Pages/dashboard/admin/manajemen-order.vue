@@ -1,5 +1,5 @@
 <script setup>
-import { Head, usePage, useForm, router } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import { computed, ref, onMounted, watch } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 import { Line, Doughnut, Bar } from 'vue-chartjs';
@@ -17,8 +17,6 @@ const props = defineProps({
     orders:    Object,   // paginated
     stats:     Object,
     filters:   Object,
-    services:  Array,
-    customers: Array,
     chartData: Object,
 });
 
@@ -27,14 +25,16 @@ const flash = computed(() => usePage().props.flash ?? {});
 // ── Search / Filter ────────────────────────────────────────────────
 const search       = ref(props.filters?.search ?? '');
 const statusFilter = ref(props.filters?.status ?? '');
+const dateFilter   = ref(props.filters?.date   ?? '');
 
 let searchTimeout = null;
-watch([search, statusFilter], () => {
+watch([search, statusFilter, dateFilter], () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
         router.get(route('admin.orders'), {
             search: search.value,
             status: statusFilter.value,
+            date:   dateFilter.value,
         }, { preserveState: true, replace: true });
     }, 350);
 });
@@ -47,11 +47,8 @@ onMounted(() => {
 });
 watch(isChartExpanded, v => localStorage.setItem('manajemen-order-chart-expanded', v));
 
-// ── Modals ─────────────────────────────────────────────────────────
-const showFormModal   = ref(false);
+// ── Modals (Read-only: hanya detail) ──────────────────────────────
 const showDetailModal = ref(false);
-const showDeleteModal = ref(false);
-const editingOrder    = ref(null);
 const viewingOrder    = ref(null);
 const deletingOrder   = ref(null);
 
@@ -115,16 +112,8 @@ function openDetail(o) {
     showDetailModal.value = true;
 }
 
-function openDelete(o) {
-    deletingOrder.value   = o;
-    showDeleteModal.value = true;
-}
-
 function closeModals() {
-    showFormModal.value   = false;
     showDetailModal.value = false;
-    showDeleteModal.value = false;
-    editingOrder.value    = null;
     viewingOrder.value    = null;
     deletingOrder.value   = null;
 }
@@ -260,21 +249,6 @@ const chartServiceData = computed(() => {
                 <i class="fa-solid fa-circle-xmark"></i> {{ flash.error }}
             </div>
 
-            <!-- Header -->
-            <header class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div class="space-y-1">
-                    <h1 class="text-4xl font-black tracking-tighter text-text uppercase">
-                        Manajemen <span class="text-muted font-medium">Order</span>
-                    </h1>
-                    <p class="text-muted font-medium italic">Kelola semua transaksi dan pantau status pesanan pelanggan.</p>
-                </div>
-                <button @click="openCreate"
-                    class="bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-sm font-black uppercase tracking-widest text-xs shadow-lg transition-all transform hover:-translate-y-1 flex items-center gap-3">
-                    <i class="fa-solid fa-plus"></i>
-                    Buat Pesanan Baru
-                </button>
-            </header>
-
             <!-- Stats -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div v-for="(stat, i) in statCards" :key="i"
@@ -355,32 +329,48 @@ const chartServiceData = computed(() => {
 
             <!-- Table -->
             <div class="space-y-4">
-                <div class="flex flex-col md:flex-row gap-4 justify-between items-end">
+                <div class="flex flex-col md:flex-row gap-3 justify-between items-end">
+                    <!-- Search -->
                     <div class="w-full md:max-w-md relative group">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
-                        <input v-model="search" type="text" placeholder="Cari nama pelanggan atau ID..."
+                        <input v-model="search" type="text" placeholder="Cari nama pelanggan atau no. invoice (INV-20260422-0001)..."
                             class="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm" />
                     </div>
-                    <select v-model="statusFilter"
-                        class="px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
-                        <option value="">Semua Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="diproses">Diproses</option>
-                        <option value="selesai">Selesai</option>
-                        <option value="diantar">Diantar</option>
-                    </select>
+
+                    <div class="flex flex-col sm:flex-row gap-3 items-end w-full md:w-auto">
+                        <!-- Date Filter -->
+                        <div class="relative w-full sm:w-auto">
+                            <i class="fa-solid fa-calendar-days absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-xs"></i>
+                            <input type="date" v-model="dateFilter"
+                                class="w-full sm:w-[175px] pl-9 pr-8 py-3 border border-border bg-surface text-text rounded-sm text-sm outline-none focus:border-primary transition" />
+                            <button v-if="dateFilter" @click="dateFilter = ''"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 transition-colors">
+                                <i class="fa-solid fa-times text-xs"></i>
+                            </button>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <select v-model="statusFilter"
+                            class="w-full sm:w-auto px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
+                            <option value="">Semua Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="diproses">Diproses</option>
+                            <option value="selesai">Selesai</option>
+                            <option value="diantar">Diantar</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="bg-surface border border-border rounded-sm shadow-xl overflow-x-auto">
                     <table class="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr class="bg-container/50 border-b border-border">
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">ID Order</th>
+                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">No. Invoice</th>
                                 <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Pelanggan</th>
                                 <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Layanan</th>
                                 <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Status</th>
                                 <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Total</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-right">Aksi</th>
+                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-center">Detail</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -393,7 +383,7 @@ const chartServiceData = computed(() => {
                             <tr v-for="o in orders.data" :key="o.id" class="hover:bg-container/30 transition-colors group">
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-text group-hover:text-primary transition-colors font-mono text-sm">#{{ o.invoice }}</span>
+                                        <span class="font-bold text-text group-hover:text-primary transition-colors font-mono text-sm">{{ o.invoice }}</span>
                                         <span class="font-mono text-[10px] text-muted mt-0.5">{{ o.date }}</span>
                                     </div>
                                 </td>
@@ -430,14 +420,6 @@ const chartServiceData = computed(() => {
                                             class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-primary hover:border-primary hover:text-white transition-all" title="Lihat Detail">
                                             <i class="fa-solid fa-eye text-xs"></i>
                                         </button>
-                                        <button @click="openEdit(o)"
-                                            class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-text hover:text-white transition-all" title="Edit">
-                                            <i class="fa-solid fa-pen-to-square text-xs"></i>
-                                        </button>
-                                        <button @click="openDelete(o)"
-                                            class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-rose-600 hover:border-rose-600 hover:text-white transition-all" title="Hapus">
-                                            <i class="fa-solid fa-trash-can text-xs"></i>
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -446,27 +428,26 @@ const chartServiceData = computed(() => {
                 </div>
 
                 <!-- Pagination -->
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-4">
+                <div v-if="orders.links && orders.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
                     <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
                         Menampilkan {{ orders.from ?? 0 }}–{{ orders.to ?? 0 }} dari {{ orders.total }} pesanan
                     </p>
-                    <div class="flex gap-2">
-                        <template v-for="link in orders.links" :key="link.label">
-                            <button v-if="link.label === '&laquo; Previous'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-left text-xs"></i>
-                            </button>
-                            <button v-else-if="link.label === 'Next &raquo;'" @click="link.url && router.get(link.url, {}, { preserveState: true })" :disabled="!link.url"
-                                class="w-8 h-8 flex items-center justify-center border border-border text-muted rounded-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-container transition">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </button>
-                            <button v-else @click="link.url && router.get(link.url, {}, { preserveState: true })"
-                                :class="link.active ? 'bg-primary text-white border-primary' : 'border-border text-text hover:bg-container'"
-                                class="w-8 h-8 flex items-center justify-center border font-bold text-xs rounded-sm transition">
-                                {{ link.label }}
-                            </button>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <template v-for="(link, key) in orders.links" :key="key">
+                            <button
+                                @click="link.url && router.get(link.url, { search: search, status: statusFilter, date: dateFilter }, { preserveState: true, preserveScroll: true })"
+                                :disabled="!link.url"
+                                v-html="link.label"
+                                :class="[
+                                    link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container',
+                                    'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors',
+                                    !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    key === 0 ? 'rounded-l-md' : '',
+                                    key === orders.links.length - 1 ? 'rounded-r-md' : '',
+                                ]"
+                            ></button>
                         </template>
-                    </div>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -635,13 +616,14 @@ const chartServiceData = computed(() => {
                         </div>
                         <div class="p-6 space-y-4">
                             <div class="flex items-center justify-between">
-                                <span class="font-mono font-black text-primary text-lg">#{{ viewingOrder.invoice }}</span>
+                                <span class="font-mono font-black text-primary text-lg">{{ viewingOrder.invoice }}</span>
                                 <span :class="getStatus(viewingOrder.status).cls" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border">
                                     {{ getStatus(viewingOrder.status).label }}
                                 </span>
                             </div>
                             <div class="divide-y divide-border rounded-sm border border-border overflow-hidden">
                                 <div v-for="(row, idx) in [
+                                    ['No. Invoice',   viewingOrder.invoice],
                                     ['Pelanggan',     viewingOrder.customer],
                                     ['Email',         viewingOrder.customer_email],
                                     ['Layanan',       viewingOrder.service],
@@ -656,11 +638,7 @@ const chartServiceData = computed(() => {
                                     <span class="text-sm font-medium text-text break-all">{{ row[1] }}</span>
                                 </div>
                             </div>
-                            <div class="flex justify-end gap-3 pt-2 border-t border-border">
-                                <button @click="closeModals; openEdit(viewingOrder)"
-                                    class="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-sm text-xs font-black uppercase tracking-widest transition flex items-center gap-2">
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                                </button>
+                            <div class="flex justify-end pt-2 border-t border-border">
                                 <button @click="closeModals"
                                     class="px-5 py-2.5 border border-border rounded-sm text-xs font-black uppercase tracking-widest text-muted hover:text-text hover:bg-container transition">
                                     Tutup
@@ -672,41 +650,6 @@ const chartServiceData = computed(() => {
             </transition>
         </teleport>
 
-        <!-- ══════════════════════════════════════
-             Modal: Konfirmasi Delete
-        ══════════════════════════════════════ -->
-        <teleport to="body">
-            <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100"
-                leave-active-class="transition duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeModals">
-                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-                    <div class="relative z-10 w-full max-w-sm bg-surface border border-rose-200 rounded-sm shadow-2xl p-6 space-y-5">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-text uppercase tracking-tight">Hapus Pesanan?</h3>
-                                <p class="text-xs text-muted mt-0.5">Tindakan ini tidak dapat dibatalkan.</p>
-                            </div>
-                        </div>
-                        <p class="text-sm text-text">
-                            Anda akan menghapus pesanan
-                            <span class="font-bold font-mono">#{{ deletingOrder?.invoice }}</span>
-                            atas nama <span class="font-bold">{{ deletingOrder?.customer }}</span>.
-                        </p>
-                        <div class="flex gap-3 pt-2 border-t border-border">
-                            <button @click="closeModals" class="flex-1 py-2.5 border border-border rounded-sm text-xs font-black uppercase tracking-widest text-muted hover:text-text hover:bg-container transition">
-                                Batal
-                            </button>
-                            <button @click="confirmDelete" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-sm text-xs font-black uppercase tracking-widest transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-trash-can"></i> Hapus
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </transition>
-        </teleport>
 
     </DashboardLayout>
 </template>
