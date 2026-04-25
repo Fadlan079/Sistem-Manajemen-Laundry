@@ -5,6 +5,7 @@ import { Link, router } from '@inertiajs/vue3';
 defineProps({
     canLogin: { type: Boolean, default: false },
     canRegister: { type: Boolean, default: false },
+    hideBottomNav: { type: Boolean, default: false },
 });
 
 const isProfileDesktopOpen = ref(false);
@@ -206,11 +207,6 @@ onMounted(() => {
 
             <!-- ── Mobile Top Bar ─────────────────────────────────── -->
             <div class="flex lg:hidden items-center gap-3 h-10">
-                <!-- SCAN BUTTON -->
-                <Link :href="route('pelanggan.lacak')" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl active:scale-95 transition-transform" aria-label="Scan">
-                    <i class="fa-solid fa-qrcode text-white text-xl"></i>
-                </Link>
-
                 <!-- SEARCH INPUT MOBILE -->
                 <div class="flex-1 relative" ref="mobileSearchContainer">
                     <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none z-10">
@@ -242,75 +238,79 @@ onMounted(() => {
                         leave-from-class="opacity-100 translate-y-0"
                         leave-to-class="opacity-0 translate-y-1"
                     >
-                        <div
-                            v-if="isSearchOpenMobile && (searchResults.length > 0 || isSearchLoading)"
-                            :style="mobileDropdownStyle"
-                            class="search-dropdown-teleport bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
-                        >
+<div
+    v-if="isSearchOpenMobile && (searchResults.length > 0 || isSearchLoading)"
+    :style="mobileDropdownStyle"
+    class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
+>
 
-                            <div v-if="isSearchLoading && searchResults.length === 0" class="px-4 py-3 space-y-3">
-                                <div v-for="i in 3" :key="i" class="flex items-center gap-3 animate-pulse">
-                                    <div class="w-9 h-9 bg-gray-200 rounded-xl shrink-0"></div>
-                                    <div class="flex-1 space-y-1.5">
-                                        <div class="h-3 bg-gray-200 rounded-full w-3/4"></div>
-                                        <div class="h-2.5 bg-gray-100 rounded-full w-1/2"></div>
-                                    </div>
-                                </div>
-                            </div>
+    <!-- Loading -->
+    <div v-if="isSearchLoading && searchResults.length === 0" class="p-4 space-y-3">
+        <div v-for="i in 3" :key="i" class="flex items-center gap-3 animate-pulse">
+            <div class="w-10 h-10 bg-gray-200 rounded-xl"></div>
+            <div class="flex-1 space-y-2">
+                <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+                <div class="h-2 bg-gray-100 rounded w-1/2"></div>
+            </div>
+        </div>
+    </div>
 
-                            <template v-else>
-                                <div class="px-3 py-2 border-b border-gray-50 flex items-center gap-1.5">
-                                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <span class="text-[10px] text-gray-400 font-medium">{{ searchResults.length }} hasil ditemukan</span>
-                                </div>
-                                <ul>
-                                    <li
-                                        v-for="(item, idx) in searchResults"
-                                        :key="item.type + '-' + item.id"
-                                        @click="selectResult(item)"
-                                        :class="['flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0', highlightIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50']"
-                                    >
-                                        <template v-if="item.type === 'order'">
-                                            <div class="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100">
-                                                <i class="fas fa-file-invoice text-blue-500 text-sm"></i>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-xs font-black text-gray-800 truncate" v-html="highlightMatch(item.invoice, searchQueryMobile)"></p>
-                                                <p class="text-[10px] text-gray-500 truncate mt-0.5">{{ item.name }} &bull; {{ item.date }}</p>
-                                            </div>
-                                            <div class="text-right shrink-0">
-                                                <span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[9px] font-bold uppercase tracking-wide border border-blue-200">{{ item.status }}</span>
-                                            </div>
-                                        </template>
+    <!-- Empty -->
+    <div v-else-if="searchResults.length === 0" class="px-4 py-5 text-center text-gray-400 text-xs">
+        Tidak ada hasil
+    </div>
 
-                                        <template v-else>
-                                            <div class="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100">
-                                                <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
-                                                <i v-else class="fas fa-shirt text-primary/60 text-sm"></i>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-xs font-semibold text-gray-800 truncate" v-html="highlightMatch(item.name, searchQueryMobile)"></p>
-                                                <p class="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
-                                                    <span class="inline-block px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQueryMobile)"></span>
-                                                </p>
-                                            </div>
-                                            <div class="text-right shrink-0">
-                                                <span class="text-xs font-bold text-primary">{{ formatPrice(item.price) }}</span>
-                                                <span v-if="item.unit" class="block text-[10px] text-gray-400">/{{ item.unit }}</span>
-                                            </div>
-                                        </template>
+    <!-- Results -->
+    <ul v-else class="max-h-[360px] overflow-y-auto py-2">
+        <li
+            v-for="(item, idx) in searchResults"
+            :key="item.type + '-' + item.id"
+            @click="selectResult(item)"
+            :class="[
+                'flex items-center gap-3 px-3 py-2.5 mx-2 my-1 rounded-xl transition',
+                highlightIndex === idx
+                ? 'bg-red-50 ring-1 ring-red-200'
+                : 'bg-white active:scale-[0.98]'
+            ]"
+        >
 
-                                        <svg class="w-3.5 h-3.5 text-gray-300 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                    </li>
-                                </ul>
-                                <div class="px-3 py-2 bg-gray-50 border-t border-gray-100">
-                                    <button @click="router.visit(route('pelanggan.pesan'))" class="text-[10px] text-primary font-semibold hover:underline flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                                        Lihat semua layanan
-                                    </button>
-                                </div>
-                            </template>
-                        </div>
+            <!-- ICON -->
+            <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0
+                        bg-gradient-to-br from-red-50 to-yellow-50
+                        flex items-center justify-center">
+
+                <template v-if="item.type === 'order'">
+                    <i class="fas fa-file-invoice text-blue-500 text-sm"></i>
+                </template>
+
+                <template v-else>
+                    <img v-if="item.image_url" :src="item.image_url" class="w-full h-full object-cover">
+                    <i v-else class="fas fa-shirt text-primary/60 text-sm"></i>
+                </template>
+            </div>
+
+            <!-- TEXT -->
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold text-gray-800 truncate"
+                   v-html="highlightMatch(item.name || item.invoice, searchQueryMobile)">
+                </p>
+
+                <p class="text-[10px] text-gray-400 mt-0.5">
+                    {{ item.category || item.date }}
+                </p>
+            </div>
+
+            <!-- PRICE -->
+            <div class="text-right">
+                <span v-if="item.price" class="text-xs font-bold text-primary">
+                    {{ formatPrice(item.price) }}
+                </span>
+            </div>
+
+        </li>
+    </ul>
+
+</div>
                     </transition>
                 </Teleport>
 
@@ -332,6 +332,7 @@ onMounted(() => {
                     <Link :href="route('home')" @click="activeSection = 'beranda'" :class="[activeSection === 'beranda' ? 'text-secondary' : 'text-white/70 hover:text-white']">Beranda</Link>
                     <Link :href="route('pelanggan.aktivitas')" @click="activeSection = 'aktivitas'" :class="[activeSection === 'aktivitas' ? 'text-secondary' : 'text-white/70 hover:text-white']">Aktivitas</Link>
                     <Link :href="route('pelanggan.lacak')" @click="activeSection = 'lacak'" :class="[activeSection === 'lacak' ? 'text-secondary' : 'text-white/70 hover:text-white']">Lacak Pesanan</Link>
+                    <Link :href="route('pelanggan.daftar-layanan')" @click="activeSection = 'daftar-layanan'" :class="[activeSection === 'daftar-layanan' ? 'text-secondary' : 'text-white/70 hover:text-white']">Pesan Sekarang</Link>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -366,103 +367,125 @@ onMounted(() => {
                             </button>
                         </div>
 
-                        <!-- Dropdown Desktop -->
-                        <transition
-                            enter-active-class="transition ease-out duration-200"
-                            enter-from-class="opacity-0 translate-y-1 scale-95"
-                            enter-to-class="opacity-100 translate-y-0 scale-100"
-                            leave-active-class="transition ease-in duration-100"
-                            leave-from-class="opacity-100 translate-y-0 scale-100"
-                            leave-to-class="opacity-0 translate-y-1 scale-95"
-                        >
-                            <div
-                                v-if="isSearchOpen && (searchResults.length > 0 || isSearchLoading)"
-                                class="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-[9999] border border-gray-100"
-                                @mousedown.prevent
-                            >
-                                <!-- Loading skeleton -->
-                                <div v-if="isSearchLoading && searchResults.length === 0" class="px-4 py-3 space-y-3">
-                                    <div v-for="i in 3" :key="i" class="flex items-center gap-3 animate-pulse">
-                                        <div class="w-10 h-10 bg-gray-200 rounded-xl shrink-0"></div>
-                                        <div class="flex-1 space-y-2">
-                                            <div class="h-3 bg-gray-200 rounded-full w-3/4"></div>
-                                            <div class="h-2.5 bg-gray-100 rounded-full w-1/2"></div>
-                                        </div>
-                                        <div class="w-16 h-4 bg-gray-200 rounded-full"></div>
-                                    </div>
-                                </div>
+<!-- Dropdown Desktop (Improved UI) -->
+<transition
+    enter-active-class="transition ease-out duration-200"
+    enter-from-class="opacity-0 translate-y-1 scale-95"
+    enter-to-class="opacity-100 translate-y-0 scale-100"
+    leave-active-class="transition ease-in duration-100"
+    leave-from-class="opacity-100 translate-y-0 scale-100"
+    leave-to-class="opacity-0 translate-y-1 scale-95"
+>
+    <div
+        v-if="isSearchOpen && (searchResults.length > 0 || isSearchLoading)"
+        class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden z-[9999] border border-gray-100"
+        @mousedown.prevent
+    >
 
-                                <!-- Results -->
-                                <template v-else>
-                                    <!-- Header -->
-                                    <div class="px-4 pt-3 pb-2 flex items-center justify-between">
-                                        <span class="text-[11px] text-gray-400 font-medium uppercase tracking-wide">Pencarian Teratas</span>
-                                        <span class="text-[10px] text-primary font-bold">{{ searchResults.length }} hasil</span>
-                                    </div>
-                                    <ul class="pb-1">
-                                        <li
-                                            v-for="(item, idx) in searchResults"
-                                            :key="item.type + '-' + item.id"
-                                            @click="selectResult(item)"
-                                            :class="['group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0', highlightIndex === idx ? 'bg-red-50' : 'hover:bg-gray-50']"
-                                        >
-                                            <template v-if="item.type === 'order'">
-                                                <!-- Icon Order -->
-                                                <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100 group-hover:border-blue-200 transition-colors">
-                                                    <i class="fas fa-file-invoice text-blue-500"></i>
-                                                </div>
-                                                <!-- Text Order -->
-                                                <div class="flex-1 min-w-0">
-                                                    <p class="text-sm font-black text-gray-800 truncate group-hover:text-blue-600 transition-colors" v-html="highlightMatch(item.invoice, searchQuery)"></p>
-                                                    <p class="text-xs text-gray-500 mt-0.5">{{ item.name }} &bull; {{ item.date }}</p>
-                                                </div>
-                                                <!-- Status Badge Order -->
-                                                <div class="text-right shrink-0">
-                                                    <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-bold uppercase tracking-wide border border-blue-200">{{ item.status }}</span>
-                                                </div>
-                                            </template>
-                                            
-                                            <template v-else>
-                                                <!-- Icon / Image Service -->
-                                                <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center border border-gray-100 group-hover:border-primary/20 transition-colors">
-                                                    <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="w-full h-full object-cover">
-                                                    <i v-else class="fas fa-shirt text-primary/60"></i>
-                                                </div>
-                                                <!-- Text Service -->
-                                                <div class="flex-1 min-w-0">
-                                                    <p class="text-sm font-semibold text-gray-800 truncate group-hover:text-primary transition-colors" v-html="highlightMatch(item.name, searchQuery)"></p>
-                                                    <p class="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
-                                                        <span class="inline-block px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold uppercase tracking-wide" v-html="highlightMatch(item.category, searchQuery)"></span>
-                                                    </p>
-                                                </div>
-                                                <!-- Price Service -->
-                                                <div class="text-right shrink-0">
-                                                    <span class="text-sm font-bold text-primary">{{ formatPrice(item.price) }}</span>
-                                                    <span v-if="item.unit" class="block text-[10px] text-gray-400 mt-0.5">/{{ item.unit }}</span>
-                                                </div>
-                                            </template>
+        <!-- Loading -->
+        <div v-if="isSearchLoading && searchResults.length === 0" class="p-4 space-y-3">
+            <div v-for="i in 3" :key="i" class="flex items-center gap-3 animate-pulse">
+                <div class="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-2 bg-gray-100 rounded w-1/2"></div>
+                </div>
+            </div>
+        </div>
 
-                                            <!-- Arrow chevron -->
-                                            <svg class="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                        </li>
-                                    </ul>
-                                    <!-- Footer -->
-                                    <div class="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                                        <span class="text-[10px] text-gray-400">Tekan <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] font-mono shadow-sm">↑↓</kbd> untuk navigasi, <kbd class="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] font-mono shadow-sm">Enter</kbd> untuk pilih</span>
-                                        <button @click="router.visit(route('pelanggan.pesan'))" class="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1">
-                                            Semua layanan <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                        </button>
-                                    </div>
-                                </template>
-                            </div>
-                        </transition>
+        <!-- Empty -->
+        <div v-else-if="searchResults.length === 0" class="px-4 py-6 text-center text-gray-400 text-sm">
+            Tidak ada hasil ditemukan
+        </div>
+
+        <!-- Results -->
+        <div v-else class="py-2 max-h-[380px] overflow-y-auto">
+
+            <ul>
+                <li
+                    v-for="(item, idx) in searchResults"
+                    :key="item.type + '-' + item.id"
+                    @click="selectResult(item)"
+                    :class="[
+                        'group flex items-center gap-3 px-3 py-3 mx-2 my-1 rounded-xl cursor-pointer transition-all',
+                        highlightIndex === idx
+                        ? 'bg-red-50 ring-1 ring-red-200 shadow-sm'
+                        : 'bg-white hover:bg-gray-50 hover:shadow'
+                    ]"
+                >
+
+                    <!-- ICON -->
+                    <div class="w-12 h-12 rounded-xl overflow-hidden shrink-0
+                                bg-gradient-to-br from-red-50 to-yellow-50
+                                flex items-center justify-center border border-gray-100
+                                group-hover:scale-105 transition-transform">
+
+                        <template v-if="item.type === 'order'">
+                            <i class="fas fa-file-invoice text-blue-500"></i>
+                        </template>
+
+                        <template v-else>
+                            <img v-if="item.image_url" :src="item.image_url" class="w-full h-full object-cover">
+                            <i v-else class="fas fa-shirt text-primary/60"></i>
+                        </template>
+                    </div>
+
+                    <!-- TEXT -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-800 truncate"
+                           v-html="highlightMatch(item.name || item.invoice, searchQuery)">
+                        </p>
+
+                        <div class="flex items-center gap-2 mt-1">
+
+                            <span v-if="item.category"
+                                class="text-[10px] px-2 py-0.5 bg-gray-100 rounded-md text-gray-500 font-medium"
+                                v-html="highlightMatch(item.category, searchQuery)">
+                            </span>
+
+                            <span v-if="item.date"
+                                class="text-[10px] text-gray-400">
+                                {{ item.date }}
+                            </span>
+
+                        </div>
+                    </div>
+
+                    <!-- RIGHT -->
+                    <div class="text-right shrink-0">
+                        <template v-if="item.price">
+                            <p class="text-sm font-extrabold text-primary">
+                                {{ formatPrice(item.price) }}
+                            </p>
+                        </template>
+
+                        <template v-if="item.status">
+                            <span class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md font-bold">
+                                {{ item.status }}
+                            </span>
+                        </template>
+                    </div>
+
+                    <!-- ARROW -->
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-primary transition shrink-0"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5l7 7-7 7"/>
+                    </svg>
+
+                </li>
+            </ul>
+
+        </div>
+    </div>
+</transition>
                     </div>
 
                     <template v-if="canLogin">
                         <div v-if="$page.props.auth.user" class="relative">
                             <button @click="isProfileDesktopOpen = !isProfileDesktopOpen" class="flex items-center focus:outline-none shrink-0 group">
-                                <div v-if="$page.props.auth.user.profile_photo_url" class="w-10 h-10 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition-colors">
-                                    <img :src="$page.props.auth.user.profile_photo_url" alt="Profile" class="w-full h-full object-cover">
+                                <div v-if="$page.props.auth.user.avatar_url" class="w-10 h-10 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition-colors">
+                                    <img :src="$page.props.auth.user.avatar_url" alt="Profile" class="w-full h-full object-cover">
                                 </div>
                                 <div v-else class="w-10 h-10 rounded-full bg-secondary text-primary font-bold flex items-center justify-center text-sm shadow-lg group-hover:scale-105 transition-transform">
                                     {{ getInitials($page.props.auth.user.name) }}
@@ -502,77 +525,94 @@ onMounted(() => {
         class="lg:hidden fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]"
     ></div>
 
-    <!-- ── Bottom Nav (Mobile) ──────────────────────────────── -->
-    <nav v-show="!route().current('pelanggan.pesan') && !route().current('pelanggan.aktivitas.detail')" :class="[
-        'lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-lg border-t border-white/5 pb-safe shadow-[0_-4px_25px_rgba(0,0,0,0.4)] transition-transform duration-500 ease-in-out',
+<!-- ── Bottom Nav (Mobile - Clean Version) ──────────────────────────────── -->
+<nav
+    v-show="!hideBottomNav && !route().current('pelanggan.pesan') && !route().current('pelanggan.aktivitas.detail')"
+    :class="[
+        'lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe shadow-sm transition-transform duration-300',
         isBottomNavVisible ? 'translate-y-0' : 'translate-y-full'
-    ]">
-        <div class="flex justify-between items-center h-16 relative">
+    ]"
+>
+    <div class="flex justify-between items-center h-16 relative text-gray-500">
 
-            <!-- BERANDA -->
-            <Link :href="route('home')" @click="activeSection = 'beranda'"
-                class="relative h-full flex flex-col items-center justify-center gap-1 flex-1 transition-all duration-300 overflow-hidden"
-                :class="activeSection === 'beranda' ? 'text-secondary' : 'text-white/40'">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-secondary transition-all duration-300 origin-center"
-                     :class="activeSection === 'beranda' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-secondary/10 to-transparent transition-opacity duration-300"
-                     :class="activeSection === 'beranda' ? 'opacity-100' : 'opacity-0'"></div>
-                <i class="fas fa-home text-[17px]"></i>
-                <span class="text-[9px] font-bold uppercase tracking-tighter">Beranda</span>
+        <!-- BERANDA -->
+        <Link
+            :href="route('home')"
+            @click="activeSection = 'beranda'"
+            class="flex flex-col items-center justify-center flex-1 gap-1 transition"
+            :class="activeSection === 'beranda' ? 'text-red-600' : ''"
+        >
+            <i class="fas fa-home text-[18px]"></i>
+            <span class="text-[10px] font-medium">Beranda</span>
+        </Link>
+
+        <!-- AKTIVITAS -->
+        <Link
+            :href="route('pelanggan.aktivitas')"
+            @click="activeSection = 'aktivitas'"
+            class="flex flex-col items-center justify-center flex-1 gap-1 transition"
+            :class="activeSection === 'aktivitas' ? 'text-red-600' : ''"
+        >
+            <i class="fas fa-receipt text-[18px]"></i>
+            <span class="text-[10px] font-medium">Aktivitas</span>
+        </Link>
+
+        <!-- CENTER CTA (PESAN) -->
+        <div class="flex-1 flex justify-center relative">
+            <Link
+                :href="route('pelanggan.daftar-layanan')"
+                class="absolute -top-7 flex flex-col items-center"
+            >
+                <div class="w-14 h-14 bg-red-600 text-white rounded-full
+                            flex items-center justify-center shadow-md
+                            transition active:scale-95">
+                    <i class="fas fa-basket-shopping text-lg"></i>
+                </div>
+                <span class="text-[10px] mt-1 font-semibold text-gray-700">
+                    Pesan
+                </span>
             </Link>
-
-            <!-- AKTIVITAS -->
-            <Link :href="route('pelanggan.aktivitas')" @click="activeSection = 'aktivitas'"
-                class="relative h-full flex flex-col items-center justify-center gap-1 flex-1 transition-all duration-300 overflow-hidden"
-                :class="activeSection === 'aktivitas' ? 'text-secondary' : 'text-white/40'">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-secondary transition-all duration-300 origin-center"
-                     :class="activeSection === 'aktivitas' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-secondary/10 to-transparent transition-opacity duration-300"
-                     :class="activeSection === 'aktivitas' ? 'opacity-100' : 'opacity-0'"></div>
-                <i class="fas fa-receipt text-[17px]"></i>
-                <span class="text-[9px] font-bold uppercase tracking-tighter">Aktivitas</span>
-            </Link>
-
-            <!-- ACTION BUTTON (CENTER) -->
-            <div class="flex-1 flex justify-center relative z-10">
-                <Link :href="route('pelanggan.pesan')" class="absolute -top-6 w-14 h-14 bg-secondary text-primary rounded-full shadow-[0_8px_20px_rgba(255,232,0,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all border-4 border-[#8B0000]">
-                    <i class="fas fa-plus text-2xl"></i>
-                </Link>
-            </div>
-
-            <!-- BANTUAN/KONTAK -->
-            <a href="/#kontak" @click="activeSection = 'kontak'"
-                class="relative h-full flex flex-col items-center justify-center gap-1 flex-1 transition-all duration-300 overflow-hidden"
-                :class="activeSection === 'kontak' ? 'text-secondary' : 'text-white/40'">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-secondary transition-all duration-300 origin-center"
-                     :class="activeSection === 'kontak' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-secondary/10 to-transparent transition-opacity duration-300"
-                     :class="activeSection === 'kontak' ? 'opacity-100' : 'opacity-0'"></div>
-                <i class="fas fa-headset text-[17px]"></i>
-                <span class="text-[9px] font-bold uppercase tracking-tighter">Bantuan</span>
-            </a>
-
-            <!-- PROFIL -->
-            <Link :href="route('profile.edit')" @click="activeSection = 'profil'"
-                class="relative h-full flex flex-col items-center justify-center gap-1 flex-1 transition-all duration-300 overflow-hidden"
-                :class="activeSection === 'profil' ? 'text-secondary' : 'text-white/40'">
-                <div class="absolute top-0 left-0 right-0 h-1 bg-secondary transition-all duration-300 origin-center"
-                     :class="activeSection === 'profil' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-secondary/10 to-transparent transition-opacity duration-300"
-                     :class="activeSection === 'profil' ? 'opacity-100' : 'opacity-0'"></div>
-                <template v-if="$page.props.auth?.user">
-                    <img v-if="$page.props.auth.user.avatar" :src="$page.props.auth.user.avatar" alt="Profile" class="w-5 h-5 rounded-full object-cover border" :class="activeSection === 'profil' ? 'border-secondary' : 'border-white/20'">
-                    <div v-else class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black uppercase shadow-sm transition-colors"
-                         :class="activeSection === 'profil' ? 'bg-secondary text-primary' : 'bg-white/20 text-white'">
-                        {{ getInitials($page.props.auth.user.name) }}
-                    </div>
-                </template>
-                <i v-else class="fas fa-user-circle text-[17px]"></i>
-                <span class="text-[9px] font-bold uppercase tracking-tighter">Profil</span>
-            </Link>
-
         </div>
-    </nav>
+
+        <!-- LACAK -->
+        <Link
+            :href="route('pelanggan.lacak')"
+            @click="activeSection = 'lacak'"
+            class="flex flex-col items-center justify-center flex-1 gap-1 transition"
+            :class="activeSection === 'lacak' ? 'text-red-600' : ''"
+        >
+            <i class="fa-solid fa-qrcode text-[18px]"></i>
+            <span class="text-[10px] font-medium">Lacak</span>
+        </Link>
+
+        <!-- PROFIL -->
+        <Link
+            :href="route('profile.edit')"
+            @click="activeSection = 'profil'"
+            class="flex flex-col items-center justify-center flex-1 gap-1 transition"
+            :class="activeSection === 'profil' ? 'text-red-600' : ''"
+        >
+            <template v-if="$page.props.auth?.user">
+                <img
+                    v-if="$page.props.auth.user.avatar_url"
+                    :src="$page.props.auth.user.avatar_url"
+                    class="w-5 h-5 rounded-full object-cover border border-gray-300"
+                >
+                <div
+                    v-else
+                    class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold bg-gray-200 text-gray-700"
+                >
+                    {{ getInitials($page.props.auth.user.name) }}
+                </div>
+            </template>
+
+            <i v-else class="fas fa-user text-[18px]"></i>
+
+            <span class="text-[10px] font-medium">Profil</span>
+        </Link>
+
+    </div>
+</nav>
 </template>
 
 <style scoped>

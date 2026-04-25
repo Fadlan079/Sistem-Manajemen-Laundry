@@ -7,7 +7,7 @@ const currentYear = new Date().getFullYear();
 <template>
   <footer class="bg-primary text-white pt-20 pb-10 px-8">
     <div class="max-w-7xl mx-auto">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
 
         <div class="space-y-6">
           <div class="flex items-center gap-3">
@@ -36,31 +36,13 @@ const currentYear = new Date().getFullYear();
           </div>
         </div>
 
-        <div>
-          <h4 class="text-secondary font-bold uppercase tracking-widest text-xs mb-8">Navigasi Utama</h4>
+        <div class="md:text-center">
+          <h4 class="text-secondary font-bold uppercase tracking-widest text-xs mb-8">Menu</h4>
           <ul class="space-y-4">
-            <li><Link :href="route('home')" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Beranda</Link></li>
-            <li><a href="#layanan" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Layanan</a></li>
-            <li><a href="#kontak" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">Kontak</a></li>
-            <li><a href="#faq" class="text-white/70 hover:text-white hover:translate-x-1 inline-block transition-all">FAQ</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 class="text-secondary font-bold uppercase tracking-widest text-xs mb-8">Eksplorasi Layanan</h4>
-          <ul class="space-y-4">
-            <li class="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Cuci Kiloan Higienis
-            </li>
-            <li class="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Premium Dry Cleaning
-            </li>
-            <li class="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Perawatan Sepatu & Tas
-            </li>
-            <li class="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Express Service
-            </li>
+            <li><Link :href="route('home')" class="text-white/70 hover:text-white md:hover:translate-x-0 md:hover:scale-105 inline-block transition-all">Beranda</Link></li>
+            <li><Link :href="route('pelanggan.aktivitas')" class="text-white/70 hover:text-white md:hover:translate-x-0 md:hover:scale-105 inline-block transition-all">Aktivitas</Link></li>
+            <li><Link :href="route('pelanggan.lacak')" class="text-white/70 hover:text-white md:hover:translate-x-0 md:hover:scale-105 inline-block transition-all">Lacak Pesanan</Link></li>
+            <li><Link :href="route('pelanggan.daftar-layanan')" class="text-white/70 hover:text-white md:hover:translate-x-0 md:hover:scale-105 inline-block transition-all">Pesan Sekarang</Link></li>
           </ul>
         </div>
 
@@ -73,12 +55,12 @@ const currentYear = new Date().getFullYear();
           </h4>
           <div class="space-y-3 text-sm">
             <div class="flex justify-between border-b border-white/10 pb-2">
-              <span class="text-white/60">Senin - Sabtu</span>
-              <span class="font-bold text-secondary">08:00 - 20:00</span>
+              <span class="text-white/60">Setiap Hari</span>
+              <span class="font-bold text-secondary">07:00 - 21:00</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-white/60">Minggu</span>
-              <span class="bg-secondary text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase">Tutup</span>
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+              <span class="text-[10px] text-white/40 font-medium uppercase tracking-wider">Buka Setiap Hari (Termasuk Minggu)</span>
             </div>
           </div>
           <div class="mt-6 pt-4 border-t border-white/10 text-[11px] text-white/40 italic leading-tight">
@@ -92,10 +74,6 @@ const currentYear = new Date().getFullYear();
           &copy; {{ currentYear }} <span class="text-white font-bold">HiWash Laundry</span>.
           Hak Cipta Dilindungi
         </div>
-        <!-- <div class="flex gap-8 text-xs font-bold uppercase tracking-widest">
-          <a href="#" class="text-white/40 hover:text-secondary transition-colors">Privacy Policy</a>
-          <a href="#" class="text-white/40 hover:text-secondary transition-colors">Terms</a>
-        </div> -->
       </div>
     </div>
   </footer>

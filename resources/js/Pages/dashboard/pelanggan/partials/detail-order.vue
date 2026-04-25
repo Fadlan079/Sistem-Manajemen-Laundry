@@ -65,6 +65,82 @@ onUnmounted(() => {
     if (countdownInterval) clearInterval(countdownInterval);
 });
 
+const isSnapLoading = ref(false);
+const snapError = ref('');
+
+// Dynamically load Midtrans Snap.js
+function loadSnapScript() {
+    return new Promise((resolve, reject) => {
+        if (window.snap) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = import.meta.env.VITE_MIDTRANS_SNAP_URL;
+        script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY);
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+async function bayarMidtrans() {
+    isSnapLoading.value = true;
+    snapError.value = '';
+    try {
+        await loadSnapScript();
+
+        // Fetch snap token from backend
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        const res = await fetch(route('pelanggan.aktivitas.midtrans.token', props.order.dbId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            snapError.value = err.error ?? 'Gagal mendapatkan token pembayaran.';
+            return;
+        }
+
+        const data = await res.json();
+
+        window.snap.pay(data.snap_token, {
+            onSuccess: async function(result) {
+                // Call backend callback to mark as paid
+                const cbRes = await fetch(route('pelanggan.aktivitas.midtrans.callback', props.order.dbId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                // Reload page to reflect updated payment status
+                router.reload({ only: ['order'] });
+            },
+            onPending: function(result) {
+                // Pending (e.g. VA waiting payment) - just reload
+                router.reload({ only: ['order'] });
+            },
+            onError: function(result) {
+                snapError.value = 'Pembayaran gagal atau dibatalkan. Silakan coba lagi.';
+            },
+            onClose: function() {
+                // user closed popup without finishing
+            }
+        });
+    } catch (e) {
+        snapError.value = 'Terjadi kesalahan. Silakan coba lagi.';
+        console.error(e);
+    } finally {
+        isSnapLoading.value = false;
+    }
+}
+
 const payForm = useForm({
     method: props.order.paymentMethodRaw || 'cash'
 });
@@ -588,18 +664,19 @@ const estimatedTotalCostText = computed(() => {
                         </div>
                     </div>
 
+                    <!-- Snap Error -->
+                    <div v-if="snapError" class="bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 mt-3 text-xs font-bold flex gap-2 items-center">
+                        <i class="fas fa-exclamation-circle"></i> {{ snapError }}
+                    </div>
+
                     <!-- Desktop Payment Button -->
-                    <button v-if="order.isCalculated && !['cash', 'cod'].includes(payForm.method)"
-                        @click="konfirmasiBayar"
-                        :disabled="payForm.processing"
-                        class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-white text-xs bg-[#E30613] shadow-md hover:bg-black transition-colors justify-center items-center">
-                        <i v-if="payForm.processing" class="fas fa-spinner fa-spin mr-2"></i>
-                        Bayar Sekarang
-                    </button>
-                    <button v-else-if="order.isCalculated"
-                        disabled
-                        class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-gray-500 text-xs bg-gray-200 cursor-not-allowed justify-center items-center border border-gray-300 shadow-sm">
-                        Bayar Tunai ke Kurir / Operator
+                    <button v-if="order.isCalculated"
+                        @click="bayarMidtrans"
+                        :disabled="isSnapLoading"
+                        class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-white text-xs bg-[#E30613] shadow-md hover:bg-black transition-colors justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
+                        <i v-else class="fas fa-credit-card"></i>
+                        {{ isSnapLoading ? 'Memuat...' : 'Bayar Sekarang' }}
                     </button>
                     <button v-else
                         disabled
@@ -682,17 +759,14 @@ const estimatedTotalCostText = computed(() => {
                 </p>
             </div>
 
-            <!-- Calculated: Pay Now -->
-            <button v-if="order.isCalculated && !['cash', 'cod'].includes(payForm.method)" type="button" @click="konfirmasiBayar"
-                :disabled="payForm.processing"
+            <!-- Calculated: Pay Now via Midtrans -->
+            <button v-if="order.isCalculated" type="button" @click="bayarMidtrans"
+                :disabled="isSnapLoading"
                 class="px-8 py-3.5 rounded-full font-bold text-white text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-                :class="payForm.processing ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none' : 'bg-[#E30613] hover:bg-[#B7050F] shadow-[0_4px_14px_rgba(227,6,19,0.3)]'">
-                <i v-if="payForm.processing" class="fas fa-spinner fa-spin"></i>
-                <span v-if="!payForm.processing">Bayar Sekarang</span>
-            </button>
-            <button v-else-if="order.isCalculated" type="button" disabled
-                class="px-6 py-3.5 rounded-full font-bold text-gray-500 text-[11px] bg-gray-200 border border-gray-300 cursor-not-allowed shadow-none flex items-center justify-center gap-2">
-                Bayar Tunai ke Kurir
+                :class="isSnapLoading ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none' : 'bg-[#E30613] hover:bg-[#B7050F] shadow-[0_4px_14px_rgba(227,6,19,0.3)]'">
+                <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
+                <i v-else class="fas fa-credit-card"></i>
+                <span v-if="!isSnapLoading">Bayar Sekarang</span>
             </button>
             
             <!-- Not Calculated: Wait for courier -->

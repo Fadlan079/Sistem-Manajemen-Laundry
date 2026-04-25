@@ -243,49 +243,48 @@ function submit() {
                 Kembali ke Layanan
             </Link>
 
-            <!-- Services Header & Options -->
+<!-- Services Header & Options -->
 <section class="space-y-4 pt-2">
-    <h2 class="text-sm font-semibold text-gray-900 border-b pb-2">
-        Pilih Layanan
-    </h2>
+    <div class="flex items-center justify-between border-b pb-2">
+        <h2 class="text-sm font-bold text-gray-900">
+            Layanan Terpilih
+        </h2>
+        <Link href="/pelanggan/daftar-layanan" class="text-[10px] font-bold text-[#E30613] hover:underline uppercase tracking-wide">Ubah</Link>
+    </div>
 
-    <!-- Horizontal Scroll Container -->
-    <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        <button
-            v-for="srv in services"
-            :key="srv.id"
-            type="button"
-            @click="form.service_id = srv.id"
-            class="min-w-[140px] flex-shrink-0 border rounded-lg p-3 text-left transition-all"
-            :class="form.service_id === srv.id
-                ? 'border-[#E30613] bg-red-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'"
-        >
-
-            <!-- Top: Title -->
-            <div class="flex items-start justify-between">
-                <h3 class="text-sm font-semibold leading-tight"
-                    :class="form.service_id === srv.id ? 'text-[#E30613]' : 'text-gray-800'">
-                    {{ srv.name }}
-                </h3>
-
-                <i v-if="form.service_id === srv.id"
-                    class="fas fa-check text-[11px] text-[#E30613]"></i>
+    <div class="pb-2">
+        <div class="w-full border-2 border-[#E30613] bg-red-50/30 rounded-xl p-4 text-left shadow-sm relative overflow-hidden">
+            <!-- Decorative background -->
+            <div class="absolute -right-4 -bottom-4 opacity-10">
+                <i class="fas fa-tshirt text-6xl text-[#E30613]"></i>
             </div>
 
-            <!-- Optional Description -->
-            <p class="text-[11px] text-gray-500 mt-1 line-clamp-2">
-                {{ srv.description || 'Layanan laundry profesional' }}
-            </p>
+            <div class="relative z-10">
+                <!-- Top: Title -->
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span v-if="currentService.category" class="inline-block px-2 py-0.5 bg-red-100 text-[#E30613] rounded text-[9px] font-black uppercase tracking-wider mb-1.5">
+                            {{ currentService.category }}
+                        </span>
+                        <h3 class="text-base font-black text-gray-900 leading-tight">
+                            {{ currentService.name }}
+                        </h3>
+                    </div>
+                    <i class="fas fa-check-circle text-xl text-[#E30613]"></i>
+                </div>
 
-            <!-- Price -->
-            <div class="mt-3 text-sm font-semibold text-gray-900">
-                {{ formatRupiah(srv.price) }}
-                <span class="text-[11px] text-gray-400 font-normal">
-                    /{{ srv.unit }}
-                </span>
+                <!-- Optional Description -->
+                <p class="text-xs text-gray-600 mt-2 leading-relaxed pr-8">
+                    {{ currentService.description || 'Layanan laundry profesional dengan penanganan terbaik.' }}
+                </p>
+
+                <!-- Price -->
+                <div class="mt-4 flex items-end">
+                    <span class="text-lg font-black text-[#E30613]">{{ formatRupiah(currentService.price) }}</span>
+                    <span class="text-xs text-gray-500 font-bold ml-1 mb-0.5">/{{ currentService.unit }}</span>
+                </div>
             </div>
-        </button>
+        </div>
     </div>
 
     <!-- Notes -->
@@ -306,33 +305,44 @@ function submit() {
             <form @submit.prevent="submit" class="space-y-6">
 
                 <!-- Delivery Type -->
-                <section class="space-y-3">
-                    <h2 class="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Metode Pengiriman</h2>
+<section class="space-y-4">
+    <h2 class="text-sm font-semibold text-gray-900">
+        Metode Pengiriman
+    </h2>
 
-                    <div class="flex flex-col gap-3">
-                        <label v-for="opt in deliveryOptions" :key="opt.value"
-                            class="flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all"
-                            :class="form.delivery_type === opt.value ? 'border-[#E30613] bg-red-50 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'">
-                            <input type="radio" v-model="form.delivery_type" :value="opt.value" class="sr-only">
+    <div class="space-y-2">
+        <label
+            v-for="opt in deliveryOptions"
+            :key="opt.value"
+            class="block border rounded-xl p-4 cursor-pointer transition-all"
+            :class="form.delivery_type === opt.value
+                ? 'border-red-500 bg-red-50'
+                : 'border-gray-200 hover:border-gray-300 bg-white'"
+        >
+            <input
+                type="radio"
+                v-model="form.delivery_type"
+                :value="opt.value"
+                class="hidden"
+            />
 
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                                :class="form.delivery_type === opt.value ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-400'">
-                                <i :class="[opt.icon, 'text-lg']"></i>
-                            </div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">
+                        {{ opt.label }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ opt.description }}
+                    </p>
+                </div>
 
-                            <div class="flex-1">
-                                <h3 class="text-[13px] font-bold leading-tight" :class="form.delivery_type === opt.value ? 'text-[#E30613]' : 'text-gray-700'">{{ opt.label }}</h3>
-                                <p class="text-[10px] mt-0.5 leading-snug" :class="form.delivery_type === opt.value ? 'text-red-500/80' : 'text-gray-400'">{{ opt.description }}</p>
-                                <p class="text-[11px] mt-1" :class="form.delivery_type === opt.value ? 'text-red-600 font-bold' : 'text-gray-500'">Ongkir: {{ formatRupiah(opt.fee) }}</p>
-                            </div>
-
-                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
-                                :class="form.delivery_type === opt.value ? 'border-[#E30613]' : 'border-gray-300'">
-                                <div v-if="form.delivery_type === opt.value" class="w-2.5 h-2.5 bg-[#E30613] rounded-full"></div>
-                            </div>
-                        </label>
-                    </div>
-                </section>
+                <p class="text-sm font-semibold text-gray-900">
+                    {{ formatRupiah(opt.fee) }}
+                </p>
+            </div>
+        </label>
+    </div>
+</section>
 
                 <!-- Time and Address -->
                 <section class="space-y-4 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -381,14 +391,18 @@ function submit() {
                         <div v-if="form.errors.pickup_address" class="text-[11px] text-[#E30613] font-bold">{{ form.errors.pickup_address }}</div>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-wide">Catatan Kurir (Opsional / Patokan Rumah)</label>
-                        <div class="relative">
-                            <i class="fas fa-motorcycle absolute top-3 left-3 text-gray-400"></i>
-                            <textarea v-model="form.courier_notes" rows="2" placeholder="Cth: Rumah pagar hijau muda no 2 dari depan..."
-                                class="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-1 focus:ring-[#E30613] focus:border-[#E30613] outline-none transition-all resize-none text-gray-800"></textarea>
-                        </div>
-                    </div>
+<div class="space-y-2">
+    <label class="text-xs font-medium text-gray-600">
+        Catatan untuk Kurir (Opsional)
+    </label>
+
+    <textarea
+        v-model="form.courier_notes"
+        rows="2"
+        placeholder="Contoh: Rumah cat putih, pagar hitam..."
+        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none"
+    ></textarea>
+</div>
                 </section>
 
                 <!-- Layanan Ekstra -->
@@ -464,18 +478,33 @@ function submit() {
                     </div>
 
                     <!-- Payment Preference -->
-                    <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-3">
-                        <h2 class="text-sm font-bold text-gray-900 border-b pb-2">Preferensi Pembayaran <span class="text-[#E30613]">*</span></h2>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label v-for="pay in paymentOptions" :key="pay.value"
-                                class="flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all text-center"
-                                :class="form.payment_preference === pay.value ? 'border-[#E30613] bg-[#E30613] text-white shadow-sm' : 'border-gray-200 hover:border-gray-300 text-gray-700 bg-white'">
-                                <input type="radio" v-model="form.payment_preference" :value="pay.value" class="sr-only">
-                                <i :class="[pay.icon, 'text-xl']"></i>
-                                <span class="text-xs font-bold">{{ pay.label }}</span>
-                            </label>
-                        </div>
-                    </div>
+      <section class="space-y-4">
+    <h2 class="text-sm font-semibold text-gray-900">
+        Metode Pembayaran
+    </h2>
+
+    <div class="grid grid-cols-2 gap-2">
+        <label
+            v-for="pay in paymentOptions"
+            :key="pay.value"
+            class="border rounded-lg p-3 text-center cursor-pointer transition-all"
+            :class="form.payment_preference === pay.value
+                ? 'border-red-500 bg-red-50 text-red-600'
+                : 'border-gray-200 text-gray-700 hover:border-gray-300'"
+        >
+            <input
+                type="radio"
+                v-model="form.payment_preference"
+                :value="pay.value"
+                class="hidden"
+            />
+
+            <p class="text-sm font-medium">
+                {{ pay.label }}
+            </p>
+        </label>
+    </div>
+</section>
                 </section>
 
                 <!-- Warning Reminder -->

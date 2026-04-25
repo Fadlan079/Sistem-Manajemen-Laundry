@@ -2,6 +2,12 @@
 import { Head } from '@inertiajs/vue3';
 import Navbar from '@/Components/navbar.vue';
 
+defineProps({
+    hideBottomNav: {
+        type: Boolean,
+        default: false
+    }
+});
 </script>
 
 <template>
@@ -10,7 +16,7 @@ import Navbar from '@/Components/navbar.vue';
     <Head title="HiWash" />
 
     <header>
-      <Navbar :canLogin="$page.props.canLogin" :canRegister="$page.props.canRegister" />
+      <Navbar :canLogin="$page.props.canLogin" :canRegister="$page.props.canRegister" :hideBottomNav="hideBottomNav" />
     </header>
 
     <main class="flex-1">

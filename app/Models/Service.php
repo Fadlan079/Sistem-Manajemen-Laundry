@@ -9,6 +9,7 @@ class Service extends Model
     protected $fillable = [
         'name',
         'category',
+        'category_id',
         'price',
         'estimate',
         'status',
@@ -23,8 +24,18 @@ class Service extends Model
         'features' => 'array',
     ];
 
+    public function serviceCategory()
+    {
+        return $this->belongsTo(ServiceCategory::class, 'category_id');
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserAddressController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\OrderController;
@@ -51,19 +52,25 @@ Route::get('/', function () {
     return Inertia::render('home', [
         'canLogin'      => Route::has('login'),
         'canRegister'   => Route::has('register'),
-        'serviceList'   => \App\Models\Service::withCount('orders')->where('status', 'tersedia')->get()->map(fn($s) => [
-            'id'          => $s->id,
-            'name'        => $s->name,
-            'category'    => $s->category,
-            'price'       => $s->price,
-            'estimate'    => $s->estimate,
-            'description' => $s->description,
-            'image_url'   => $s->image ? asset('storage/' . $s->image) : null,
-            'features'    => $s->features,
-            'unit'        => $s->unit,
-            'tag'         => $s->tag,
-            'orders_count'=> $s->orders_count,
-        ]),
+        'serviceList'   => \App\Models\Service::withCount(['orders', 'reviews'])
+            ->withAvg('reviews', 'rating')
+            ->where('status', 'tersedia')
+            ->get()
+            ->map(fn($s) => [
+                'id'            => $s->id,
+                'name'          => $s->name,
+                'category'      => $s->category,
+                'price'         => $s->price,
+                'estimate'      => $s->estimate,
+                'description'   => $s->description,
+                'image_url'     => $s->image ? asset('storage/' . $s->image) : null,
+                'features'      => $s->features,
+                'unit'          => $s->unit,
+                'tag'           => $s->tag,
+                'orders_count'  => $s->orders_count,
+                'rating'        => round($s->reviews_avg_rating ?? 0, 1),
+                'reviews_count' => $s->reviews_count,
+            ]),
         'banners'       => \App\Models\Banner::where('is_active', true)
                             ->orderBy('created_at', 'desc')
                             ->get()
@@ -193,10 +200,13 @@ Route::middleware(['auth', 'verified'])
         Route::get('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'ulasanAktivitas'])->name('aktivitas.ulasan');
         Route::post('/aktivitas/{id}/ulasan', [CustomerDashboardController::class, 'simpanUlasan'])->name('aktivitas.ulasan.post');
         Route::get('/pembayaran', [CustomerDashboardController::class, 'pembayaran'])->name('pembayaran');
+        Route::get('/daftar-layanan', [CustomerDashboardController::class, 'daftarLayanan'])->name('daftar-layanan');
         Route::get('/pesan/{service?}', [CustomerDashboardController::class, 'buatPesanan'])->name('pesan');
         Route::post('/pesan', [CustomerDashboardController::class, 'simpanPesanan'])->name('pesan.simpan');
         Route::post('/aktivitas/{id}/bayar', [CustomerDashboardController::class, 'konfirmasiBayar'])->name('aktivitas.bayar');
         Route::post('/aktivitas/{id}/batal', [CustomerDashboardController::class, 'batalkanPesanan'])->name('aktivitas.batal');
+        Route::post('/aktivitas/{id}/midtrans/token', [CustomerDashboardController::class, 'getMidtransToken'])->name('aktivitas.midtrans.token');
+        Route::post('/aktivitas/{id}/midtrans/callback', [CustomerDashboardController::class, 'midtransCallback'])->name('aktivitas.midtrans.callback');
         Route::get('/lacak-pesanan', [CustomerDashboardController::class, 'lacakPesanan'])->name('lacak');
         Route::post('/lacak-pesanan', [CustomerDashboardController::class, 'cariPesanan'])->name('lacak.post');
     });
@@ -210,6 +220,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+
+    // User Addresses
+    Route::post('/profile/addresses', [UserAddressController::class, 'store'])->name('profile.addresses.store');
+    Route::put('/profile/addresses/{address}', [UserAddressController::class, 'update'])->name('profile.addresses.update');
+    Route::delete('/profile/addresses/{address}', [UserAddressController::class, 'destroy'])->name('profile.addresses.destroy');
 });
 
 // ─────────────────────────────────────────────
@@ -283,5 +299,19 @@ Route::get('/search/services', function (\Illuminate\Http\Request $request) {
 
     return response()->json($results);
 })->name('services.search');
+
+// ─────────────────────────────────────────────
+//  TEMP: Midtrans Test Seed (local only)
+// ─────────────────────────────────────────────
+Route::get('/test-midtrans-seed', function () {
+    if (!app()->isLocal()) abort(403);
+    $user = \App\Models\User::where('email', 'pelanggan@test.com')->first();
+    if (!$user) return 'User not found';
+    $order = \App\Models\Order::where('user_id', $user->id)->latest()->first();
+    if (!$order) return 'No order found';
+    $order->update(['total_price' => 35000]);
+    \App\Models\OrderItem::where('order_id', $order->id)->update(['qty' => 5]);
+    return "Done! Order #{$order->id} simulated. Total=35000, Qty=5kg. Visit: /pelanggan/aktivitas/{$order->id}";
+});
 
 require __DIR__.'/auth.php';

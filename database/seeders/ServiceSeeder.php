@@ -12,75 +12,75 @@ class ServiceSeeder extends Seeder
      */
     public function run(): void
     {
-        $services = [
+        $categories = [
             [
-                'name' => 'Cuci Kiloan',
-                'category' => 'Kiloan',
-                'price' => 8000,
-                'estimate' => '2-3 Hari',
-                'status' => 'tersedia',
-                'description' => 'Pilihan praktis & hemat untuk pakaian harian keluarga Anda.',
-                'icon' => 'fa-solid fa-shirt',
-                'features' => [
-                    'Cuci + Kering + Lipat',
-                    'Estimasi 2-3 Hari',
-                    'Higienis Per Pelanggan'
-                ],
-                'unit' => '/kg',
-                'tag' => null,
+                'name' => 'Laundry Harian',
+                'slug' => 'laundry-harian',
+                'description' => 'Untuk pakaian umum berbasis kg'
             ],
             [
-                'name' => 'Cuci Satuan',
-                'category' => 'Satuan',
-                'price' => 15000,
-                'estimate' => '3-4 Hari',
-                'status' => 'tersedia',
-                'description' => 'Penanganan khusus untuk pakaian berharga & material sensitif.',
-                'icon' => 'fa-solid fa-user-tie',
-                'features' => [
-                    'Jas, Dress, Kebaya, dll',
-                    'Teknik Finishing Khusus',
-                    'Packing Premium'
-                ],
-                'unit' => '/pcs',
-                'tag' => null,
+                'name' => 'Item Satuan',
+                'slug' => 'item-satuan',
+                'description' => 'Untuk layanan per item (pcs/pasang)'
             ],
             [
-                'name' => 'Bedcover & Karpet',
-                'category' => 'Satuan',
-                'price' => 25000,
-                'estimate' => '4-5 Hari',
-                'status' => 'tersedia',
-                'description' => 'Membersihkan debu & tungau pada perlengkapan tidur Anda.',
-                'icon' => 'fa-solid fa-rug',
-                'features' => [
-                    'Deep Cleaning Method',
-                    'Sterilisasi Kuman',
-                    'Wangi Extra Segar'
-                ],
-                'unit' => '/pcs',
-                'tag' => null,
+                'name' => 'Bedding & Besar',
+                'slug' => 'bedding',
+                'description' => 'Untuk item besar (butuh handling khusus)'
             ],
             [
-                'name' => 'Express Service',
-                'category' => 'Kiloan',
-                'price' => 15000,
-                'estimate' => '6-12 Jam',
-                'status' => 'tersedia', // status 'tersedia' agar muncul di landing page
-                'description' => 'Solusi cerdas saat Anda butuh pakaian bersih dalam waktu singkat.',
-                'icon' => 'fa-solid fa-bolt',
-                'features' => [
-                    'Selesai Same-Day',
-                    'Prioritas Utama',
-                    'Pick-up Segera'
-                ],
-                'unit' => '/kg',
-                'tag' => 'Cepat',
+                'name' => 'Perawatan Khusus',
+                'slug' => 'special-care',
+                'description' => 'Untuk item sensitif / premium'
             ],
         ];
 
-        foreach ($services as $service) {
-            Service::updateOrCreate(['name' => $service['name']], $service);
+        foreach ($categories as $categoryData) {
+            $category = \App\Models\ServiceCategory::updateOrCreate(['slug' => $categoryData['slug']], $categoryData);
+
+            if ($category->slug === 'laundry-harian') {
+                $services = [
+                    ['name' => 'Cuci kering', 'price' => 4500, 'unit' => '/kg'],
+                    ['name' => 'Cuci lipat', 'price' => 5000, 'unit' => '/kg'],
+                    ['name' => 'Cuci setrika /3kg', 'price' => 28000, 'unit' => '/3kg'],
+                    ['name' => 'Cuci setrika /6kg', 'price' => 50400, 'unit' => '/6kg'],
+                    ['name' => 'Setrika saja', 'price' => 6500, 'unit' => '/kg'],
+                ];
+            } elseif ($category->slug === 'item-satuan') {
+                $services = [
+                    ['name' => 'Bantal', 'price' => 10000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Guling', 'price' => 10000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Boneka', 'price' => 15000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Tas', 'price' => 20000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Sepatu', 'price' => 20000, 'unit' => '/pasang'], // Harga asumsi, sesuaikan
+                    ['name' => 'Koper', 'price' => 40000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                ];
+            } elseif ($category->slug === 'bedding') {
+                $services = [
+                    ['name' => 'Bed cover', 'price' => 25000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Selimut', 'price' => 15000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                    ['name' => 'Sprei', 'price' => 10000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                ];
+            } elseif ($category->slug === 'special-care') {
+                $services = [
+                    ['name' => 'Baby stroller car seat', 'price' => 50000, 'unit' => '/pcs'], // Harga asumsi, sesuaikan
+                ];
+            } else {
+                $services = [];
+            }
+
+            foreach ($services as $service) {
+                Service::updateOrCreate(
+                    ['name' => $service['name']],
+                    [
+                        'category_id' => $category->id,
+                        'category' => $category->name, // Keeping the string column if still needed, can be removed if strictly using category_id
+                        'price' => $service['price'],
+                        'unit' => $service['unit'],
+                        'status' => 'tersedia'
+                    ]
+                );
+            }
         }
     }
 }

@@ -12,6 +12,8 @@ class Payment extends Model
         'method',
         'status',
         'paid_at',
+        'snap_token',
+        'midtrans_order_id',
     ];
 
     protected $casts = [

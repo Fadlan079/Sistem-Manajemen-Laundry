@@ -12,6 +12,8 @@ use App\Models\Payment;
 use App\Models\Delivery;
 use App\Models\Service;
 use App\Models\Review;
+use Midtrans\Config as MidtransConfig;
+use Midtrans\Snap;
 
 class CustomerDashboardController extends Controller
 {
@@ -81,6 +83,38 @@ class CustomerDashboardController extends Controller
         return Inertia::render('dashboard/pelanggan/aktivitas', [
             'auth'        => ['user' => $user],
             'orders'      => $orders,
+        ]);
+    }
+
+    public function daftarLayanan(Request $request)
+    {
+        $services = Service::withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'id'            => $s->id,
+                    'name'          => $s->name,
+                    'description'   => $s->description,
+                    'price'         => (float) $s->price,
+                    'unit'          => $s->unit ?? '/kg',
+                    'category'      => $s->category,
+                    'image_url'     => $s->image ? asset('storage/' . $s->image) : null,
+                    'rating'        => $s->reviews_avg_rating ? round($s->reviews_avg_rating, 1) : null,
+                    'reviews_count' => $s->reviews_count,
+                    'orders_count'  => $s->orders_count ?? 0, // Fallback if no order count in DB, but normally orders_count is available if queried
+                ];
+            });
+
+        // Get categories to be used in UI filter
+        $categories = $services->pluck('category')->unique()->filter()->values()->toArray();
+
+        return Inertia::render('dashboard/pelanggan/daftar-layanan', [
+            'auth' => [
+                'user' => $request->user(),
+            ],
+            'services'   => $services,
+            'categories' => $categories,
         ]);
     }
 
@@ -484,6 +518,92 @@ class CustomerDashboardController extends Controller
 
         return redirect()->route('pelanggan.aktivitas.detail', $order->id)
             ->with('success', 'Pesanan berhasil dibuat! Kurir kami akan segera menjemput & mengonfirmasi biaya.');
+    }
+
+    public function getMidtransToken(Request $request, $id)
+    {
+        $order = Order::with(['payments', 'service'])
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        $payment = $order->payments()->where('status', 'pending')->first();
+
+        if (! $payment) {
+            return response()->json(['error' => 'Tidak ada tagihan yang pending.'], 404);
+        }
+
+        // If snap_token already exists and order still pending, reuse it
+        if ($payment->snap_token) {
+            return response()->json([
+                'snap_token' => $payment->snap_token,
+                'client_key' => config('services.midtrans.client_key'),
+            ]);
+        }
+
+        // Setup Midtrans config
+        MidtransConfig::$serverKey    = config('services.midtrans.server_key');
+        MidtransConfig::$isProduction = config('services.midtrans.is_production');
+        MidtransConfig::$isSanitized  = true;
+        MidtransConfig::$is3ds        = true;
+
+        $user = $request->user();
+        $midtransOrderId = 'ORD-' . $order->id . '-' . time();
+
+        $params = [
+            'transaction_details' => [
+                'order_id'     => $midtransOrderId,
+                'gross_amount' => (int) $order->total_price,
+            ],
+            'customer_details' => [
+                'first_name' => $user->name,
+                'email'      => $user->email,
+                'phone'      => $user->phone ?? '',
+            ],
+            'item_details' => [
+                [
+                    'id'       => $order->service_id,
+                    'price'    => (int) $order->total_price,
+                    'quantity' => 1,
+                    'name'     => substr($order->service->name ?? 'Layanan Laundry', 0, 50),
+                ],
+            ],
+        ];
+
+        $snapToken = Snap::getSnapToken($params);
+
+        // Save snap token and midtrans order id to payment
+        $payment->update([
+            'snap_token'        => $snapToken,
+            'midtrans_order_id' => $midtransOrderId,
+        ]);
+
+        return response()->json([
+            'snap_token' => $snapToken,
+            'client_key' => config('services.midtrans.client_key'),
+        ]);
+    }
+
+    public function midtransCallback(Request $request, $id)
+    {
+        // After Snap onSuccess callback from frontend, mark payment as paid
+        $order = Order::with('payments')
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        $payment = $order->payments()->where('status', 'pending')->first();
+
+        if (! $payment) {
+            return response()->json(['message' => 'Payment already processed.']);
+        }
+
+        $payment->update([
+            'status'  => 'paid',
+            'amount'  => (float) $order->total_price,
+            'method'  => 'midtrans',
+            'paid_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Payment confirmed successfully.']);
     }
 
     public function konfirmasiBayar(Request $request, $id)
