@@ -3,7 +3,7 @@ import { Head, Link, usePage, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/app.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
-import html2pdf from 'html2pdf.js';
+
 
 const props = defineProps({
     auth: Object,
@@ -192,6 +192,10 @@ function downloadQR() {
     }
 }
 
+const goBack = () => {
+    window.history.back();
+};
+
 const isCopied = ref(false);
 function copyInvoice() {
     navigator.clipboard.writeText(props.order.invoice).then(() => {
@@ -326,6 +330,7 @@ async function cetakNota() {
     el.innerHTML = html;
     document.body.appendChild(el);
 
+    const html2pdf = (await import('html2pdf.js')).default;
     await html2pdf()
         .set({
             margin: [5, 5],
@@ -371,150 +376,185 @@ const estimatedTotalCostText = computed(() => {
     <Head title="Detail Pesanan" />
 
     <AppLayout>
-        <div class="pt-20 lg:pt-28 max-w-2xl mx-auto pb-32 lg:pb-12 space-y-4 px-4 sm:px-0">
+        <div class="bg-[#E30613] pt-24 lg:pt-32 pb-24 lg:pb-32 relative overflow-hidden">
+            <!-- Back Button -->
+            <button 
+                @click="goBack" 
+                class="absolute top-[110px] lg:top-[140px] left-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-30 backdrop-blur-sm border border-white/20 shadow-lg active:scale-95"
+            >
+                <i class="fas fa-arrow-left"></i>
+            </button>
 
-            <Link :href="route('pelanggan.aktivitas')" class="flex items-center text-[11px] font-black text-gray-400 hover:text-[#E30613] uppercase tracking-widest transition-colors mb-2 group">
-                <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
-                Kembali ke Aktivitas
-            </Link>
+            <div class="absolute inset-0 opacity-20 pointer-events-none z-0">
+                <div class="absolute top-10 left-10 w-12 h-12 bg-white rounded-full opacity-50"></div>
+                <div class="absolute top-20 right-1/4 w-8 h-8 bg-white rounded-full opacity-50"></div>
+                <div class="absolute bottom-10 right-10 w-24 h-24 bg-white rounded-full opacity-30"></div>
+            </div>
 
-            <!-- Flash success after order creation -->
-            <div v-if="flash.success" class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm font-bold text-green-700 flex items-center gap-3">
+            <div class="relative z-10 max-w-2xl mx-auto px-6 text-center text-white">
+                <h1 class="text-3xl font-bold mb-1">Detail Pesanan</h1>
+                <p class="text-xs opacity-80 font-medium tracking-widest uppercase">{{ order.invoice }}</p>
+            </div>
+
+            <!-- Curved Bottom -->
+            <div class="absolute bottom-0 left-0 w-full z-10 leading-none pointer-events-none">
+                <svg class="block w-full h-12 sm:h-16 lg:h-20" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-8 sm:h-10 lg:h-12" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-white" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Stepper Design -->
+        <div class="max-w-2xl mx-auto px-4 mt-6 mb-8 relative z-20">
+            <div class="flex items-center justify-between relative px-2">
+                <!-- Progress Line Background -->
+                <div class="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 -z-0 mx-10">
+                    <!-- Active Progress Line -->
+                    <div
+                        class="h-full bg-[#E30613] transition-all duration-500 ease-in-out"
+                        :style="{ width: `${(getStepIndex() / (steps.length - 1)) * 100}%` }"
+                    ></div>
+                </div>
+
+                <div v-for="(step, index) in steps" :key="index" class="relative z-10 flex flex-col items-center">
+                    <div
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-500 border-2"
+                        :class="[
+                            getStepIndex() === index ? 'bg-white border-[#E30613] text-[#E30613] scale-110 shadow-lg' :
+                            getStepIndex() > index ? 'bg-[#E30613] border-[#E30613] text-white' :
+                            'bg-gray-100 border-gray-200 text-gray-400'
+                        ]"
+                    >
+                        <i v-if="getStepIndex() > index" class="fas fa-check"></i>
+                        <span v-else>{{ index + 1 }}</span>
+                    </div>
+                    <span
+                        class="text-[9px] font-black mt-2 uppercase tracking-tight text-center max-w-[60px] leading-tight transition-colors duration-300"
+                        :class="getStepIndex() >= index ? 'text-[#E30613]' : 'text-gray-400'"
+                    >
+                        {{ step }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto pb-32 lg:pb-12 space-y-5 px-4 sm:px-0 mt-4">
+
+            <!-- Status Badge Section -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-center gap-4 overflow-hidden relative">
+                <div v-if="order.dbStatus === 'pending'" class="flex flex-col items-center gap-2">
+                    <div class="flex items-center gap-2 bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] uppercase tracking-widest">
+                        <i class="fas fa-info-circle"></i> Menunggu Penjemputan
+                    </div>
+                    <p v-if="countdownText" class="text-[11px] font-black text-gray-500 tracking-wider h-4">
+                        Tersisa: <span class="text-blue-600">{{ countdownText }}</span>
+                    </p>
+                </div>
+                <div v-else-if="order.dbStatus === 'dijemput'" class="flex items-center gap-2 bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Di Jalan
+                </div>
+                <div v-else-if="order.dbStatus === 'diproses'" class="flex items-center gap-2 bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-tshirt animate-bounce"></i> Pakaian Sedang Diproses
+                </div>
+                <div v-else-if="order.dbStatus === 'selesai' && order.paymentStatus === 'UNPAID'" class="flex flex-col items-center gap-2">
+                    <div class="flex items-center gap-2 bg-yellow-50 text-yellow-600 font-bold py-1.5 px-4 rounded-full border border-yellow-100 text-[10px] uppercase tracking-widest">
+                        <i class="fas fa-exclamation-circle animate-pulse"></i> Menunggu Pembayaran
+                    </div>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Siapkan Tunai / Bayar via Sistem</p>
+                </div>
+                <div v-else-if="order.dbStatus === 'selesai' && order.paymentStatus === 'PAID'" class="flex items-center gap-2 bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-box"></i> Pesanan Siap Diantar
+                </div>
+                <div v-else-if="order.dbStatus === 'diantar'" class="flex items-center gap-2 bg-purple-50 text-purple-600 font-bold py-1.5 px-4 rounded-full border border-purple-100 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Mengantar
+                </div>
+            </div>
+
+            <!-- Flash success -->
+            <div v-if="flash.success" class="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm font-bold text-green-700 flex items-center gap-3">
                 <i class="fas fa-check-circle text-green-500"></i>
                 {{ flash.success }}
             </div>
 
-            <section class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                <h2 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-8">
-                    {{ order.paymentStatus === 'PAID' ? 'Progres Pesanan' : 'Progres Transaksi' }}
-                </h2>
-
-                <div class="relative flex items-center justify-between w-full px-2">
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-100 rounded-full z-0"></div>
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#22C55E] rounded-full z-0 transition-all duration-1000"
-                         :style="`width: ${(getStepIndex() / (steps.length - 1)) * 100}%` "></div>
-
-                    <div v-for="(step, index) in steps" :key="index" class="relative z-10 flex flex-col items-center">
-                        <div class="w-6 h-6 rounded-full flex items-center justify-center transition-colors shadow-sm border"
-                             :class="getStepIndex() >= index ? 'bg-[#22C55E] border-[#22C55E] text-white' : 'bg-white border-gray-200 text-gray-300'">
-                            <i v-if="getStepIndex() >= index" class="fas fa-check text-[10px]"></i>
-                            <span v-else class="text-[10px] font-bold">{{ index + 1 }}</span>
-                        </div>
-                        <span class="absolute top-8 text-[9px] font-black uppercase tracking-tighter whitespace-nowrap"
-                              :class="getStepIndex() >= index ? 'text-[#22C55E]' : 'text-gray-400'">
-                            {{ step }}
-                        </span>
-                    </div>
-                </div>
-
-                <div v-if="order.dbStatus === 'pending'" class="mt-14 space-y-3 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-info-circle"></i> Menunggu Penjemputan
-                    </div>
-                    <p v-if="countdownText" class="text-[11px] font-black text-gray-500 tracking-wider h-4 drop-shadow-sm">
-                        Tersisa: <span class="text-blue-600">{{ countdownText }}</span>
-                    </p>
-                </div>
-                <div v-else-if="order.dbStatus === 'dijemput'" class="mt-14 space-y-4 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Di Jalan
-                    </div>
-                </div>
-                <div v-else-if="order.dbStatus === 'diproses'" class="mt-14 space-y-4 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-tshirt animate-bounce"></i> Pakaian Sedang Diproses
-                    </div>
-                </div>
-                <div v-else-if="order.dbStatus === 'selesai' && order.paymentStatus === 'UNPAID'" class="mt-14 space-y-3 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-yellow-50 text-yellow-600 font-bold py-1.5 px-4 rounded-full border border-yellow-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-exclamation-circle animate-pulse"></i> Menunggu Pembayaran
-                    </div>
-                    <p class="text-[10px] font-black text-gray-400 tracking-wider px-4 leading-relaxed mt-2 uppercase">
-                         Selesaikan via sistem / Siapkan uang tunai saat pengantaran.
-                    </p>
-                </div>
-                <div v-else-if="order.dbStatus === 'selesai' && order.paymentStatus === 'PAID'" class="mt-14 space-y-4 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-box"></i> Pesanan Siap Diantar
-                    </div>
-                </div>
-                <div v-else-if="order.dbStatus === 'diantar'" class="mt-14 space-y-4 text-center">
-                    <div class="flex items-center gap-2 justify-center bg-purple-50 text-purple-600 font-bold py-1.5 px-4 rounded-full border border-purple-100 text-[10px] w-max mx-auto uppercase tracking-widest shadow-sm">
-                        <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Mengantar
-                    </div>
-                </div>
-            </section>
-
-            <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div class="p-5 border-b border-gray-100 flex items-center gap-4 bg-gray-50/30">
-                    <div class="w-12 h-12 bg-[#E30613]/10 text-[#E30613] rounded border border-red-100 shadow-sm flex items-center justify-center text-xl">
+                    <div class="w-12 h-12 bg-[#E30613] text-white rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-center text-xl shrink-0">
                         <i class="fas fa-tshirt"></i>
                     </div>
                     <div>
-                        <h2 class="font-black text-gray-900 text-sm tracking-tight">{{ order.service }}</h2>
-                        <p v-if="order.isKg && !order.isCalculated" class="text-[10px] text-gray-500 font-medium">Berat akan ditimbang saat penjemputan</p>
-                        <p v-else-if="order.isKg && order.isCalculated" class="text-[11px] font-bold text-[#E30613] mt-0.5">Sudah Ditimbang</p>
-                        <p v-else class="text-[11px] font-bold text-[#E30613] mt-0.5">Harga Berdasarkan Jumlah Item</p>
+                        <h2 class="font-black text-gray-900 text-sm tracking-tight uppercase">{{ order.service }}</h2>
+                        <p v-if="order.isKg && !order.isCalculated" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Menunggu Penimbangan</p>
+                        <p v-else-if="order.isKg && order.isCalculated" class="text-[11px] font-black text-[#E30613] mt-0.5">Selesai Ditimbang</p>
+                        <p v-else class="text-[11px] font-black text-[#E30613] mt-0.5 uppercase tracking-tighter">Per Satuan/Item</p>
                     </div>
                 </div>
 
                 <div class="p-5 space-y-4">
                     <div v-if="order.laundry_notes" class="flex gap-4 items-start text-xs border-b border-gray-50 pb-4">
-                        <i class="fas fa-clipboard-list text-gray-400 mt-1 text-base w-4 text-center"></i>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                            <i class="fas fa-clipboard-list text-gray-400 text-sm"></i>
+                        </div>
                         <div class="flex-1">
-                            <span class="font-bold text-gray-900 block mb-1">Catatan Layanan</span>
-                            <span class="font-medium text-gray-500 block leading-relaxed italic">"{{ order.laundry_notes }}"</span>
+                            <span class="font-black text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Catatan Layanan</span>
+                            <span class="font-bold text-gray-700 block leading-relaxed italic text-xs">"{{ order.laundry_notes }}"</span>
                         </div>
                     </div>
 
                     <div v-if="order.pickup_address" class="flex gap-4 items-start text-xs border-b border-gray-50 pb-4">
-                        <i class="fas fa-map-marker-alt text-gray-400 mt-1 text-base w-4 text-center"></i>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                            <i class="fas fa-map-marker-alt text-gray-400 text-sm"></i>
+                        </div>
                         <div class="flex-1">
-                            <span class="font-bold text-gray-900 block mb-1">Alamat Penjemputan</span>
-                            <span class="font-medium text-gray-500 block leading-relaxed">{{ order.pickup_address }}</span>
+                            <span class="font-black text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Alamat Penjemputan</span>
+                            <span class="font-bold text-gray-700 block leading-relaxed text-xs">{{ order.pickup_address }}</span>
                             
                             <!-- Catatan Kurir -->
-                            <div v-if="order.courier_notes" class="mt-2.5 bg-[#E30613]/5 border border-red-100 rounded-lg p-2.5 text-[10px] text-gray-700 flex gap-2 shadow-sm w-full">
-                                <i class="fas fa-comment-dots text-[#E30613] mt-0.5 shrink-0"></i>
-                                <span class="leading-relaxed"><strong class="font-bold text-[#E30613]">Catatan Kurir:</strong> {{ order.courier_notes }}</span>
+                            <div v-if="order.courier_notes" class="mt-2.5 bg-gray-50 border border-gray-100 rounded-xl p-3 text-[10px] text-gray-600 flex gap-2 shadow-sm w-full">
+                                <i class="fas fa-comment-dots text-gray-400 mt-0.5 shrink-0"></i>
+                                <span class="leading-relaxed"><strong class="font-black text-gray-900 uppercase text-[9px] mr-1">Catatan Kurir:</strong> {{ order.courier_notes }}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex gap-4 items-start text-xs border-b border-gray-50 pb-4">
-                        <i class="fas fa-calendar-alt text-gray-400 mt-1 text-base w-4 text-center"></i>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                            <i class="fas fa-calendar-alt text-gray-400 text-sm"></i>
+                        </div>
                         <div>
-                            <span class="font-bold text-gray-900 block mb-1">Jadwal Penjemputan</span>
-                            <span class="font-medium text-gray-500">{{ order.pickup_date_text || order.date }}</span>
+                            <span class="font-black text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Jadwal Penjemputan</span>
+                            <span class="font-bold text-gray-700 text-xs">{{ order.pickup_date_text || order.date }}</span>
                         </div>
                     </div>
 
                     <!-- Kurir Jemput Section -->
                     <div v-if="order.pickup_courier" class="flex gap-4 items-center text-xs border-b border-gray-50 pb-4">
-                        <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0">
                             <i class="fas fa-truck-loading"></i>
                         </div>
                         <div class="flex-1">
-                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Penjemputan</span>
+                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Penjemputan</span>
                             <span class="font-black text-gray-900 block text-[13px]">{{ order.pickup_courier.name }}</span>
-                            <span class="font-bold text-emerald-600 block mt-0.5">{{ order.pickup_courier.phone }}</span>
+                            <span class="font-bold text-emerald-600 block mt-0.5 text-[10px]">{{ order.pickup_courier.phone }}</span>
                         </div>
-                        <a :href="'tel:' + order.pickup_courier.phone" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm active:scale-95">
+                        <a :href="'tel:' + order.pickup_courier.phone" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors shadow-md active:scale-95 shrink-0">
                             Hubungi
                         </a>
                     </div>
 
                     <!-- Kurir Antar Section -->
                     <div v-if="order.delivery_courier" class="flex gap-4 items-center text-xs border-b border-gray-50 pb-4">
-                        <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 border border-blue-100 shrink-0">
+                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100 shrink-0">
                             <i class="fas fa-motorcycle"></i>
                         </div>
                         <div class="flex-1">
-                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Pengantaran</span>
+                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Kurir Pengantaran</span>
                             <span class="font-black text-gray-900 block text-[13px]">{{ order.delivery_courier.name }}</span>
-                            <span class="font-bold text-blue-600 block mt-0.5">{{ order.delivery_courier.phone }}</span>
+                            <span class="font-bold text-blue-600 block mt-0.5 text-[10px]">{{ order.delivery_courier.phone }}</span>
                         </div>
-                        <a :href="'tel:' + order.delivery_courier.phone" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm active:scale-95">
+                        <a :href="'tel:' + order.delivery_courier.phone" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors shadow-md active:scale-95 shrink-0">
                             Hubungi
                         </a>
                     </div>
@@ -551,52 +591,52 @@ const estimatedTotalCostText = computed(() => {
                         </div>
                     </div>
 
-                    <div class="mt-4 pt-3 border-t-2 border-dashed border-gray-300 space-y-2">
-                        <h3 class="text-[11px] font-black uppercase text-gray-500 tracking-wider mb-2">Rincian Biaya</h3>
+                    <div class="mt-4 pt-3 border-t-2 border-dashed border-gray-200 space-y-3">
+                        <h3 class="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] mb-3">Rincian Biaya</h3>
 
                         <!-- Biaya Layanan -->
-                        <div class="flex justify-between text-xs">
-                            <span class="text-gray-600">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-gray-500 uppercase tracking-tighter">
                                 Biaya Layanan
-                                <span v-if="order.isKg && !order.isCalculated && order.estimated_weight">(~{{ estimatedKG.min }}-{{ estimatedKG.max }} kg)</span>
-                                <span v-else-if="order.isKg && order.isCalculated">({{ order.items_qty }} kg)</span>
-                                <span v-else>({{ order.items_qty }} {{ order.unit.replace('/', '') }})</span>
+                                <span v-if="order.isKg && !order.isCalculated && order.estimated_weight" class="text-gray-300">(~{{ estimatedKG.min }}-{{ estimatedKG.max }} kg)</span>
+                                <span v-else-if="order.isKg && order.isCalculated" class="text-gray-300">({{ order.items_qty }} kg)</span>
+                                <span v-else class="text-gray-300">({{ order.items_qty }} {{ order.unit.replace('/', '') }})</span>
                             </span>
-                            <span class="font-bold text-gray-800">{{ estimatedServiceCostText }}</span>
+                            <span class="text-gray-900">{{ estimatedServiceCostText }}</span>
                         </div>
 
                         <!-- Extra Info on service price -->
-                        <div v-if="order.isCalculated" class="text-[10px] text-gray-400 -mt-1 font-medium">
+                        <div v-if="order.isCalculated" class="text-[9px] text-gray-400 -mt-2 font-black uppercase tracking-widest">
                             {{ formatRupiah(order.service_price) }}{{ order.unit }}
                         </div>
 
                         <!-- Ongkos Kirim -->
-                        <div class="flex justify-between text-xs pt-1">
-                            <span class="text-gray-600">Ongkos Kirim <span class="font-medium text-[10px] text-gray-400">({{ order.delivery_type_label }})</span></span>
-                            <span class="font-bold text-gray-800">{{ formatRupiah(order.fee) }}</span>
+                        <div class="flex justify-between text-xs font-bold pt-1">
+                            <span class="text-gray-500 uppercase tracking-tighter">Ongkos Kirim <span class="text-gray-300">({{ order.delivery_type_label }})</span></span>
+                            <span class="text-gray-900">{{ formatRupiah(order.fee) }}</span>
                         </div>
 
                         <!-- Total Biaya -->
-                        <div class="flex justify-between text-sm pt-2 mt-2 border-t border-gray-200">
-                            <span class="font-black text-gray-800">
-                                Total Biaya
-                                <span v-if="order.isKg && !order.isCalculated" class="text-gray-400 font-medium text-[10px] uppercase">(Estimasi)</span>
-                            </span>
-                            <span class="font-black text-[#E30613]">{{ estimatedTotalCostText }}</span>
+                        <div class="flex justify-between items-end pt-4 mt-2 border-t border-gray-100">
+                            <div>
+                                <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Biaya</span>
+                                <span v-if="order.isKg && !order.isCalculated" class="text-[8px] text-blue-500 font-black uppercase tracking-tighter leading-none italic">*Estimasi</span>
+                            </div>
+                            <span class="text-2xl font-black text-[#E30613] tracking-tighter leading-none">{{ estimatedTotalCostText }}</span>
                         </div>
                     </div>
 
                     <!-- Not Calculated Note -->
                     <template v-if="order.isKg && !order.isCalculated">
-                        <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-3 mt-4 flex gap-3 text-blue-700 text-[11px] items-start shadow-sm">
-                            <i class="fas fa-lightbulb mt-0.5"></i>
-                            <p class="leading-relaxed">Berat & harga layanan di atas masih berupa perkiraan. Harga akhir akan ditentukan setelah pesanan dijemput dan ditimbang.</p>
+                        <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mt-4 flex gap-3 text-blue-700 text-[11px] items-start shadow-sm">
+                            <i class="fas fa-lightbulb mt-0.5 text-base"></i>
+                            <p class="leading-relaxed font-bold">Berat & harga layanan di atas masih berupa perkiraan. Harga akhir akan ditentukan <span class="text-blue-900 underline">setelah pesanan dijemput</span> dan ditimbang.</p>
                         </div>
 
                         <button
                             v-if="order.dbStatus === 'pending'"
                             @click="batalkanPesanan"
-                            class="w-full mt-4 py-3 rounded-lg font-bold text-[#E30613] text-xs bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-colors shadow-sm">
+                            class="w-full mt-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-[#E30613] text-[10px] bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-all shadow-sm active:scale-95">
                             Batalkan Pesanan
                         </button>
                     </template>
@@ -604,7 +644,7 @@ const estimatedTotalCostText = computed(() => {
                         <!-- Even if calculated (PCS), if still pending allow cancellation -->
                          <button
                             @click="batalkanPesanan"
-                            class="w-full mt-4 py-3 rounded-lg font-bold text-[#E30613] text-xs bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-colors shadow-sm">
+                            class="w-full mt-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-[#E30613] text-[10px] bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-all shadow-sm active:scale-95">
                             Batalkan Pesanan
                         </button>
                     </template>

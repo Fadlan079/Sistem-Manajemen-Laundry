@@ -21,6 +21,7 @@ class OrderController extends Controller
         $date   = $request->input('date', '');
 
         $query = Order::with(['user', 'service', 'payments'])
+            ->where('status', '!=', 'cart')
             ->when($search, function ($q) use ($search) {
                 // Support searching by invoice format "INV-20260422-0001", partial, or name
                 // Extract the trailing numeric ID from the invoice string if present
@@ -61,7 +62,7 @@ class OrderController extends Controller
 
         // ── Stats ──────────────────────────────────────────
         $stats = [
-            'total'    => Order::count(),
+            'total'    => Order::where('status', '!=', 'cart')->count(),
             'selesai'  => Order::where('status', 'selesai')->count(),
             'diproses' => Order::where('status', 'diproses')->count(),
             'pending'  => Order::where('status', 'pending')->count(),
@@ -80,7 +81,7 @@ class OrderController extends Controller
             $day = Carbon::now()->subDays($i);
             return [
                 'label' => $day->format('D'),
-                'value' => Order::whereDate('created_at', $day->toDateString())->count(),
+                'value' => Order::where('status', '!=', 'cart')->whereDate('created_at', $day->toDateString())->count(),
             ];
         });
 
@@ -101,7 +102,8 @@ class OrderController extends Controller
             $month = Carbon::now()->subMonths($i);
             $row = ['label' => $month->format('M')];
             foreach ($services as $s) {
-                $row[$s->name] = Order::where('service_id', $s->id)
+                $row[$s->name] = Order::where('status', '!=', 'cart')
+                    ->where('service_id', $s->id)
                     ->whereYear('created_at', $month->year)
                     ->whereMonth('created_at', $month->month)
                     ->count();

@@ -19,12 +19,13 @@ defineProps({
     averageRating: { type: Number, default: 0 },
     totalReviews:  { type: Number, default: 0 },
     ratingStats:   { type: Array,  default: () => [] },
+    stats:         { type: Object, default: () => ({ totalOrders: 0, totalCustomers: 0, happyCustomerPct: 100 }) }
 });
 </script>
 
 <template>
     <AppLayout>
-        <HeroSection :banners="banners" />
+        <HeroSection :banners="banners" :stats="stats" :averageRating="averageRating" :totalReviews="totalReviews" />
         <!-- <AboutSection /> -->
         <LayananSection :services="serviceList" />
         <UlasanSection :reviews="reviews" :averageRating="averageRating" :totalReviews="totalReviews" :ratingStats="ratingStats" />

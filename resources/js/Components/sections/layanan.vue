@@ -64,7 +64,12 @@ const handleScroll = (e, name) => {
 
 const popularServicesAll = computed(() => {
     return [...props.services]
-        .sort((a, b) => (b.orders_count || 0) - (a.orders_count || 0))
+        .sort((a, b) => {
+            if ((b.rating || 0) !== (a.rating || 0)) {
+                return (b.rating || 0) - (a.rating || 0);
+            }
+            return (b.reviews_count || 0) - (a.reviews_count || 0);
+        })
         .slice(0, 3);
 });
 
@@ -81,14 +86,25 @@ const groupedServices = computed(() => {
 });
 
 const categoriesList = computed(() => {
-    const cats = ['Semua'];
-    Object.keys(groupedServices.value).forEach(k => cats.push(k));
+    const cats = [{ name: 'Semua', count: props.services.length }];
+
+    const onSaleCount = props.services.filter(s => s.is_discount_today).length;
+    if (onSaleCount > 0) {
+        cats.push({ name: 'On sale', count: onSaleCount });
+    }
+
+    Object.entries(groupedServices.value).forEach(([name, services]) => {
+        cats.push({ name, count: services.length });
+    });
     return cats;
 });
 
 const filteredServices = computed(() => {
     if (activeTab.value === 'Semua') {
         return props.services;
+    }
+    if (activeTab.value === 'On sale') {
+        return props.services.filter(s => s.is_discount_today);
     }
     return groupedServices.value[activeTab.value] || [];
 });
@@ -152,9 +168,9 @@ function formatRupiah(val) {
 
             <div v-if="popularServicesAll.length > 0" class="mb-16 md:mb-24 px-4 md:px-8">
                 <div class="text-center mb-8 md:mb-16">
-                    <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-[8px] md:text-xs font-bold uppercase tracking-widest mb-2 md:mb-4 inline-block">Populer</span>
-                    <h2 class="text-xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Layanan <span class="text-primary">Terfavorit</span></h2>
-                    <p class="text-muted text-[10px] md:text-sm max-w-2xl mx-auto">Pilihan terbaik untuk hasil pencucian yang maksimal dan cepat.</p>
+                    <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-[8px] md:text-xs font-bold uppercase tracking-widest mb-2 md:mb-4 inline-block shadow-sm">Top Rated</span>
+                    <h2 class="text-xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Rating <span class="text-primary">Tertinggi</span></h2>
+                    <p class="text-muted text-[10px] md:text-sm max-w-2xl mx-auto">3 layanan dengan ulasan terbaik dari pelanggan kami.</p>
                 </div>
 
                 <div class="max-w-5xl mx-auto relative group/pop">
@@ -180,7 +196,31 @@ function formatRupiah(val) {
                                 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-300 flex flex-col h-full">
 
                                     <!-- Image -->
-                                    <div class="w-full h-40 bg-gray-100 overflow-hidden">
+                                    <div class="w-full h-40 bg-gray-100 overflow-hidden relative">
+                                        <!-- Rank Badge -->
+                                        <div class="absolute top-3 right-3 z-20">
+                                            <!-- Crown for Rank 1 -->
+                                            <div v-if="idx === 0" class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 drop-shadow-md">
+                                                <i class="fas fa-crown text-yellow-500 text-base"></i>
+                                            </div>
+                                            <div :class="[
+                                                'flex flex-col items-center justify-center w-10 h-10 rounded-xl shadow-lg border-2 backdrop-blur-sm transition-transform hover:scale-110',
+                                                idx === 0 ? 'bg-yellow-400/95 border-yellow-200 text-yellow-950' :
+                                                idx === 1 ? 'bg-gray-200/95 border-white text-gray-800' :
+                                                'bg-orange-200/95 border-orange-100 text-orange-900'
+                                            ]">
+                                                <span class="text-lg font-black leading-none">{{ idx + 1 }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Discount Badge -->
+                                        <div v-if="service.is_discount_today" class="absolute top-3 left-3 z-10">
+                                            <div class="bg-primary text-white px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 shadow-sm border border-yellow-400/50">
+                                                <i class="fas fa-tag"></i>
+                                                DISKON {{ Math.round(service.discount_percentage) }}%
+                                            </div>
+                                        </div>
+
                                         <img
                                             v-if="service.image_url"
                                             :src="service.image_url"
@@ -211,11 +251,17 @@ function formatRupiah(val) {
                                         </p>
 
                                         <div class="mt-auto">
-                                            <div class="text-base md:text-lg font-bold text-gray-900">
-                                                {{ formatRupiah(service.price) }}
-                                                <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
-                                                    {{ service.unit }}
-                                                </span>
+                                            <div class="flex flex-col">
+                                                <div v-if="service.is_discount_today" class="flex items-center gap-1.5">
+                                                    <span class="text-xs text-gray-400 line-through decoration-red-400/50">{{ formatRupiah(service.price) }}</span>
+                                                    <span class="text-[10px] px-1 bg-red-50 text-red-500 font-bold rounded">-{{ Math.round(service.discount_percentage) }}%</span>
+                                                </div>
+                                                <div class="text-base md:text-lg font-bold text-gray-900">
+                                                    {{ formatRupiah(service.discounted_price) }}
+                                                    <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
+                                                        {{ service.unit }}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <button
@@ -245,14 +291,28 @@ function formatRupiah(val) {
                     <!-- Right shadow indicator for scroll -->
                     <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg to-transparent pointer-events-none md:hidden z-10"></div>
                     <div class="flex overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:justify-center gap-2 snap-x scrollbar-hide relative">
-                        <button v-for="tab in categoriesList" :key="tab"
-                            @click="activeTab = tab"
+                        <button v-for="tab in categoriesList" :key="tab.name"
+                            @click="activeTab = tab.name"
                             :class="[
-                                'whitespace-nowrap snap-center shrink-0 px-4 py-2 rounded-full text-[10px] md:text-xs font-bold transition-all border',
-                                activeTab === tab ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/50 hover:text-primary'
+                                'whitespace-nowrap snap-center shrink-0 px-4 py-2 rounded-full text-[10px] md:text-xs font-bold transition-all border flex items-center gap-2',
+                                activeTab === tab.name ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/50 hover:text-primary'
                             ]"
                         >
-                            {{ tab === 'Semua' ? 'SEMUA' : tab.toUpperCase() }}
+                            <span v-if="tab.name === 'Semua'" class="flex items-center gap-1.5">
+                                SEMUA
+                                <span class="flex items-center gap-1">
+                                    <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
+                                    <span class="opacity-70 text-[9px]">{{ tab.count }}</span>
+                                </span>
+                            </span>
+                            <span v-else-if="tab.name === 'On sale'" class="flex items-center gap-1.5">
+                                <i class="fas fa-fire text-orange-500"></i>
+                                ON SALE
+                                <span class="opacity-70 text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">{{ tab.count }}</span>
+                            </span>
+                            <span v-else>
+                                {{ tab.name.toUpperCase() }}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -289,6 +349,13 @@ function formatRupiah(val) {
 
                                             <!-- Image -->
                                             <div class="w-full h-40 bg-gray-100 overflow-hidden relative">
+                                                <!-- Discount Badge -->
+                                                <div v-if="service.is_discount_today" class="absolute top-3 left-3 z-10">
+                                                    <div class="bg-primary text-white px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 shadow-sm border border-yellow-400/50">
+                                                        <i class="fas fa-tag"></i>
+                                                        DISKON {{ Math.round(service.discount_percentage) }}%
+                                                    </div>
+                                                </div>
                                                 <img
                                                     v-if="service.image_url"
                                                     :src="service.image_url"
@@ -305,7 +372,7 @@ function formatRupiah(val) {
                                                 <h3 class="text-sm md:text-base font-semibold text-gray-900 mb-1 line-clamp-1">
                                                     {{ service.name }}
                                                 </h3>
-                                                
+
                                                 <!-- Rating -->
                                                 <div class="flex items-center gap-1 text-[11px] mb-2">
                                                     <i class="fas fa-star text-yellow-400 text-[10px]"></i>
@@ -317,11 +384,17 @@ function formatRupiah(val) {
                                                     {{ service.description || 'Layanan laundry profesional.' }}
                                                 </p>
                                                 <div class="mt-auto">
-                                                    <div class="text-base md:text-lg font-bold text-gray-900">
-                                                        {{ formatRupiah(service.price) }}
-                                                        <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
-                                                            {{ service.unit }}
-                                                        </span>
+                                                    <div class="flex flex-col">
+                                                        <div v-if="service.is_discount_today" class="flex items-center gap-1.5">
+                                                            <span class="text-xs text-gray-400 line-through decoration-red-400/50">{{ formatRupiah(service.price) }}</span>
+                                                            <span class="text-[10px] px-1 bg-red-50 text-red-500 font-bold rounded">-{{ Math.round(service.discount_percentage) }}%</span>
+                                                        </div>
+                                                        <div class="text-base md:text-lg font-bold text-gray-900">
+                                                            {{ formatRupiah(service.discounted_price) }}
+                                                            <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
+                                                                {{ service.unit }}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <button
                                                         @click="selectService(service)"
@@ -405,11 +478,17 @@ function formatRupiah(val) {
                                                 {{ service.description || 'Layanan laundry profesional.' }}
                                             </p>
                                             <div class="mt-auto">
-                                                <div class="text-base md:text-lg font-bold text-gray-900">
-                                                    {{ formatRupiah(service.price) }}
-                                                    <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
-                                                        {{ service.unit }}
-                                                    </span>
+                                                <div class="flex flex-col">
+                                                    <div v-if="service.is_discount_today" class="flex items-center gap-1.5">
+                                                        <span class="text-xs text-gray-400 line-through decoration-red-400/50">{{ formatRupiah(service.price) }}</span>
+                                                        <span class="text-[10px] px-1 bg-red-50 text-red-500 font-bold rounded">-{{ Math.round(service.discount_percentage) }}%</span>
+                                                    </div>
+                                                    <div class="text-base md:text-lg font-bold text-gray-900">
+                                                        {{ formatRupiah(service.discounted_price) }}
+                                                        <span v-if="service.unit" class="text-xs text-gray-400 font-medium">
+                                                            {{ service.unit }}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <button
                                                     @click="selectService(service)"

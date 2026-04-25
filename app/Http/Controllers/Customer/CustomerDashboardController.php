@@ -24,7 +24,7 @@ class CustomerDashboardController extends Controller
         $user = $request->user();
         $dateFilter = $request->query('date', 'semua');
 
-        $query = $user->orders()->with(['service', 'orderItems', 'payments', 'review'])->latest();
+        $query = $user->orders()->with(['service', 'orderItems', 'payments', 'review'])->where('status', '!=', 'cart')->latest();
 
         // Apply date filter
         if ($dateFilter === 'hari_ini') {
@@ -100,6 +100,9 @@ class CustomerDashboardController extends Controller
                     'price'         => (float) $s->price,
                     'unit'          => $s->unit ?? '/kg',
                     'category'      => $s->category,
+                    'is_discount_today' => $s->is_discount_today,
+                    'discounted_price' => $s->discounted_price,
+                    'discount_percentage' => $s->discount_percentage,
                     'image_url'     => $s->image ? asset('storage/' . $s->image) : null,
                     'rating'        => $s->reviews_avg_rating ? round($s->reviews_avg_rating, 1) : null,
                     'reviews_count' => $s->reviews_count,
@@ -384,8 +387,13 @@ class CustomerDashboardController extends Controller
             'name'      => $s->name,
             'price'     => (float) $s->price,
             'unit'      => $s->unit ?? '/kg',
+            'is_discount_today' => $s->is_discount_today,
+            'discounted_price' => $s->discounted_price,
+            'discount_percentage' => $s->discount_percentage,
             'image_url' => $s->image ? asset('storage/' . $s->image) : null,
         ]);
+
+        $addresses = $request->user()->addresses()->get();
 
         return Inertia::render('dashboard/pelanggan/buat-pesanan', [
             'auth'     => ['user' => $request->user()],
@@ -396,9 +404,13 @@ class CustomerDashboardController extends Controller
                 'description' => $service->description,
                 'price'       => (float) $service->price,
                 'unit'        => $service->unit ?? '/kg',
+                'is_discount_today' => $service->is_discount_today,
+                'discounted_price' => $service->discounted_price,
+                'discount_percentage' => $service->discount_percentage,
                 'image_url'   => $service->image ? asset('storage/' . $service->image) : null,
             ],
-            'prefill'  => $prefill,
+            'prefill'   => $prefill,
+            'addresses' => $addresses,
         ]);
     }
 
@@ -432,13 +444,19 @@ class CustomerDashboardController extends Controller
         $isKg = in_array(strtolower($service->unit), ['/kg', 'kg']);
         $fixedQty = 0;
         
-        $baseServicePrice = (float) $service->price;
+        $useDiscount = $request->input('use_discount', false);
+        if ($useDiscount && $service->is_discount_today) {
+            $baseServicePrice = (float) $service->discounted_price;
+        } else {
+            $baseServicePrice = (float) $service->price;
+        }
+
         $extraPricing = 0;
         $extraLabels = [];
         
         if (!empty($validated['extra_services'])) {
             if (in_array('express', $validated['extra_services'])) {
-                $extraPricing += $baseServicePrice * 0.5;
+                $extraPricing += (float)$service->price * 0.5; // Extra based on original price
                 $extraLabels[] = 'Express (24 Jam)';
             }
             if (in_array('treatment', $validated['extra_services'])) {
@@ -473,6 +491,9 @@ class CustomerDashboardController extends Controller
 
         // 2. Create Order Item
         $extraStr = !empty($extraLabels) ? ' [+ ' . implode(', ', $extraLabels) . ']' : '';
+        if ($useDiscount && $service->is_discount_today) {
+            $extraStr .= ' [DISKON 20%]';
+        }
 
         if ($isKg) {
             $itemName = 'Estimasi Berat: ' . ($validated['estimated_weight'] ?? 'N/A') . ' - ' . $service->name . $extraStr;

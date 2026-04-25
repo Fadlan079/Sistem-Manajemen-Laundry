@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DeliveryController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerOrderController;
+use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Operator\PickupController;
 use App\Http\Controllers\Operator\PengantaranController;
 use App\Http\Controllers\Operator\PembayaranController;
@@ -20,89 +21,22 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+use App\Http\Controllers\HomeController;
+
 // ─────────────────────────────────────────────
 //  Public Routes
 // ─────────────────────────────────────────────
 
-Route::get('/', function () {
-    // Compute review stats
-    $reviews = \App\Models\Review::with(['user', 'service'])
-        ->latest()
-        ->get();
-
-    $totalReviews = $reviews->count();
-    $averageRating = $totalReviews > 0 ? round($reviews->avg('rating'), 1) : 0;
-
-    $ratingStats = collect([5, 4, 3, 2, 1])->map(function ($star) use ($reviews, $totalReviews) {
-        $count = $reviews->where('rating', $star)->count();
-        $pct   = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
-        return ['stars' => $star, 'count' => $count, 'percentage' => $pct . '%'];
-    })->values();
-
-    $reviewList = $reviews->take(12)->map(fn($r) => [
-        'id'          => $r->id,
-        'name'        => $r->user->name ?? 'Anonim',
-        'initials'    => implode('', array_map(fn($w) => strtoupper($w[0]), array_slice(explode(' ', trim($r->user->name ?? 'A')), 0, 2))),
-        'rating'      => $r->rating,
-        'comment'     => $r->comment,
-        'service'     => $r->service->name ?? '-',
-        'created_at'  => $r->created_at->diffForHumans(),
-    ]);
-
-    return Inertia::render('home', [
-        'canLogin'      => Route::has('login'),
-        'canRegister'   => Route::has('register'),
-        'serviceList'   => \App\Models\Service::withCount(['orders', 'reviews'])
-            ->withAvg('reviews', 'rating')
-            ->where('status', 'tersedia')
-            ->get()
-            ->map(fn($s) => [
-                'id'            => $s->id,
-                'name'          => $s->name,
-                'category'      => $s->category,
-                'price'         => $s->price,
-                'estimate'      => $s->estimate,
-                'description'   => $s->description,
-                'image_url'     => $s->image ? asset('storage/' . $s->image) : null,
-                'features'      => $s->features,
-                'unit'          => $s->unit,
-                'tag'           => $s->tag,
-                'orders_count'  => $s->orders_count,
-                'rating'        => round($s->reviews_avg_rating ?? 0, 1),
-                'reviews_count' => $s->reviews_count,
-            ]),
-        'banners'       => \App\Models\Banner::where('is_active', true)
-                            ->orderBy('created_at', 'desc')
-                            ->get()
-                            ->map(fn($b) => [
-                                'id'        => $b->id,
-                                'image_url' => asset('storage/' . $b->image),
-                                'is_active' => $b->is_active,
-                            ]),
-        'reviews'       => $reviewList,
-        'averageRating' => $averageRating,
-        'totalReviews'  => $totalReviews,
-        'ratingStats'   => $ratingStats,
-    ]);
-})->name('home');
-
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // ─────────────────────────────────────────────
 //  Dashboard Router (redirect sesuai role)
 //  Dipakai sebagai fallback route('dashboard')
 // ─────────────────────────────────────────────
 
-Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
-    $role = auth()->user()->role;
-    $query = $request->query();
-
-    return match ($role) {
-        'admin'    => redirect()->route('admin.dashboard', $query),
-        'operator' => redirect()->route('operator.dashboard', $query),
-        'kurir'    => redirect()->route('kurir.dashboard', $query),
-        default    => redirect()->route('pelanggan.pelanggan', $query),
-    };
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [HomeController::class, 'dashboard'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 // ─────────────────────────────────────────────
 //  Admin Dashboard
@@ -166,9 +100,7 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         Route::get('/pembayaran', [PembayaranController::class, 'index'])->name('pembayaran');
         Route::put('/pembayaran/{order}', [PembayaranController::class, 'processPayment'])->name('pembayaran.process');
 
-        Route::get('/layanan', function () {
-            return Inertia::render('dashboard/operator/layanan');
-        })->name('layanan');
+        Route::get('/layanan', [OperatorDashboardController::class, 'layanan'])->name('layanan');
     });
 
 // ─────────────────────────────────────────────
@@ -209,6 +141,12 @@ Route::middleware(['auth', 'verified'])
         Route::post('/aktivitas/{id}/midtrans/callback', [CustomerDashboardController::class, 'midtransCallback'])->name('aktivitas.midtrans.callback');
         Route::get('/lacak-pesanan', [CustomerDashboardController::class, 'lacakPesanan'])->name('lacak');
         Route::post('/lacak-pesanan', [CustomerDashboardController::class, 'cariPesanan'])->name('lacak.post');
+
+        // Cart
+        Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang');
+        Route::post('/keranjang/tambah', [CartController::class, 'addToCart'])->name('keranjang.tambah');
+        Route::post('/keranjang/checkout', [CartController::class, 'checkout'])->name('keranjang.checkout');
+        Route::delete('/keranjang/{id}', [CartController::class, 'remove'])->name('keranjang.hapus');
     });
 
 
@@ -238,73 +176,7 @@ Route::middleware('auth')->group(function () {
 //  Public Search API for Services (navbar autocomplete)
 // ─────────────────────────────────────────────
 
-Route::get('/search/services', function (\Illuminate\Http\Request $request) {
-    $q = trim($request->query('q', ''));
-
-    if (strlen($q) < 1) {
-        return response()->json([]);
-    }
-
-    // 1. Search Services
-    $services = \App\Models\Service::where('status', 'tersedia')
-        ->where(function ($query) use ($q) {
-            $query->where('name', 'like', "%{$q}%")
-                  ->orWhere('category', 'like', "%{$q}%");
-        })
-        ->select('id', 'name', 'category', 'price', 'unit', 'image')
-        ->limit(6)
-        ->get()
-        ->map(fn($s) => [
-            'type'      => 'service',
-            'id'        => $s->id,
-            'name'      => $s->name,
-            'category'  => $s->category,
-            'price'     => $s->price,
-            'unit'      => $s->unit,
-            'image_url' => $s->image ? asset('storage/' . $s->image) : null,
-        ]);
-
-    // 2. Search Orders (if logged in & query indicates invoice/number)
-    $orders = collect();
-    if (auth()->check()) {
-        $orderId = null;
-        if (stripos($q, 'inv') !== false) {
-            $parts = explode('-', $q);
-            if (count($parts) >= 3) {
-                $orderId = (int) end($parts);
-            } else {
-                $orderId = (int) preg_replace('/[^0-9]/', '', $q);
-            }
-        } elseif (is_numeric($q)) {
-            $orderId = (int) $q;
-        }
-
-        // Jika menemukan angka dari query, lakukan pencarian order id
-        if ($orderId > 0) {
-            $orders = \App\Models\Order::with('service')
-                ->where('user_id', auth()->id())
-                ->where('id', 'like', "%{$orderId}%")
-                ->limit(3)
-                ->get()
-                ->map(function($o) {
-                    $invoice = 'INV-' . $o->created_at->format('Ymd') . '-' . str_pad($o->id, 4, '0', STR_PAD_LEFT);
-                    return [
-                        'type'    => 'order',
-                        'id'      => $o->id,
-                        'name'    => 'Pesanan ' . ($o->service->name ?? ''),
-                        'invoice' => '#' . $invoice,
-                        'status'  => ucfirst($o->status),
-                        'date'    => $o->created_at->format('d M Y'),
-                    ];
-                });
-        }
-    }
-
-    // Return combined results: orders first, then services
-    $results = $orders->merge($services)->take(8);
-
-    return response()->json($results);
-})->name('services.search');
+Route::get('/search/services', [HomeController::class, 'searchServices'])->name('services.search');
 
 // ─────────────────────────────────────────────
 //  TEMP: Midtrans Test Seed (local only)

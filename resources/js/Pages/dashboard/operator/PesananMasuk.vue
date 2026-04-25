@@ -9,7 +9,7 @@ import {
     LineElement, LinearScale, PointElement, CategoryScale,
     Filler, ArcElement, BarElement
 } from 'chart.js';
-import html2pdf from 'html2pdf.js';
+
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale,
     PointElement, CategoryScale, Filler, ArcElement, BarElement);
@@ -324,6 +324,7 @@ async function cetakNota(o) {
     const el = document.createElement('div');
     el.innerHTML = html;
     document.body.appendChild(el);
+    const html2pdf = (await import('html2pdf.js')).default;
     await html2pdf().set({ margin: [5, 5], filename: `Nota-${o.invoice}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: [80, 200], orientation: 'portrait' } }).from(el).save();
     document.body.removeChild(el);
     printingId.value = null;

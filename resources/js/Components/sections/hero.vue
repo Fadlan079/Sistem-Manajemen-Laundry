@@ -8,7 +8,27 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    stats: {
+        type: Object,
+        default: () => ({ totalOrders: 0, totalCustomers: 0, happyCustomerPct: 100 })
+    },
+    averageRating: {
+        type: Number,
+        default: 0
+    },
+    totalReviews: {
+        type: Number,
+        default: 0
+    }
 });
+
+// Helper to format large numbers
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(num % 1000 === 0 ? 0 : 1) + 'k';
+    }
+    return num;
+}
 
 // Only display active banners
 const activeBanners = computed(() => props.banners.filter(b => b.is_active));
@@ -134,8 +154,57 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="relative z-20 w-full min-h-[150px] lg:min-h-[200px] bg-bg">
+    <div class="relative z-20 w-full bg-bg py-10 lg:py-16">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 items-center">
+            
+            <!-- Rating -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-left group transition-all duration-300">
+                <div class="flex items-center gap-1 mb-2">
+                    <i v-for="i in 5" :key="i" class="fas fa-star text-sm" :class="i <= Math.round(averageRating) ? 'text-yellow-400' : 'text-gray-200'"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-2xl lg:text-3xl font-black text-gray-900 leading-tight">{{ averageRating || '0.0' }} / 5</span>
+                    <span class="text-[11px] lg:text-xs text-gray-400 font-bold">({{ totalReviews || 0 }} ulasan)</span>
+                </div>
+            </div>
+
+            <!-- Pesanan Selesai -->
+            <div class="flex items-center gap-4 group justify-center md:justify-start border-l-0 md:border-l border-gray-100 md:pl-8">
+                <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                    <i class="fas fa-shopping-bag text-xl"></i>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl lg:text-2xl font-black text-gray-900 leading-tight">{{ formatNumber(stats.totalOrders) }}+</span>
+                    <span class="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Pesanan Selesai</span>
+                </div>
+            </div>
+
+            <!-- Pelanggan Puas -->
+            <div class="flex items-center gap-4 group justify-center md:justify-start border-l-0 md:border-l border-gray-100 md:pl-8">
+                <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                    <i class="fas fa-smile text-xl"></i>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl lg:text-2xl font-black text-gray-900 leading-tight">{{ stats.happyCustomerPct }}%</span>
+                    <span class="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Pelanggan Puas</span>
+                </div>
+            </div>
+
+            <!-- Pelanggan Terdaftar -->
+            <div class="flex items-center gap-4 group justify-center md:justify-start border-l-0 md:border-l border-gray-100 md:pl-8">
+                <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-xl lg:text-2xl font-black text-gray-900 leading-tight">{{ formatNumber(stats.totalCustomers) }}+</span>
+                    <span class="text-[10px] lg:text-xs text-gray-500 font-bold uppercase tracking-wider">Pelanggan Terdaftar</span>
+                </div>
+            </div>
+
+        </div>
       </div>
+    </div>
 
   </div>
 </template>

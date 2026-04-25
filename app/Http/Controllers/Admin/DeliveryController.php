@@ -27,6 +27,7 @@ class DeliveryController extends Controller
             ))
             ->when($status, fn($q) => $q->where('status', $status))
             ->when($date, fn($q) => $q->whereDate('created_at', $date))
+            ->where('status', '!=', 'pending')
             ->where('type', $tab)
             ->latest();
 
@@ -60,7 +61,7 @@ class DeliveryController extends Controller
         $statusDist = [
             Delivery::where('status', 'selesai')->count(),
             Delivery::whereIn('status', ['dijemput', 'diantar'])->whereNotNull('courier_id')->count(),
-            Delivery::whereNull('courier_id')->count(),
+            Delivery::where('status', '!=', 'pending')->whereNull('courier_id')->count(),
         ];
 
         // ── Chart 2: Volume tugas 7 hari (Line) ───────────────
@@ -68,7 +69,7 @@ class DeliveryController extends Controller
             $day = Carbon::now()->subDays($i);
             return [
                 'label' => $day->locale('id')->isoFormat('ddd'),
-                'value' => Delivery::whereDate('created_at', $day->toDateString())->count(),
+                'value' => Delivery::where('status', '!=', 'pending')->whereDate('created_at', $day->toDateString())->count(),
             ];
         });
 

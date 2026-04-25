@@ -407,11 +407,14 @@ onMounted(() => {
                 <div v-if="$page.props.auth.user" class="flex items-center gap-3">
                     <!-- CART BUTTON MOBILE -->
                     <Link
-                        :href="route('pelanggan.daftar-layanan')"
-                        class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl active:scale-95 transition-transform"
+                        :href="route('pelanggan.keranjang')"
+                        class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl active:scale-95 transition-transform relative"
                         aria-label="Keranjang"
                     >
                         <i class="fas fa-basket-shopping text-white text-lg"></i>
+                        <span v-if="$page.props.cartCount > 0" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary shadow-sm scale-90">
+                            {{ $page.props.cartCount }}
+                        </span>
                     </Link>
 
                     <div class="relative">
@@ -423,7 +426,7 @@ onMounted(() => {
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
-                        <span v-if="unreadCount > 0" class="absolute top-2 right-2 w-4 h-4 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary">
+                        <span v-if="unreadCount > 0" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary shadow-sm scale-90">
                             {{ unreadCount > 9 ? '9+' : unreadCount }}
                         </span>
                     </button>
@@ -680,11 +683,14 @@ onMounted(() => {
                     <div v-if="$page.props.auth.user" class="flex items-center gap-3">
                         <!-- CART BUTTON DESKTOP -->
                         <Link
-                            :href="route('pelanggan.daftar-layanan')"
-                            class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl active:scale-95 transition-all group"
+                            :href="route('pelanggan.keranjang')"
+                            class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl active:scale-95 transition-all group relative"
                             aria-label="Keranjang"
                         >
                             <i class="fas fa-basket-shopping text-white/70 group-hover:text-white transition-colors"></i>
+                            <span v-if="$page.props.cartCount > 0" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary group-hover:scale-100 transition-transform shadow-sm">
+                                {{ $page.props.cartCount }}
+                            </span>
                         </Link>
 
                         <div class="relative">
@@ -696,7 +702,7 @@ onMounted(() => {
                             <svg class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            <span v-if="unreadCount > 0" class="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-secondary text-primary text-[9px] font-black flex items-center justify-center rounded-full border-2 border-primary group-hover:scale-110 transition-transform">
+                            <span v-if="unreadCount > 0" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary group-hover:scale-100 transition-transform shadow-sm">
                                 {{ unreadCount > 9 ? '9+' : unreadCount }}
                             </span>
                         </button>
@@ -816,7 +822,7 @@ onMounted(() => {
                 <div class="w-14 h-14 bg-red-600 text-white rounded-full
                             flex items-center justify-center shadow-md
                             transition active:scale-95">
-                    <i class="fas fa-basket-shopping text-lg"></i>
+                    <i class="fas fa-plus text-lg"></i>
                 </div>
                 <span class="text-[10px] mt-1 font-semibold text-gray-700">
                     Pesan

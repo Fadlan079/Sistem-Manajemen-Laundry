@@ -31,6 +31,10 @@ function submitReview() {
         preserveScroll: true,
     });
 }
+
+const goBack = () => {
+    window.history.back();
+};
 </script>
 
 <template>
@@ -38,7 +42,15 @@ function submitReview() {
 
     <AppLayout>
         <!-- Red Header Section -->
-        <div class="bg-[#E30613] pt-20 lg:pt-28 pb-10 relative overflow-hidden">
+        <div class="bg-[#E30613] pt-24 lg:pt-32 pb-24 lg:pb-32 relative overflow-hidden">
+            <!-- Back Button -->
+            <button 
+                @click="goBack" 
+                class="absolute top-[110px] lg:top-[140px] left-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-30 backdrop-blur-sm border border-white/20 shadow-lg active:scale-95"
+            >
+                <i class="fas fa-arrow-left"></i>
+            </button>
+
             <div class="absolute inset-0 opacity-20 pointer-events-none z-0">
                 <div class="absolute top-10 left-10 w-12 h-12 bg-white rounded-full opacity-50"></div>
                 <div class="absolute top-20 right-1/4 w-8 h-8 bg-white rounded-full opacity-50"></div>
@@ -49,27 +61,20 @@ function submitReview() {
                 <h1 class="text-3xl font-bold mb-2">Beri Ulasan</h1>
                 <p class="text-sm opacity-90">Bagikan pengalaman Anda menggunakan layanan kami</p>
             </div>
-            
-            <!-- Curved bottom edge to match design -->
-            <div class="absolute bottom-0 left-0 right-0 z-10 translate-y-px">
-                <svg viewBox="0 0 1440 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-8 sm:h-12 lg:h-16 preserve-3d" preserveAspectRatio="none">
-                    <!-- Thicker Yellow accent curve -->
-                    <path d="M0,35 C320,85 1120,85 1440,35 L1440,100 L0,100 Z" fill="#FFD700"></path>
-                    <!-- Main content background curve -->
-                    <path d="M0,50 C320,100 1120,100 1440,50 L1440,100 L0,100 Z" fill="#f9fafb"></path>
+
+            <!-- Curved Bottom -->
+            <div class="absolute bottom-0 left-0 w-full z-10 leading-none pointer-events-none">
+                <svg class="block w-full h-12 sm:h-16 lg:h-20" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-8 sm:h-10 lg:h-12" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-gray-50" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
                 </svg>
             </div>
         </div>
 
         <div class="bg-gray-50 min-h-screen pb-32">
             <div class="max-w-xl mx-auto px-4 mt-6 relative z-20">
-                <!-- Header / Back Link -->
-                <div class="flex items-center gap-4 mb-6">
-                    <Link :href="route('pelanggan.aktivitas')" class="flex items-center text-[11px] font-black text-gray-400 hover:text-[#E30613] uppercase tracking-widest transition-colors group">
-                        <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
-                        Kembali ke Aktivitas
-                    </Link>
-                </div>
 
                 <div class="space-y-6">
                     <!-- Invoice & Badge -->

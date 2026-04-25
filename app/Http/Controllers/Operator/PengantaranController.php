@@ -22,7 +22,7 @@ class PengantaranController extends Controller
         // Base query for deliveries that are delivery tasks and not yet completed
         $query = Delivery::with(['order.user', 'courier', 'order.orderItems'])
             ->where('type', 'delivery')
-            ->where('status', '!=', 'selesai');
+            ->whereNotIn('status', ['selesai', 'pending']);
 
         if ($dateFilter) {
             $query->whereHas('order', function ($q) use ($dateFilter) {
@@ -52,12 +52,12 @@ class PengantaranController extends Controller
         $lateThreshold = Carbon::now()->subHours(12);
 
         $stats = [
-            'semua' => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')->count(),
-            'belum_diassign' => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')
+            'semua' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])->count(),
+            'belum_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereNull('courier_id')->whereNull('external_courier_name')->count(),
-            'sudah_diassign' => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')
+            'sudah_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
                                 ->where(fn($q) => $q->whereNotNull('courier_id')->orWhereNotNull('external_courier_name'))->count(),
-            'terlama' => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')
+            'terlama' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereHas('order', fn($q) => $q->where('created_at', '<', $lateThreshold))
                                 ->count(),
             'hari_ini' => Delivery::where('type', 'delivery')->whereDate('created_at', $today)->count(),
