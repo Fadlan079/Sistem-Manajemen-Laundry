@@ -8,6 +8,7 @@ use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Notification;
 
 class KurirDashboardController extends Controller
 {
@@ -184,7 +185,26 @@ class KurirDashboardController extends Controller
                     $delivery->order->update([
                         'status' => 'selesai'
                     ]);
+
+                    Notification::create([
+                        'user_id'     => $delivery->order->user_id,
+                        'type'        => 'delivery',
+                        'title'       => 'Pesanan Telah Tiba',
+                        'description' => "Pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . " telah berhasil diantarkan ke lokasi Anda.",
+                        'metadata'    => ['order_id' => $delivery->order_id]
+                    ]);
                 }
+            }
+
+            // Pickup notification
+            if ($delivery->type === 'pickup' && $delivery->order->status === 'diproses') {
+                Notification::create([
+                    'user_id'     => $delivery->order->user_id,
+                    'type'        => 'order',
+                    'title'       => 'Penjemputan Berhasil',
+                    'description' => "Cucian Anda untuk pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . " telah dijemput kurir.",
+                    'metadata'    => ['order_id' => $delivery->order_id]
+                ]);
             }
         }
 

@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use App\Models\Notification;
 
 class PesananMasukController extends Controller
 {
@@ -283,6 +284,24 @@ class PesananMasukController extends Controller
             'status' => $validated['status'],
             'total_price' => $validated['total_price'],
         ]);
+
+        // Trigger notification
+        $statusLabels = [
+            'diproses' => 'Pesanan Sedang Diproses',
+            'selesai' => 'Pesanan Telah Selesai',
+            'diantar' => 'Pesanan Sedang Diantar',
+            'dijemput' => 'Pesanan Telah Dijemput',
+        ];
+
+        if (isset($statusLabels[$validated['status']])) {
+            Notification::create([
+                'user_id' => $order->user_id,
+                'type' => 'order',
+                'title' => $statusLabels[$validated['status']],
+                'description' => "Status pesanan #INV-" . $order->created_at->format('Ymd') . "-" . str_pad($order->id, 4, '0', STR_PAD_LEFT) . " kini: " . strtolower($statusLabels[$validated['status']]) . ".",
+                'metadata' => ['order_id' => $order->id, 'status' => $validated['status']]
+            ]);
+        }
 
         return back()->with('success', 'Status pesanan berhasil diperbarui.');
     }

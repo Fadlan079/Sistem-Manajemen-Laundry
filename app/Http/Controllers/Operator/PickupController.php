@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Notification;
 
 class PickupController extends Controller
 {
@@ -168,6 +169,14 @@ class PickupController extends Controller
             ]);
         }
 
+        Notification::create([
+            'user_id'     => $delivery->order->user_id,
+            'type'        => 'delivery',
+            'title'       => 'Kurir Sedang Menuju Lokasi',
+            'description' => "Kurir sedang menuju lokasi Anda untuk menjemput pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . ".",
+            'metadata'    => ['order_id' => $delivery->order_id]
+        ]);
+
         return back()->with('success', 'Kurir berhasil di-assign dan pesanan dalam penjemputan.');
     }
 
@@ -225,6 +234,14 @@ class PickupController extends Controller
                 'status' => 'diproses'
             ]);
         }
+
+        Notification::create([
+            'user_id'     => $delivery->order->user_id,
+            'type'        => 'order',
+            'title'       => 'Penjemputan Berhasil',
+            'description' => "Cucian Anda untuk pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . " telah dijemput kurir dan mulai diproses.",
+            'metadata'    => ['order_id' => $delivery->order_id]
+        ]);
 
         return back()->with('success', 'Penjemputan berhasil diselesaikan dan pesanan sedang diproses.');
     }

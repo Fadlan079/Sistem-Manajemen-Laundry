@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Notification;
 
 class PengantaranController extends Controller
 {
@@ -154,6 +155,14 @@ class PengantaranController extends Controller
             ]);
         }
 
+        Notification::create([
+            'user_id'     => $delivery->order->user_id,
+            'type'        => 'delivery',
+            'title'       => 'Pesanan Sedang Diantar',
+            'description' => "Kurir sedang menuju lokasi Anda untuk mengantarkan pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . ".",
+            'metadata'    => ['order_id' => $delivery->order_id]
+        ]);
+
         return back()->with('success', 'Kurir berhasil di-assign dan pesanan dalam pengantaran.');
     }
 
@@ -177,6 +186,21 @@ class PengantaranController extends Controller
 
         // Ubah task delivery menjadi selesai
         $delivery->update($payload);
+
+        // Update status Order Parent
+        if ($delivery->order) {
+            $delivery->order->update([
+                'status' => 'selesai'
+            ]);
+
+            Notification::create([
+                'user_id'     => $delivery->order->user_id,
+                'type'        => 'delivery',
+                'title'       => 'Pesanan Telah Tiba',
+                'description' => "Pesanan #INV-" . $delivery->order->created_at->format('Ymd') . "-" . str_pad($delivery->order_id, 4, '0', STR_PAD_LEFT) . " telah berhasil diantarkan ke lokasi Anda.",
+                'metadata'    => ['order_id' => $delivery->order_id]
+            ]);
+        }
 
         return back()->with('success', 'Pengantaran berhasil diselesaikan.');
     }

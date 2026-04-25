@@ -14,6 +14,7 @@ use App\Models\Service;
 use App\Models\Review;
 use Midtrans\Config as MidtransConfig;
 use Midtrans\Snap;
+use App\Models\Notification;
 
 class CustomerDashboardController extends Controller
 {
@@ -516,6 +517,15 @@ class CustomerDashboardController extends Controller
             ]);
         }
 
+        // 5. Create Notification
+        Notification::create([
+            'user_id'     => $user->id,
+            'type'        => 'order',
+            'title'       => 'Pesanan Berhasil Dibuat',
+            'description' => "Pesanan #INV-" . $order->created_at->format('Ymd') . "-" . str_pad($order->id, 4, '0', STR_PAD_LEFT) . " telah berhasil dibuat.",
+            'metadata'    => ['order_id' => $order->id]
+        ]);
+
         return redirect()->route('pelanggan.aktivitas.detail', $order->id)
             ->with('success', 'Pesanan berhasil dibuat! Kurir kami akan segera menjemput & mengonfirmasi biaya.');
     }
@@ -603,6 +613,14 @@ class CustomerDashboardController extends Controller
             'paid_at' => now(),
         ]);
 
+        Notification::create([
+            'user_id'     => $order->user_id,
+            'type'        => 'payment',
+            'title'       => 'Pembayaran Berhasil',
+            'description' => "Pembayaran sebesar Rp" . number_format($order->total_price, 0, ',', '.') . " untuk pesanan #" . $order->id . " telah berhasil.",
+            'metadata'    => ['order_id' => $order->id]
+        ]);
+
         return response()->json(['message' => 'Payment confirmed successfully.']);
     }
 
@@ -628,6 +646,14 @@ class CustomerDashboardController extends Controller
             'method'  => $newMethod,
             'status'  => 'paid',
             'paid_at' => now(),
+        ]);
+
+        Notification::create([
+            'user_id'     => $order->user_id,
+            'type'        => 'payment',
+            'title'       => 'Pembayaran Berhasil',
+            'description' => "Pembayaran sebesar Rp" . number_format($order->total_price, 0, ',', '.') . " untuk pesanan #" . $order->id . " telah berhasil.",
+            'metadata'    => ['order_id' => $order->id]
         ]);
 
         return redirect()->route('pelanggan.aktivitas.detail', $id)

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -23,6 +23,93 @@ const isSearchLoading = ref(false);
 const highlightIndex = ref(-1);
 const mobileSearchContainer = ref(null);
 const mobileDropdownStyle = ref({});
+
+// ── Notification State ─────────────────────────────────────
+const notifications = ref([]);
+const unreadCount = ref(0);
+const isNotifOpen = ref(false);
+const isNotifLoading = ref(false);
+
+const fetchNotifications = async () => {
+    if (!usePage().props.auth.user) return;
+    isNotifLoading.value = true;
+    try {
+        const res = await fetch(route('notifications.latest'));
+        const data = await res.json();
+        notifications.value = data.notifications;
+        unreadCount.value = data.unread_count;
+    } catch (e) {
+        console.error('Failed to fetch notifications', e);
+    } finally {
+        isNotifLoading.value = false;
+    }
+};
+
+const markNotifAsRead = async (notif) => {
+    if (!notif.read_at) {
+        try {
+            await router.patch(route('notifications.read', { id: notif.id }), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    notif.read_at = new Date().toISOString();
+                    unreadCount.value = Math.max(0, unreadCount.value - 1);
+                }
+            });
+        } catch (e) {
+            console.error('Failed to mark notification as read', e);
+        }
+    }
+
+    isNotifOpen.value = false;
+
+    if (notif.metadata?.order_id) {
+        router.visit(route('pelanggan.aktivitas.detail', { id: notif.metadata.order_id }));
+    }
+};
+
+const markAllNotifsAsRead = async () => {
+    try {
+        await router.post(route('notifications.read-all'), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                notifications.value.forEach(n => n.read_at = new Date().toISOString());
+                unreadCount.value = 0;
+            }
+        });
+    } catch (e) {
+        console.error('Failed to mark all as read', e);
+    }
+};
+
+const getNotifIcon = (type) => {
+    switch (type) {
+        case 'order': return 'fa-shopping-basket text-blue-500 bg-blue-50';
+        case 'payment': return 'fa-credit-card text-emerald-500 bg-emerald-50';
+        case 'delivery': return 'fa-truck text-amber-500 bg-amber-50';
+        case 'promo': return 'fa-tag text-purple-500 bg-purple-50';
+        default: return 'fa-bell text-gray-400 bg-gray-50';
+    }
+};
+
+const timeAgo = (date) => {
+    return new Date(date).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+watch(isNotifOpen, (val) => {
+    if (val) {
+        isProfileDesktopOpen.value = false;
+        fetchNotifications();
+    }
+});
+
+watch(isProfileDesktopOpen, (val) => {
+    if (val) isNotifOpen.value = false;
+});
 
 let debounceTimer = null;
 
@@ -157,6 +244,9 @@ const getInitials = (name) => {
 
 onMounted(() => {
     updateActiveSection();
+    if (usePage().props.auth.user) {
+        fetchNotifications();
+    }
 
     const unregisterNavigate = router.on('navigate', () => {
         updateActiveSection();
@@ -314,12 +404,81 @@ onMounted(() => {
                     </transition>
                 </Teleport>
 
-                <button class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl relative active:scale-95 transition-transform" aria-label="Notifications">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    <span class="absolute top-2.5 right-3 w-2 h-2 bg-secondary rounded-full border-2 border-primary"></span>
-                </button>
+                <div v-if="$page.props.auth.user" class="relative">
+                    <button
+                        @click="isNotifOpen = !isNotifOpen"
+                        class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl relative active:scale-95 transition-transform"
+                        aria-label="Notifications"
+                    >
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span v-if="unreadCount > 0" class="absolute top-2 right-2 w-4 h-4 bg-secondary text-primary text-[10px] font-black flex items-center justify-center rounded-full border-2 border-primary">
+                            {{ unreadCount > 9 ? '9+' : unreadCount }}
+                        </span>
+                    </button>
+
+                    <!-- NOTIFICATION DROPDOWN MOBILE -->
+                    <transition
+                        enter-active-class="transition ease-out duration-200"
+                        enter-from-class="opacity-0 translate-y-1"
+                        enter-to-class="opacity-100 translate-y-0"
+                        leave-active-class="transition ease-in duration-150"
+                        leave-from-class="opacity-100 translate-y-0"
+                        leave-to-class="opacity-0 translate-y-1"
+                    >
+                        <div v-if="isNotifOpen" class="fixed inset-x-4 top-16 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 z-[60] max-h-[80vh] flex flex-col">
+                            <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+                                <h3 class="text-sm font-black text-gray-900 uppercase tracking-tight">Notifikasi</h3>
+                                <button @click="markAllNotifsAsRead" class="text-[10px] font-bold text-primary hover:underline">Tandai semua dibaca</button>
+                            </div>
+
+                            <div class="overflow-y-auto flex-1">
+                                <div v-if="isNotifLoading && notifications.length === 0" class="p-4 space-y-4">
+                                    <div v-for="i in 3" :key="i" class="flex gap-3 animate-pulse">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-lg shrink-0"></div>
+                                        <div class="flex-1 space-y-2">
+                                            <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+                                            <div class="h-2 bg-gray-50 rounded w-3/4"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else-if="notifications.length === 0" class="px-4 py-12 text-center">
+                                    <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <i class="fa-solid fa-bell-slash text-gray-300"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-gray-400">Belum ada notifikasi</p>
+                                </div>
+                                <div v-else>
+                                    <div
+                                        v-for="notif in notifications"
+                                        :key="notif.id"
+                                        @click="markNotifAsRead(notif)"
+                                        class="px-4 py-3 flex gap-3 hover:bg-gray-50 transition border-b border-gray-50 last:border-0"
+                                        :class="{'bg-red-50/30': !notif.read_at}"
+                                    >
+                                        <div :class="['w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-sm', getNotifIcon(notif.type)]">
+                                            <i :class="['fas', getNotifIcon(notif.type).split(' ')[0]]"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between items-start gap-2">
+                                                <p class="text-xs font-black text-gray-900 leading-tight" :class="{'font-extrabold': !notif.read_at}">{{ notif.title }}</p>
+                                                <span v-if="!notif.read_at" class="w-2 h-2 bg-primary rounded-full shrink-0 mt-1"></span>
+                                            </div>
+                                            <p class="text-[11px] text-gray-500 mt-0.5 line-clamp-1" :class="{'text-gray-900 font-medium': !notif.read_at}">{{ notif.description }}</p>
+                                            <p class="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">{{ timeAgo(notif.created_at) }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Link :href="route('notifications.index')" @click="isNotifOpen = false" class="block w-full py-3 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-primary hover:bg-gray-50 border-t border-gray-100 transition shrink-0 bg-white">
+                                Lihat semua notifikasi <i class="fas fa-arrow-right ml-1"></i>
+                            </Link>
+                        </div>
+                    </transition>
+                    <div v-if="isNotifOpen" @click="isNotifOpen = false" class="fixed inset-0 z-50"></div>
+                </div>
             </div>
 
             <!-- ── Desktop Top Bar ────────────────────────────────── -->
@@ -507,12 +666,81 @@ onMounted(() => {
                         </template>
                     </template>
 
-                    <button class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group" aria-label="Notifications">
-                        <svg class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        <span class="absolute top-2.5 right-3 w-2 h-2 bg-secondary rounded-full border-2 border-primary animate-pulse"></span>
-                    </button>
+                    <div v-if="$page.props.auth.user" class="relative">
+                        <button
+                            @click="isNotifOpen = !isNotifOpen"
+                            class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group"
+                            aria-label="Notifications"
+                        >
+                            <svg class="w-6 h-6 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <span v-if="unreadCount > 0" class="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-secondary text-primary text-[9px] font-black flex items-center justify-center rounded-full border-2 border-primary group-hover:scale-110 transition-transform">
+                                {{ unreadCount > 9 ? '9+' : unreadCount }}
+                            </span>
+                        </button>
+
+                        <!-- NOTIFICATION DROPDOWN DESKTOP -->
+                        <transition
+                            enter-active-class="transition ease-out duration-200"
+                            enter-from-class="opacity-0 translate-y-1 scale-95"
+                            enter-to-class="opacity-100 translate-y-0 scale-100"
+                            leave-active-class="transition ease-in duration-100"
+                            leave-from-class="opacity-100 translate-y-0 scale-100"
+                            leave-to-class="opacity-0 translate-y-1 scale-95"
+                        >
+                            <div v-if="isNotifOpen" class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl overflow-hidden z-50 border border-gray-100 flex flex-col">
+                                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+                                    <h3 class="text-xs font-black text-gray-900 uppercase tracking-widest">Notifikasi</h3>
+                                    <button @click="markAllNotifsAsRead" class="text-[10px] font-black text-primary hover:underline uppercase tracking-tight">Tandai semua dibaca</button>
+                                </div>
+
+                                <div class="max-h-[380px] overflow-y-auto">
+                                    <div v-if="isNotifLoading && notifications.length === 0" class="p-4 space-y-4">
+                                        <div v-for="i in 3" :key="i" class="flex gap-3 animate-pulse">
+                                            <div class="w-10 h-10 bg-gray-100 rounded-lg shrink-0"></div>
+                                            <div class="flex-1 space-y-2">
+                                                <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+                                                <div class="h-2 bg-gray-50 rounded w-3/4"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="notifications.length === 0" class="px-4 py-12 text-center">
+                                        <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <i class="fa-solid fa-bell-slash text-gray-300"></i>
+                                        </div>
+                                        <p class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Belum ada notifikasi</p>
+                                    </div>
+                                    <div v-else>
+                                        <div
+                                            v-for="notif in notifications"
+                                            :key="notif.id"
+                                            @click="markNotifAsRead(notif)"
+                                            class="px-4 py-3.5 flex gap-3 hover:bg-gray-50 cursor-pointer transition border-b border-gray-50 last:border-0"
+                                            :class="{'bg-red-50/20': !notif.read_at}"
+                                        >
+                                            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-sm shadow-sm border border-black/5', getNotifIcon(notif.type)]">
+                                                <i :class="['fas', getNotifIcon(notif.type).split(' ')[0]]"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex justify-between items-start gap-2">
+                                                    <p class="text-xs font-black text-gray-900 leading-tight" :class="{'font-extrabold': !notif.read_at}">{{ notif.title }}</p>
+                                                    <span v-if="!notif.read_at" class="w-2 h-2 bg-primary rounded-full shrink-0 mt-1 shadow-[0_0_8px_rgba(227,6,19,0.4)]"></span>
+                                                </div>
+                                                <p class="text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed" :class="{'text-gray-900 font-medium': !notif.read_at}">{{ notif.description }}</p>
+                                                <p class="text-[9px] text-gray-400 mt-1.5 uppercase font-black tracking-widest">{{ timeAgo(notif.created_at) }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Link :href="route('notifications.index')" @click="isNotifOpen = false" class="block w-full py-3 text-center text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] hover:text-primary hover:bg-gray-50 border-t border-gray-100 transition shrink-0 bg-white">
+                                    Lihat semua notifikasi <i class="fas fa-arrow-right ml-1 transition-transform group-hover:translate-x-1"></i>
+                                </Link>
+                            </div>
+                        </transition>
+                        <div v-if="isNotifOpen" @click="isNotifOpen = false" class="fixed inset-0 z-40"></div>
+                    </div>
                 </div>
             </div>
         </div>
