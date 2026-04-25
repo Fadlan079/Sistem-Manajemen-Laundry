@@ -17,6 +17,8 @@ class NotificationController extends Controller
         $user = $request->user();
         $type = $request->query('type', 'semua');
 
+        $this->ensureDailyPromoNotification($user);
+
         $query = Notification::where('user_id', $user->id)
             ->when($type !== 'semua', function ($q) use ($type) {
                 return $q->where('type', $type);
@@ -55,6 +57,7 @@ class NotificationController extends Controller
     public function getLatest(Request $request)
     {
         $user = $request->user();
+        $this->ensureDailyPromoNotification($user);
         
         $latest = Notification::where('user_id', $user->id)
             ->latest()
@@ -94,5 +97,49 @@ class NotificationController extends Controller
             ->update(['read_at' => now()]);
 
         return back();
+    }
+
+    /**
+     * Ensure a promo notification exists for today's discounts.
+     */
+    private function ensureDailyPromoNotification($user)
+    {
+        if (!$user) return;
+
+        $today = Carbon::today();
+        $dayName = $today->format('l'); // Monday, etc.
+
+        // Check if we already created a promo notif for this user today
+        $exists = Notification::where('user_id', $user->id)
+            ->where('type', 'promo')
+            ->where('title', 'like', 'Promo ' . $dayName . '%')
+            ->whereDate('created_at', $today)
+            ->exists();
+
+        if ($exists) return;
+
+        // Get services with discount today
+        $services = \App\Models\Service::where('discount_day', $dayName)
+            ->where('discount_percentage', '>', 0)
+            ->get();
+
+        if ($services->isEmpty()) return;
+
+        $promoText = "Diskon spesial hari ini: ";
+        $details = $services->map(function($s) {
+            return $s->name . " (" . number_format($s->discount_percentage, 0) . "%)";
+        })->join(', ');
+
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'promo',
+            'title' => 'Promo ' . $dayName . '!',
+            'description' => $promoText . $details . ". Yuk, pesan sekarang sebelum promo berakhir!",
+            'metadata' => [
+                'type' => 'daily_promo',
+                'day' => $dayName,
+                'services_count' => $services->count()
+            ]
+        ]);
     }
 }

@@ -598,9 +598,6 @@ class CustomerDashboardController extends Controller
                     'name'     => substr($order->service->name ?? 'Layanan Laundry', 0, 50),
                 ],
             ],
-            'callbacks' => [
-                'finish' => route('pelanggan.aktivitas.detail', $order->id),
-            ],
         ];
 
         $snapToken = Snap::getSnapToken($params);
@@ -700,10 +697,19 @@ class CustomerDashboardController extends Controller
 
             return response()->json(['status' => $status->transaction_status, 'message' => 'Status pembayaran: ' . $status->transaction_status]);
         } catch (\Exception $e) {
+            $errorMessage = $e->getMessage();
+            
+            if (str_contains($errorMessage, '404') && str_contains($errorMessage, "Transaction doesn't exist")) {
+                return response()->json([
+                    'status' => 'pending',
+                    'message' => 'Pembayaran belum terdeteksi. Silakan klik "Bayar Sekarang" untuk menyelesaikan pembayaran.'
+                ], 200);
+            }
+
             \Log::error('Midtrans Status Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error: ' . $e->getMessage() . ' di baris ' . $e->getLine()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 200);
         }
     }

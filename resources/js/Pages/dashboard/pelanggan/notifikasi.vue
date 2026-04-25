@@ -35,6 +35,8 @@ const handleNotifClick = (notif) => {
     
     if (notif.metadata?.order_id) {
         router.visit(route('pelanggan.aktivitas.detail', { id: notif.metadata.order_id }));
+    } else if (notif.type === 'promo') {
+        router.visit(route('pelanggan.daftar-layanan'));
     }
 };
 

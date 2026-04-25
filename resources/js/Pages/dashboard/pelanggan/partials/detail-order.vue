@@ -4,6 +4,17 @@ import AppLayout from '@/Layouts/app.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
 
+// Confetti loader
+const loadConfetti = () => {
+    return new Promise((resolve) => {
+        if (window.confetti) return resolve(window.confetti);
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
+        script.onload = () => resolve(window.confetti);
+        document.head.appendChild(script);
+    });
+};
+
 
 const props = defineProps({
     auth: Object,
@@ -27,6 +38,29 @@ const steps = computed(() => {
 
 const isExpanded = ref(false);
 const isChangingPaymentMethod = ref(false);
+const isSuccessModalOpen = ref(false);
+const successType = ref('payment'); // 'payment' or 'order'
+
+const triggerSuccess = async (type = 'payment') => {
+    successType.value = type;
+    isSuccessModalOpen.value = true;
+    const confetti = await loadConfetti();
+    if (confetti) {
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function() {
+            const timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) return clearInterval(interval);
+            const particleCount = 50 * (timeLeft / duration);
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+    }
+};
 
 const countdownText = ref('');
 let countdownInterval = null;
@@ -58,6 +92,11 @@ onMounted(() => {
     if (props.order.dbStatus === 'pending' && props.order.pickup_timestamp) {
         updateCountdown();
         countdownInterval = setInterval(updateCountdown, 60000); // per minute
+    }
+
+    // Trigger success celebration if redirected with success flash (for new orders)
+    if (flash.value.success && flash.value.success.toLowerCase().includes('berhasil dibuat')) {
+        triggerSuccess('order');
     }
 });
 
@@ -99,7 +138,10 @@ async function checkPaymentStatus() {
 
         const data = await res.json();
         if (data.status === 'paid') {
-            router.reload({ only: ['order'] });
+            await triggerSuccess();
+            setTimeout(() => {
+                router.reload({ only: ['order'] });
+            }, 3000);
         } else {
             // Show toast or message that it's still pending
             alert(data.message || 'Pembayaran belum diterima.');
@@ -149,8 +191,13 @@ async function bayarMidtrans() {
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                 });
-                // Reload page to reflect updated payment status
-                router.reload({ only: ['order'] });
+                
+                if (cbRes.ok) {
+                    await triggerSuccess();
+                    setTimeout(() => {
+                        router.reload({ only: ['order'] });
+                    }, 3000);
+                }
             },
             onPending: function(result) {
                 // Pending (e.g. VA waiting payment) - just reload
@@ -230,7 +277,7 @@ function downloadQR() {
 }
 
 const goBack = () => {
-    window.history.back();
+    router.visit(route('pelanggan.aktivitas'));
 };
 
 const isCopied = ref(false);
@@ -412,7 +459,7 @@ const estimatedTotalCostText = computed(() => {
 <template>
     <Head title="Detail Pesanan" />
 
-    <AppLayout>
+    <AppLayout :hideBottomNav="order.paymentStatus === 'UNPAID'">
         <div class="bg-[#E30613] pt-24 lg:pt-32 pb-24 lg:pb-32 relative overflow-hidden">
             <!-- Back Button -->
             <button 
@@ -906,4 +953,65 @@ const estimatedTotalCostText = computed(() => {
             </button>
         </div>
     </AppLayout>
+
+    <!-- Success Modal -->
+    <Teleport to="body">
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="isSuccessModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isSuccessModalOpen = false"></div>
+                
+                <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                    <!-- Top accent -->
+                    <div class="h-2 bg-gradient-to-r from-[#E30613] via-[#FFE800] to-[#E30613]"></div>
+                    
+                    <div class="p-8 text-center space-y-6">
+                        <!-- Success Icon Wrapper -->
+                        <div class="relative mx-auto w-24 h-24">
+                            <div class="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-20"></div>
+                            <div class="relative w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                                <i class="fas fa-check text-4xl animate-in slide-in-from-bottom-2 duration-500"></i>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-2xl font-black text-gray-900 tracking-tight">
+                                {{ successType === 'payment' ? 'Pembayaran Berhasil!' : 'Pesanan Berhasil!' }}
+                            </h2>
+                            <p class="text-xs text-gray-500 font-bold mt-2 leading-relaxed px-4">
+                                {{ successType === 'payment' 
+                                    ? 'Terima kasih! Pembayaran Anda telah kami terima. Pesanan akan segera diproses.' 
+                                    : 'Pesanan Anda telah berhasil dibuat! Kurir kami akan segera menjemput laundry Anda sesuai jadwal.' 
+                                }}
+                            </p>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 text-left">
+                            <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                                <span>No. Invoice</span>
+                                <span>Metode</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[13px] font-black text-[#E30613] tracking-tighter">{{ order.invoice }}</span>
+                                <span class="text-[11px] font-black text-gray-900 uppercase tracking-tight">{{ order.paymentMethod }}</span>
+                            </div>
+                        </div>
+
+                        <button 
+                            @click="isSuccessModalOpen = false"
+                            class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-lg hover:bg-black transition-all active:scale-95"
+                        >
+                            {{ successType === 'payment' ? 'Tutup & Lihat Detail' : 'Siap, Saya Tunggu!' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </Teleport>
 </template>
