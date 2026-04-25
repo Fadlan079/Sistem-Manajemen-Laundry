@@ -70,72 +70,99 @@ function handleAvatarChange(event) {
     <Head title="Profil Saya" />
 
     <AppLayout :hideBottomNav="activeView !== 'profile'">
-        <!-- Header Section (Blue with wave) -->
-        <div v-if="activeView === 'profile'" class="bg-primary pt-24 pb-20 relative overflow-hidden">
-            <!-- Wave patterns (SVG or purely CSS) -->
-            <div class="absolute inset-0 opacity-10 pointer-events-none z-0">
-                <svg class="w-full h-full" viewBox="0 0 400 400" preserveAspectRatio="none">
-                    <path d="M0,100 C150,200 250,0 400,100 L400,400 L0,400 Z" fill="white"></path>
-                </svg>
+        <!-- Dynamic Red Header Section -->
+        <div class="bg-[#E30613] pt-24 pb-24 relative overflow-hidden">
+            <!-- Decorative background -->
+            <div class="absolute inset-0 opacity-20 pointer-events-none z-0">
+                <div class="absolute top-10 left-10 w-12 h-12 bg-white rounded-full opacity-50"></div>
+                <div class="absolute top-20 right-1/4 w-8 h-8 bg-white rounded-full opacity-50"></div>
+                <div class="absolute bottom-10 right-10 w-24 h-24 bg-white rounded-full opacity-30"></div>
             </div>
 
-            <div class="relative z-10 px-6 max-w-xl mx-auto flex items-center gap-6">
-                <!-- Avatar Container -->
+            <!-- Back Button for Edit Views -->
+            <button
+                v-if="activeView !== 'profile'"
+                @click="activeView = 'profile'"
+                class="absolute top-[100px] left-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-30 backdrop-blur-sm border border-white/20 shadow-lg active:scale-95"
+            >
+                <i class="fas fa-arrow-left"></i>
+            </button>
+
+            <!-- Profile Summary Header Content -->
+            <div v-if="activeView === 'profile'" class="relative z-20 px-6 max-w-xl mx-auto flex items-center gap-6">
                 <div class="relative shrink-0">
                     <div class="w-20 h-20 rounded-full border-4 border-white/20 bg-white flex items-center justify-center overflow-hidden shadow-lg relative">
                         <img v-if="user.avatar_url" :src="user.avatar_url" class="w-full h-full object-cover">
-                        <span v-else class="text-2xl font-black text-primary">{{ getInitials(user.name) }}</span>
+                        <span v-else class="text-2xl font-black text-[#E30613]">{{ getInitials(user.name) }}</span>
 
-                        <!-- Loading Overlay -->
                         <div v-if="isUploadingAvatar" class="absolute inset-0 bg-white/70 flex items-center justify-center z-10 backdrop-blur-sm">
-                            <i class="fas fa-spinner fa-spin text-primary text-xl"></i>
+                            <i class="fas fa-spinner fa-spin text-[#E30613] text-xl"></i>
                         </div>
                     </div>
                     <button
                         @click="avatarInput.click()"
                         :disabled="isUploadingAvatar"
-                        class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center text-gray-500 shadow-md border border-gray-100 hover:text-primary active:scale-90 transition-all disabled:opacity-50"
+                        class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center text-gray-500 shadow-md border border-gray-100 hover:text-[#E30613] active:scale-90 transition-all disabled:opacity-50"
                     >
                         <i class="fas fa-camera text-[10px]"></i>
                     </button>
-                    <input
-                        type="file"
-                        ref="avatarInput"
-                        accept="image/*"
-                        class="hidden"
-                        @change="handleAvatarChange"
-                    >
+                    <input type="file" ref="avatarInput" accept="image/*" class="hidden" @change="handleAvatarChange">
                 </div>
 
-                <!-- Info -->
                 <div class="flex-1">
                     <div class="flex flex-col gap-1.5">
                         <div class="flex flex-col items-start gap-1">
-                            <span class="inline-flex items-center px-2 py-0.5 bg-yellow-400 text-primary text-[8px] font-black rounded-full uppercase tracking-widest mb-1">
+                            <span class="inline-flex items-center px-2 py-0.5 bg-[#FFE800] text-[#E30613] text-[8px] font-black rounded-full uppercase tracking-widest mb-1">
                                 {{ user.role }}
                             </span>
                             <h2 class="text-white font-black text-xl tracking-tight leading-none">{{ user.name }}</h2>
                         </div>
                         <div class="mt-2 space-y-1">
                             <p class="text-white/80 text-xs font-medium flex items-center gap-2">
-                                {{ user.email }}
+                                <i class="far fa-envelope opacity-70"></i> {{ user.email }}
                             </p>
                             <p class="text-white/80 text-xs font-medium flex items-center gap-2">
-
-                                {{ user.phone || 'Belum diatur' }}
+                                <i class="fas fa-phone-alt opacity-70"></i> {{ user.phone || 'Belum diatur' }}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Yellow accent line (Straight) -->
-            <div class="absolute bottom-8 left-0 right-0 h-1.5 bg-[#FFD700] z-10"></div>
+            <!-- Edit Views Header Content -->
+            <div v-else class="relative z-20 px-6 max-w-xl mx-auto text-center text-white">
+                <h1 class="text-2xl font-black mb-1">
+                    {{ 
+                        activeView === 'edit-info' ? 'Edit Profil' : 
+                        activeView === 'edit-password' ? 'Ubah Password' : 
+                        activeView === 'edit-address' ? 'Alamat Saya' : 
+                        'Hapus Akun' 
+                    }}
+                </h1>
+                <p class="text-xs opacity-80 font-medium">
+                    {{ 
+                        activeView === 'edit-info' ? 'Perbarui informasi dasar akun Anda' : 
+                        activeView === 'edit-password' ? 'Gunakan password yang kuat & aman' : 
+                        activeView === 'edit-address' ? 'Kelola alamat penjemputan (Maks. 3)' : 
+                        'Pikirkan kembali sebelum menghapus data Anda' 
+                    }}
+                </p>
+            </div>
+
+            <!-- Curved Bottom -->
+            <div class="absolute bottom-0 left-0 w-full z-10 leading-none pointer-events-none">
+                <svg class="block w-full h-12 sm:h-16 lg:h-20" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-8 sm:h-10 lg:h-12" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-gray-50" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+            </div>
         </div>
 
         <!-- Main Content Area -->
         <div class="bg-gray-50 min-h-screen pb-24 relative">
-            <div class="max-w-xl mx-auto px-4 -mt-8 relative z-20">
+            <div class="max-w-xl mx-auto px-4 mt-6 relative z-20">
 
                 <!-- SUMMARY VIEW -->
                 <template v-if="activeView === 'profile'">
@@ -230,11 +257,7 @@ function handleAvatarChange(event) {
 
                 <!-- EDIT VIEWS -->
                 <template v-else>
-                    <div class="pt-10">
-                        <button @click="activeView = 'profile'" class="mb-6 flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest hover:text-primary transition-colors group">
-                            <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Kembali
-                        </button>
-
+                    <div class="pt-2">
                         <div v-if="activeView === 'edit-info'">
                             <UpdateProfileInformationForm
                                 :must-verify-email="mustVerifyEmail"

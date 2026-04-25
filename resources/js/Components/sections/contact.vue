@@ -3,7 +3,7 @@
 
 <template>
 <section id="kontak" class="py-20 px-6 bg-primary text-white">
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-5xl mx-auto">
 
         <div class="text-center mb-12">
             <p class="text-sm font-semibold text-secondary uppercase tracking-wider mb-2">
@@ -17,22 +17,48 @@
             </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-
-            <a href="https://wa.me/6281234567890"
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Outlet Dr Sutomo -->
+            <a href="https://wa.me/6285186869231"
                target="_blank"
                rel="noopener noreferrer"
-               class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-green-500/20">
-                <i class="fab fa-whatsapp text-xl"></i>
-                <span>Chat via WhatsApp</span>
+               class="flex flex-col items-center justify-center gap-3 p-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all duration-300 group">
+                <div class="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/20 group-hover:scale-110 transition-transform">
+                    <i class="fab fa-whatsapp text-2xl"></i>
+                </div>
+                <div class="text-center">
+                    <h3 class="font-bold text-lg">Outlet Dr Sutomo</h3>
+                    <p class="text-white/60 text-sm">Hubungi via WhatsApp</p>
+                </div>
             </a>
 
-            <a href="mailto:halo@laundrykita.com"
-               class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-transparent hover:bg-white/5 border border-white/30 text-white rounded-lg font-semibold transition-all duration-300">
-                <i class="fas fa-envelope text-lg opacity-80"></i>
-                <span>Kirim Email</span>
+            <!-- Outlet Suryanata -->
+            <a href="https://wa.me/6285117629231"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="flex flex-col items-center justify-center gap-3 p-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all duration-300 group">
+                <div class="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/20 group-hover:scale-110 transition-transform">
+                    <i class="fab fa-whatsapp text-2xl"></i>
+                </div>
+                <div class="text-center">
+                    <h3 class="font-bold text-lg">Outlet Suryanata</h3>
+                    <p class="text-white/60 text-sm">Hubungi via WhatsApp</p>
+                </div>
             </a>
 
+            <!-- Outlet AWS -->
+            <a href="https://wa.me/6285117269231"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="flex flex-col items-center justify-center gap-3 p-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all duration-300 group">
+                <div class="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/20 group-hover:scale-110 transition-transform">
+                    <i class="fab fa-whatsapp text-2xl"></i>
+                </div>
+                <div class="text-center">
+                    <h3 class="font-bold text-lg">Outlet AWS</h3>
+                    <p class="text-white/60 text-sm">Hubungi via WhatsApp</p>
+                </div>
+            </a>
         </div>
 
         <div class="mt-14 text-center border-t border-white/10 pt-8">

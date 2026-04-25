@@ -22,28 +22,7 @@ const form = useForm({
 </script>
 
 <template>
-    <div class="flex flex-col min-h-[calc(100vh-120px)]">
-        <!-- Header Section -->
-        <header class="flex items-start justify-between mt-4 relative">
-            <div class="flex-1 pr-12">
-                <button @click="$emit('back')" class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm border border-gray-100 mb-6 active:scale-95 transition-transform">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h1 class="text-2xl font-black text-gray-900 leading-tight">Edit Profil</h1>
-                <p class="text-sm font-medium text-gray-400 mt-2 leading-relaxed">Perbarui informasi akun Anda untuk layanan yang lebih baik.</p>
-            </div>
-
-            <!-- Header Illustration -->
-            <div class="w-32 h-32 absolute -right-4 -top-4 opacity-40 pointer-events-none">
-                <div class="w-full h-full relative flex items-center justify-center">
-                    <div class="absolute inset-0 border border-red-100 rounded-full animate-[ping_4s_infinite]"></div>
-                    <div class="absolute inset-4 border border-red-50 rounded-full"></div>
-                    <div class="w-16 h-16 bg-red-50 rounded-2xl -rotate-12 flex items-center justify-center text-primary shadow-inner">
-                        <i class="fas fa-user-edit text-3xl rotate-12"></i>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <div class="flex flex-col">
 
         <form @submit.prevent="form.patch(route('profile.update'))" class="flex-1 space-y-8 pb-32">
             <!-- Full Name -->
