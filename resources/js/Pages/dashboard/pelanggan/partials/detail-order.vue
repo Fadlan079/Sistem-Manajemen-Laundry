@@ -81,6 +81,36 @@ function loadSnapScript() {
     });
 }
 
+const isCheckingStatus = ref(false);
+
+async function checkPaymentStatus() {
+    isCheckingStatus.value = true;
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        const res = await fetch(route('pelanggan.aktivitas.midtrans.status', props.order.dbId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        const data = await res.json();
+        if (data.status === 'paid') {
+            router.reload({ only: ['order'] });
+        } else {
+            // Show toast or message that it's still pending
+            alert(data.message || 'Pembayaran belum diterima.');
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        isCheckingStatus.value = false;
+    }
+}
+
 async function bayarMidtrans() {
     isSnapLoading.value = true;
     snapError.value = '';
@@ -130,7 +160,8 @@ async function bayarMidtrans() {
                 snapError.value = 'Pembayaran gagal atau dibatalkan. Silakan coba lagi.';
             },
             onClose: function() {
-                // user closed popup without finishing
+                // user closed popup - allow manual check
+                checkPaymentStatus();
             }
         });
     } catch (e) {
@@ -145,10 +176,16 @@ const payForm = useForm({
     method: props.order.paymentMethodRaw || 'cash'
 });
 
+const isCOD = computed(() => {
+    const m = (payForm.method || '').toLowerCase();
+    return m === 'cash' || m === 'cod' || m === 'tunai';
+});
+
 const getPaymentLabel = (val) => {
-    if (val === 'cash' || val === 'cod') return 'Bayar Tunai ke Kurir';
-    if (val === 'transfer') return 'Transfer Bank';
-    if (val === 'ewallet' || val === 'e-wallet') return 'E-Wallet (QRIS)';
+    const m = (val || '').toLowerCase();
+    if (m === 'cash' || m === 'cod' || m === 'tunai') return 'Bayar Tunai ke Kurir';
+    if (m === 'transfer') return 'Transfer Bank (Otomatis)';
+    if (m === 'ewallet' || m === 'e-wallet') return 'E-Wallet (Otomatis)';
     return val;
 };
 
@@ -634,13 +671,13 @@ const estimatedTotalCostText = computed(() => {
                         </div>
 
                         <button
-                            v-if="order.dbStatus === 'pending'"
+                            v-if="order.dbStatus === 'pending' && order.paymentStatus === 'UNPAID'"
                             @click="batalkanPesanan"
                             class="w-full mt-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-[#E30613] text-[10px] bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-all shadow-sm active:scale-95">
                             Batalkan Pesanan
                         </button>
                     </template>
-                    <template v-else-if="order.dbStatus === 'pending'">
+                    <template v-else-if="order.dbStatus === 'pending' && order.paymentStatus === 'UNPAID'">
                         <!-- Even if calculated (PCS), if still pending allow cancellation -->
                          <button
                             @click="batalkanPesanan"
@@ -690,13 +727,19 @@ const estimatedTotalCostText = computed(() => {
                         <label class="flex items-center gap-3 border-2 p-3 rounded-lg cursor-pointer transition-colors"
                             :class="payForm.method === 'transfer' ? 'border-[#E30613] bg-red-50/30' : 'border-gray-200 hover:border-gray-300 bg-white'">
                             <input type="radio" v-model="payForm.method" value="transfer" class="w-4 h-4 text-[#E30613] focus:ring-[#E30613]">
-                            <span class="text-xs font-bold text-gray-800">Transfer Bank</span>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-gray-800">Transfer Bank</span>
+                                <span class="text-[9px] text-emerald-600 font-bold">Verifikasi Otomatis</span>
+                            </div>
                         </label>
 
                         <label class="flex items-center gap-3 border-2 p-3 rounded-lg cursor-pointer transition-colors"
                             :class="payForm.method === 'ewallet' || payForm.method === 'e-wallet' ? 'border-[#E30613] bg-red-50/30' : 'border-gray-200 hover:border-gray-300 bg-white'">
                             <input type="radio" v-model="payForm.method" value="ewallet" class="w-4 h-4 text-[#E30613] focus:ring-[#E30613]">
-                            <span class="text-xs font-bold text-gray-800">E-Wallet (QRIS)</span>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-gray-800">E-Wallet (QRIS)</span>
+                                <span class="text-[9px] text-emerald-600 font-bold">Verifikasi Otomatis</span>
+                            </div>
                         </label>
                         
                         <div class="pt-2 text-right">
@@ -709,15 +752,40 @@ const estimatedTotalCostText = computed(() => {
                         <i class="fas fa-exclamation-circle"></i> {{ snapError }}
                     </div>
 
-                    <!-- Desktop Payment Button -->
-                    <button v-if="order.isCalculated"
-                        @click="bayarMidtrans"
-                        :disabled="isSnapLoading"
-                        class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-white text-xs bg-[#E30613] shadow-md hover:bg-black transition-colors justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-                        <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
-                        <i v-else class="fas fa-credit-card"></i>
-                        {{ isSnapLoading ? 'Memuat...' : 'Bayar Sekarang' }}
-                    </button>
+                    <!-- Desktop Payment Button (Online) -->
+                    <template v-if="order.isCalculated && !isCOD">
+                        <button
+                            @click="bayarMidtrans"
+                            :disabled="isSnapLoading || isCheckingStatus"
+                            class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-white text-xs bg-[#E30613] shadow-md hover:bg-black transition-colors justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
+                            <i v-else class="fas fa-credit-card"></i>
+                            {{ isSnapLoading ? 'Memuat...' : 'Bayar Sekarang' }}
+                        </button>
+
+                        <!-- Desktop Check Status Button -->
+                        <button
+                            @click="checkPaymentStatus"
+                            :disabled="isCheckingStatus || isSnapLoading"
+                            class="hidden lg:flex w-full mt-2 py-3 rounded-lg font-bold text-[#E30613] text-xs bg-white border border-[#E30613] shadow-sm hover:bg-red-50 transition-colors justify-center items-center gap-2 disabled:opacity-60">
+                            <i v-if="isCheckingStatus" class="fas fa-spinner fa-spin"></i>
+                            <i v-else class="fas fa-sync-alt"></i>
+                            {{ isCheckingStatus ? 'Mengecek...' : 'Cek Status Pembayaran' }}
+                        </button>
+                    </template>
+
+                    <!-- Desktop Cash/COD Message -->
+                    <template v-else-if="order.isCalculated">
+                        <div class="hidden lg:flex flex-col items-center gap-3 mt-4 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm">
+                                <i class="fas fa-hand-holding-dollar text-lg"></i>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-xs font-black text-gray-900 uppercase tracking-wide">Bayar Tunai</p>
+                                <p class="text-[10px] text-gray-500 font-medium leading-relaxed mt-1">Silakan siapkan uang tunai sesuai tagihan. Kurir akan mengonfirmasi pembayaran Anda.</p>
+                            </div>
+                        </div>
+                    </template>
                     <button v-else
                         disabled
                         class="hidden lg:flex w-full mt-4 py-3 rounded-lg font-bold text-white text-xs bg-gray-400 cursor-not-allowed justify-center items-center">
@@ -800,14 +868,36 @@ const estimatedTotalCostText = computed(() => {
             </div>
 
             <!-- Calculated: Pay Now via Midtrans -->
-            <button v-if="order.isCalculated" type="button" @click="bayarMidtrans"
-                :disabled="isSnapLoading"
-                class="px-8 py-3.5 rounded-full font-bold text-white text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-                :class="isSnapLoading ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none' : 'bg-[#E30613] hover:bg-[#B7050F] shadow-[0_4px_14px_rgba(227,6,19,0.3)]'">
-                <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
-                <i v-else class="fas fa-credit-card"></i>
-                <span v-if="!isSnapLoading">Bayar Sekarang</span>
-            </button>
+            <div v-if="order.isCalculated" class="flex-1 flex justify-end">
+                <div v-if="!isCOD" class="flex flex-col gap-2 items-end">
+                    <button type="button" @click="bayarMidtrans"
+                        :disabled="isSnapLoading || isCheckingStatus"
+                        class="px-8 py-3.5 rounded-full font-bold text-white text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                        :class="isSnapLoading || isCheckingStatus ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none' : 'bg-[#E30613] hover:bg-[#B7050F] shadow-[0_4px_14px_rgba(227,6,19,0.3)]'">
+                        <i v-if="isSnapLoading" class="fas fa-spinner fa-spin"></i>
+                        <i v-else class="fas fa-credit-card"></i>
+                        <span v-if="!isSnapLoading">Bayar Sekarang</span>
+                    </button>
+                    <button type="button" @click="checkPaymentStatus"
+                        :disabled="isCheckingStatus || isSnapLoading"
+                        class="text-[10px] font-black text-[#E30613] uppercase tracking-widest flex items-center gap-1 px-2 py-1">
+                        <i v-if="isCheckingStatus" class="fas fa-spinner fa-spin"></i>
+                        <i v-else class="fas fa-sync-alt"></i>
+                        Cek Status
+                    </button>
+                </div>
+                
+                <!-- COD Mobile State -->
+                <div v-else class="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
+                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm shrink-0">
+                        <i class="fas fa-hand-holding-dollar"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-gray-900 uppercase tracking-wide">Bayar Tunai</p>
+                        <p class="text-[8px] text-gray-500 font-medium leading-tight">Berikan ke kurir</p>
+                    </div>
+                </div>
+            </div>
             
             <!-- Not Calculated: Wait for courier -->
             <button v-else type="button" disabled

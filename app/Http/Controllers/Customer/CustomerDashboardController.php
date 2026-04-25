@@ -598,6 +598,9 @@ class CustomerDashboardController extends Controller
                     'name'     => substr($order->service->name ?? 'Layanan Laundry', 0, 50),
                 ],
             ],
+            'callbacks' => [
+                'finish' => route('pelanggan.aktivitas.detail', $order->id),
+            ],
         ];
 
         $snapToken = Snap::getSnapToken($params);
@@ -606,6 +609,7 @@ class CustomerDashboardController extends Controller
         $payment->update([
             'snap_token'        => $snapToken,
             'midtrans_order_id' => $midtransOrderId,
+            'amount'            => (float) $order->total_price,
         ]);
 
         return response()->json([
@@ -630,7 +634,6 @@ class CustomerDashboardController extends Controller
         $payment->update([
             'status'  => 'paid',
             'amount'  => (float) $order->total_price,
-            'method'  => 'midtrans',
             'paid_at' => now(),
         ]);
 
@@ -643,6 +646,66 @@ class CustomerDashboardController extends Controller
         ]);
 
         return response()->json(['message' => 'Payment confirmed successfully.']);
+    }
+
+    public function checkMidtransStatus(Request $request, $id)
+    {
+        $order = Order::with('payments')
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        $payment = $order->payments()->where('status', 'pending')->first();
+
+        if (! $payment || ! $payment->midtrans_order_id) {
+            return response()->json(['message' => 'No pending midtrans payment found.'], 404);
+        }
+
+        // Setup Midtrans config
+        MidtransConfig::$serverKey    = config('services.midtrans.server_key');
+        MidtransConfig::$isProduction = config('services.midtrans.is_production');
+
+        try {
+            $status = \Midtrans\Transaction::status($payment->midtrans_order_id);
+            
+            // Log status for debugging if needed
+            // \Log::info('Midtrans Status for ' . $payment->midtrans_order_id . ': ' . $status->transaction_status);
+
+            if ($status->transaction_status == 'settlement' || $status->transaction_status == 'capture') {
+                $payment->update([
+                    'status'  => 'paid',
+                    'method'  => $status->payment_type,
+                    'amount'  => (float) $status->gross_amount,
+                    'paid_at' => now(),
+                ]);
+
+                Notification::create([
+                    'user_id'     => $order->user_id,
+                    'type'        => 'payment',
+                    'title'       => 'Pembayaran Berhasil',
+                    'description' => "Pembayaran sebesar Rp" . number_format($status->gross_amount, 0, ',', '.') . " untuk pesanan #" . $order->id . " telah berhasil diverifikasi.",
+                    'metadata'    => ['order_id' => $order->id]
+                ]);
+
+                return response()->json(['status' => 'paid', 'message' => 'Pembayaran berhasil diverifikasi.']);
+            }
+
+            if ($status->transaction_status == 'pending') {
+                return response()->json(['status' => 'pending', 'message' => 'Pembayaran masih pending. Silakan selesaikan pembayaran di aplikasi bank/e-wallet Anda.']);
+            }
+
+            if ($status->transaction_status == 'expire') {
+                $payment->update(['status' => 'expired']);
+                return response()->json(['status' => 'expired', 'message' => 'Batas waktu pembayaran telah habis. Silakan buat ulang pembayaran.']);
+            }
+
+            return response()->json(['status' => $status->transaction_status, 'message' => 'Status pembayaran: ' . $status->transaction_status]);
+        } catch (\Exception $e) {
+            \Log::error('Midtrans Status Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error: ' . $e->getMessage() . ' di baris ' . $e->getLine()
+            ], 200);
+        }
     }
 
     public function konfirmasiBayar(Request $request, $id)

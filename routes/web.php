@@ -139,6 +139,7 @@ Route::middleware(['auth', 'verified'])
         Route::post('/aktivitas/{id}/batal', [CustomerDashboardController::class, 'batalkanPesanan'])->name('aktivitas.batal');
         Route::post('/aktivitas/{id}/midtrans/token', [CustomerDashboardController::class, 'getMidtransToken'])->name('aktivitas.midtrans.token');
         Route::post('/aktivitas/{id}/midtrans/callback', [CustomerDashboardController::class, 'midtransCallback'])->name('aktivitas.midtrans.callback');
+        Route::post('/aktivitas/{id}/midtrans/status', [CustomerDashboardController::class, 'checkMidtransStatus'])->name('aktivitas.midtrans.status');
         Route::get('/lacak-pesanan', [CustomerDashboardController::class, 'lacakPesanan'])->name('lacak');
         Route::post('/lacak-pesanan', [CustomerDashboardController::class, 'cariPesanan'])->name('lacak.post');
 
