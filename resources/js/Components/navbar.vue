@@ -404,7 +404,17 @@ onMounted(() => {
                     </transition>
                 </Teleport>
 
-                <div v-if="$page.props.auth.user" class="relative">
+                <div v-if="$page.props.auth.user" class="flex items-center gap-3">
+                    <!-- CART BUTTON MOBILE -->
+                    <Link
+                        :href="route('pelanggan.daftar-layanan')"
+                        class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl active:scale-95 transition-transform"
+                        aria-label="Keranjang"
+                    >
+                        <i class="fas fa-basket-shopping text-white text-lg"></i>
+                    </Link>
+
+                    <div class="relative">
                     <button
                         @click="isNotifOpen = !isNotifOpen"
                         class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl relative active:scale-95 transition-transform"
@@ -480,6 +490,7 @@ onMounted(() => {
                     <div v-if="isNotifOpen" @click="isNotifOpen = false" class="fixed inset-0 z-50"></div>
                 </div>
             </div>
+        </div>
 
             <!-- ── Desktop Top Bar ────────────────────────────────── -->
             <div class="hidden lg:flex justify-between items-center h-12">
@@ -666,7 +677,17 @@ onMounted(() => {
                         </template>
                     </template>
 
-                    <div v-if="$page.props.auth.user" class="relative">
+                    <div v-if="$page.props.auth.user" class="flex items-center gap-3">
+                        <!-- CART BUTTON DESKTOP -->
+                        <Link
+                            :href="route('pelanggan.daftar-layanan')"
+                            class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl active:scale-95 transition-all group"
+                            aria-label="Keranjang"
+                        >
+                            <i class="fas fa-basket-shopping text-white/70 group-hover:text-white transition-colors"></i>
+                        </Link>
+
+                        <div class="relative">
                         <button
                             @click="isNotifOpen = !isNotifOpen"
                             class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group"
@@ -742,6 +763,7 @@ onMounted(() => {
                         <div v-if="isNotifOpen" @click="isNotifOpen = false" class="fixed inset-0 z-40"></div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </nav>
