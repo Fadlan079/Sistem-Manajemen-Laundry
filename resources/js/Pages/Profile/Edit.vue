@@ -85,24 +85,24 @@ function handleAvatarChange(event) {
                     <div class="w-20 h-20 rounded-full border-4 border-white/20 bg-white flex items-center justify-center overflow-hidden shadow-lg relative">
                         <img v-if="user.avatar_url" :src="user.avatar_url" class="w-full h-full object-cover">
                         <span v-else class="text-2xl font-black text-primary">{{ getInitials(user.name) }}</span>
-                        
+
                         <!-- Loading Overlay -->
                         <div v-if="isUploadingAvatar" class="absolute inset-0 bg-white/70 flex items-center justify-center z-10 backdrop-blur-sm">
                             <i class="fas fa-spinner fa-spin text-primary text-xl"></i>
                         </div>
                     </div>
-                    <button 
+                    <button
                         @click="avatarInput.click()"
                         :disabled="isUploadingAvatar"
                         class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center text-gray-500 shadow-md border border-gray-100 hover:text-primary active:scale-90 transition-all disabled:opacity-50"
                     >
                         <i class="fas fa-camera text-[10px]"></i>
                     </button>
-                    <input 
-                        type="file" 
-                        ref="avatarInput" 
-                        accept="image/*" 
-                        class="hidden" 
+                    <input
+                        type="file"
+                        ref="avatarInput"
+                        accept="image/*"
+                        class="hidden"
                         @change="handleAvatarChange"
                     >
                 </div>
@@ -128,6 +128,9 @@ function handleAvatarChange(event) {
                     </div>
                 </div>
             </div>
+
+            <!-- Yellow accent line (Straight) -->
+            <div class="absolute bottom-8 left-0 right-0 h-1.5 bg-[#FFD700] z-10"></div>
         </div>
 
         <!-- Main Content Area -->

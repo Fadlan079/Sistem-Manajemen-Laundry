@@ -16,7 +16,15 @@ const showFilter = ref(false);
 const filterOptions = ref({
     minPrice: '',
     maxPrice: '',
+    selectedRange: null, // Index of priceRanges
 });
+
+const priceRanges = [
+    { label: '< 5.000', min: 0, max: 4999 },
+    { label: '5.000 - 15.000', min: 5000, max: 15000 },
+    { label: '20.000 - 40.000', min: 20000, max: 40000 },
+    { label: '> 40.000', min: 40001, max: null },
+];
 
 // Format Price
 const formatPrice = (price) => {
@@ -37,6 +45,7 @@ const toggleFilter = () => {
 const resetFilter = () => {
     filterOptions.value.minPrice = '';
     filterOptions.value.maxPrice = '';
+    filterOptions.value.selectedRange = null;
     showFilter.value = false;
 };
 
@@ -62,12 +71,23 @@ const filteredServices = computed(() => {
         );
     }
 
-    // Filter by Price Range
-    if (filterOptions.value.minPrice !== '' && filterOptions.value.minPrice !== null) {
-        result = result.filter(s => s.price >= Number(filterOptions.value.minPrice));
-    }
-    if (filterOptions.value.maxPrice !== '' && filterOptions.value.maxPrice !== null) {
-        result = result.filter(s => s.price <= Number(filterOptions.value.maxPrice));
+    // Filter by Price Range (Predefined)
+    if (filterOptions.value.selectedRange !== null) {
+        const range = priceRanges[filterOptions.value.selectedRange];
+        if (range.min !== null) {
+            result = result.filter(s => s.price >= range.min);
+        }
+        if (range.max !== null) {
+            result = result.filter(s => s.price <= range.max);
+        }
+    } else {
+        // Fallback to manual if still exists (optional, but keep for compatibility)
+        if (filterOptions.value.minPrice !== '' && filterOptions.value.minPrice !== null) {
+            result = result.filter(s => s.price >= Number(filterOptions.value.minPrice));
+        }
+        if (filterOptions.value.maxPrice !== '' && filterOptions.value.maxPrice !== null) {
+            result = result.filter(s => s.price <= Number(filterOptions.value.maxPrice));
+        }
     }
 
     return result;
@@ -106,6 +126,9 @@ const selectService = (id) => {
             <!-- Curved bottom edge to match design -->
             <div class="absolute bottom-0 left-0 right-0 z-10 translate-y-px">
                 <svg viewBox="0 0 1440 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-8 sm:h-12 lg:h-16 preserve-3d" preserveAspectRatio="none">
+                    <!-- Thicker Yellow accent curve -->
+                    <path d="M0,35 C320,85 1120,85 1440,35 L1440,100 L0,100 Z" fill="#FFD700"></path>
+                    <!-- Main content background curve -->
                     <path d="M0,50 C320,100 1120,100 1440,50 L1440,100 L0,100 Z" fill="#f9fafb"></path>
                 </svg>
             </div>
@@ -113,7 +136,7 @@ const selectService = (id) => {
 
         <!-- Main Content -->
         <div class="bg-gray-50 min-h-screen pb-24">
-            <div class="max-w-3xl mx-auto px-4 -mt-2 relative z-20">
+            <div class="max-w-3xl mx-auto px-4 mt-6 relative z-20">
                 
                 <!-- Search & Filter Bar -->
                 <div class="flex gap-3 mb-6">
@@ -273,31 +296,21 @@ const selectService = (id) => {
 
                     <div class="space-y-5 mb-8">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Kisaran Harga</label>
-                            <div class="flex items-center gap-3">
-                                <div class="relative flex-1">
-                                    <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-400 text-xs font-bold">Rp</span>
-                                    </div>
-                                    <input 
-                                        v-model="filterOptions.minPrice"
-                                        type="number" 
-                                        placeholder="Min" 
-                                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-[#E30613] focus:border-[#E30613]"
-                                    >
-                                </div>
-                                <span class="text-gray-400 font-bold">-</span>
-                                <div class="relative flex-1">
-                                    <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-400 text-xs font-bold">Rp</span>
-                                    </div>
-                                    <input 
-                                        v-model="filterOptions.maxPrice"
-                                        type="number" 
-                                        placeholder="Maks" 
-                                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-[#E30613] focus:border-[#E30613]"
-                                    >
-                                </div>
+                            <label class="block text-xs font-bold text-gray-700 mb-4 uppercase tracking-wide">Estimasi Harga</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button 
+                                    v-for="(range, index) in priceRanges" 
+                                    :key="index"
+                                    @click="filterOptions.selectedRange = filterOptions.selectedRange === index ? null : index"
+                                    :class="[
+                                        'py-3.5 px-2 text-[11px] font-black rounded-xl border-2 transition-all flex items-center justify-center text-center',
+                                        filterOptions.selectedRange === index 
+                                            ? 'bg-red-50 border-[#E30613] text-[#E30613] shadow-sm' 
+                                            : 'bg-white border-gray-100 text-gray-500 hover:border-red-100'
+                                    ]"
+                                >
+                                    {{ range.label }}
+                                </button>
                             </div>
                         </div>
                     </div>

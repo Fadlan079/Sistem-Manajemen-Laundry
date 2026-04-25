@@ -18,7 +18,7 @@ class UserController extends Controller
         $role   = $request->input('role', '');
         $perPage = 10;
 
-        $query = User::query()
+        $query = User::with('addresses')
             ->when($search, fn($q) => $q->where(fn($q2) =>
                 $q2->where('name', 'like', "%{$search}%")
                    ->orWhere('email', 'like', "%{$search}%")
@@ -31,7 +31,7 @@ class UserController extends Controller
             'name'       => $u->name,
             'email'      => $u->email,
             'phone'      => $u->phone,
-            'address'    => $u->address,
+            'address'    => $u->addresses->first()?->address ?? '-',
             'role'       => $u->role,
             'verified'   => !is_null($u->email_verified_at),
             'joined'     => $u->created_at->format('d M Y'),
@@ -103,10 +103,21 @@ class UserController extends Controller
             'role'     => ['required', Rule::in(['admin', 'operator', 'kurir', 'pelanggan'])],
         ]);
 
-        User::create([
-            ...$validated,
+        $user = User::create([
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'phone'    => $validated['phone'],
+            'role'     => $validated['role'],
         ]);
+
+        if (!empty($validated['address'])) {
+            $user->addresses()->create([
+                'label'      => 'Utama',
+                'address'    => $validated['address'],
+                'is_default' => true,
+            ]);
+        }
 
         return back()->with('success', 'Pengguna berhasil ditambahkan.');
     }
@@ -122,12 +133,22 @@ class UserController extends Controller
             'role'     => ['required', Rule::in(['admin', 'operator', 'kurir', 'pelanggan'])],
         ]);
 
-        $data = collect($validated)->except('password')->toArray();
+        $data = collect($validated)->except(['password', 'address'])->toArray();
         if (!empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
         }
 
         $user->update($data);
+
+        if (isset($validated['address'])) {
+            $user->addresses()->updateOrCreate(
+                ['is_default' => true],
+                [
+                    'label'   => 'Utama',
+                    'address' => $validated['address']
+                ]
+            );
+        }
 
         return back()->with('success', 'Data pengguna berhasil diperbarui.');
     }

@@ -128,7 +128,7 @@ class PesananMasukController extends Controller
             'description' => $s->description,
         ]);
         
-        $customerList = User::where('role', 'pelanggan')->select('id', 'name', 'email', 'address')->get();
+        $customerList = User::where('role', 'pelanggan')->select('id', 'name', 'email')->get();
 
         return Inertia::render('dashboard/operator/PesananMasuk', [
             'orders'      => $orders,
