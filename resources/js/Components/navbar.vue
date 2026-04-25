@@ -30,6 +30,14 @@ const unreadCount = ref(0);
 const isNotifOpen = ref(false);
 const isNotifLoading = ref(false);
 
+const handleNotifToggle = () => {
+    if (!usePage().props.auth.user) {
+        router.visit(route('login'));
+        return;
+    }
+    isNotifOpen.value = !isNotifOpen.value;
+};
+
 const fetchNotifications = async () => {
     if (!usePage().props.auth.user) return;
     isNotifLoading.value = true;
@@ -406,10 +414,10 @@ onMounted(() => {
                     </transition>
                 </Teleport>
 
-                <div v-if="$page.props.auth.user" class="flex items-center gap-3">
+                <div class="flex items-center gap-2 sm:gap-3">
                     <!-- CART BUTTON MOBILE -->
                     <Link
-                        :href="route('pelanggan.keranjang')"
+                        :href="$page.props.auth.user ? route('pelanggan.keranjang') : route('login')"
                         class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl active:scale-95 transition-transform relative"
                         aria-label="Keranjang"
                     >
@@ -421,7 +429,7 @@ onMounted(() => {
 
                     <div class="relative">
                     <button
-                        @click="isNotifOpen = !isNotifOpen"
+                        @click="handleNotifToggle"
                         class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl relative active:scale-95 transition-transform"
                         aria-label="Notifications"
                     >
@@ -656,7 +664,8 @@ onMounted(() => {
 </transition>
                     </div>
 
-                    <template v-if="canLogin">
+                    <div class="flex items-center gap-3">
+                        <!-- Profile / Auth Links -->
                         <div v-if="$page.props.auth.user" class="relative">
                             <button @click="isProfileDesktopOpen = !isProfileDesktopOpen" class="flex items-center focus:outline-none shrink-0 group">
                                 <div v-if="$page.props.auth.user.avatar_url" class="w-10 h-10 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition-colors">
@@ -668,24 +677,24 @@ onMounted(() => {
                             </button>
                             <transition enter-active-class="transition ease-out duration-200" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
                                 <div v-if="isProfileDesktopOpen" class="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-2xl py-2 z-50 text-gray-800 border border-gray-100 overflow-hidden">
-                                     <Link v-if="$page.props.auth.user.role !== 'pelanggan'" :href="route('dashboard')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-chart-pie mr-2 text-gray-400"></i> Dashboard</Link>
-                                     <Link :href="route('profile.edit')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-user-circle mr-2 text-gray-400"></i> Akun Saya</Link>
-                                     <div class="border-t border-gray-100 my-1"></div>
-                                     <button @click="logout" class="w-full text-left px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"><i class="fas fa-sign-out-alt mr-2"></i> Keluar</button>
+                                        <Link v-if="$page.props.auth.user.role !== 'pelanggan'" :href="route('dashboard')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-chart-pie mr-2 text-gray-400"></i> Dashboard</Link>
+                                        <Link :href="route('profile.edit')" class="block px-4 py-2 text-sm font-medium hover:bg-gray-50 hover:text-[#E30613] transition-colors"><i class="fas fa-user-circle mr-2 text-gray-400"></i> Akun Saya</Link>
+                                        <div class="border-t border-gray-100 my-1"></div>
+                                        <button @click="logout" class="w-full text-left px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"><i class="fas fa-sign-out-alt mr-2"></i> Keluar</button>
                                 </div>
                             </transition>
                             <div v-if="isProfileDesktopOpen" @click="isProfileDesktopOpen = false" class="fixed inset-0 z-40"></div>
                         </div>
-                        <template v-else>
+                        <template v-else-if="canLogin">
                             <Link :href="route('login')" class="text-white/70 text-xs lg:text-sm hover:text-white transition-colors px-2">Masuk</Link>
                             <Link v-if="canRegister" :href="route('register')" class="bg-secondary text-primary px-5 py-2 rounded-xl text-sm font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg">Daftar</Link>
                         </template>
-                    </template>
+                    </div>
 
-                    <div v-if="$page.props.auth.user" class="flex items-center gap-3">
+                    <div class="flex items-center gap-3">
                         <!-- CART BUTTON DESKTOP -->
                         <Link
-                            :href="route('pelanggan.keranjang')"
+                            :href="$page.props.auth.user ? route('pelanggan.keranjang') : route('login')"
                             class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl active:scale-95 transition-all group relative"
                             aria-label="Keranjang"
                         >
@@ -697,7 +706,7 @@ onMounted(() => {
 
                         <div class="relative">
                         <button
-                            @click="isNotifOpen = !isNotifOpen"
+                            @click="handleNotifToggle"
                             class="w-10 h-10 hidden lg:flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl relative active:scale-95 transition-all group"
                             aria-label="Notifications"
                         >

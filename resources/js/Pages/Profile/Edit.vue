@@ -4,6 +4,7 @@ import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import UserAddress from './Partials/alamat.vue';
+import Kalkulator from './Partials/kalkulator.vue';
 import { Head, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 
@@ -23,6 +24,10 @@ const props = defineProps({
         default: 0
     },
     addresses: {
+        type: Array,
+        default: () => []
+    },
+    services: {
         type: Array,
         default: () => []
     }
@@ -136,6 +141,7 @@ function handleAvatarChange(event) {
                         activeView === 'edit-info' ? 'Edit Profil' : 
                         activeView === 'edit-password' ? 'Ubah Password' : 
                         activeView === 'edit-address' ? 'Alamat Saya' : 
+                        activeView === 'kalkulator' ? 'Kalkulator Estimasi' :
                         'Hapus Akun' 
                     }}
                 </h1>
@@ -144,6 +150,7 @@ function handleAvatarChange(event) {
                         activeView === 'edit-info' ? 'Perbarui informasi dasar akun Anda' : 
                         activeView === 'edit-password' ? 'Gunakan password yang kuat & aman' : 
                         activeView === 'edit-address' ? 'Kelola alamat penjemputan (Maks. 3)' : 
+                        activeView === 'kalkulator' ? 'Estimasi biaya laundry Anda dengan akurat' :
                         'Pikirkan kembali sebelum menghapus data Anda' 
                     }}
                 </p>
@@ -193,6 +200,16 @@ function handleAvatarChange(event) {
                         <div>
                             <h3 class="text-[13px] font-black text-gray-900 uppercase tracking-wider mb-4 px-2">Akun Saya</h3>
                             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <Link v-if="user.role !== 'pelanggan'" :href="route('dashboard')" class="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 group">
+                                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                        <i class="fas fa-chart-pie"></i>
+                                    </div>
+                                    <div class="flex-1 text-left">
+                                        <p class="text-sm font-bold text-gray-800">Dashboard</p>
+                                        <p class="text-[11px] text-gray-400">Panel manajemen sistem</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+                                </Link>
                                 <button @click="activeView = 'edit-info'" class="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 group">
                                     <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                         <i class="fas fa-user"></i>
@@ -220,6 +237,16 @@ function handleAvatarChange(event) {
                                     <div class="flex-1 text-left">
                                         <p class="text-sm font-bold text-gray-800">Alamat Saya</p>
                                         <p class="text-[11px] text-gray-400">Kelola alamat penjemputan</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+                                </button>
+                                <button @click="activeView = 'kalkulator'" class="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors group">
+                                    <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                        <i class="fas fa-calculator"></i>
+                                    </div>
+                                    <div class="flex-1 text-left">
+                                        <p class="text-sm font-bold text-gray-800">Kalkulator Estimasi</p>
+                                        <p class="text-[11px] text-gray-400">Hitung perkiraan biaya laundry</p>
                                     </div>
                                     <i class="fas fa-chevron-right text-xs text-gray-300"></i>
                                 </button>
@@ -272,6 +299,10 @@ function handleAvatarChange(event) {
 
                         <div v-if="activeView === 'edit-address'">
                             <UserAddress :addresses="addresses" @back="activeView = 'profile'" />
+                        </div>
+
+                        <div v-if="activeView === 'kalkulator'">
+                            <Kalkulator :services="services" @back="activeView = 'profile'" />
                         </div>
 
                         <div v-if="activeView === 'delete'" class="space-y-6">
