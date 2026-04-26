@@ -22,7 +22,7 @@ const verificationLinkSent = computed(
 <template>
     <Head title="Verifikasi Email - Hi Wash Laundry" />
 
-    <div class="flex min-h-screen bg-white lg:bg-gray-100 font-sans items-start lg:items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
+    <div class="flex min-h-screen bg-white lg:bg-gray-100 font-sans relative">
         <!-- Mobile Back Button -->
         <Link
             :href="route('profile.edit')"
@@ -56,43 +56,99 @@ const verificationLinkSent = computed(
             </div>
         </div>
 
-        <div class="w-full max-w-md bg-white lg:rounded-3xl lg:shadow-xl p-0 lg:p-12 lg:border border-gray-100 mt-56 lg:mt-0 relative z-20 pb-12">
-            
-            <div class="hidden lg:flex justify-center mb-8">
-                <div class="h-16 w-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center drop-shadow-sm border border-red-100 transition-transform duration-300 hover:scale-105">
-                    <i class="fas fa-envelope-open-text text-2xl"></i>
+        <!-- Left Side (Branding) -->
+        <div class="hidden lg:flex w-1/2 bg-[#E30613] flex-col justify-between p-16 text-white relative overflow-hidden border-r border-gray-100">
+            <!-- Decorative Blobs -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-red-500 rounded-full translate-x-1/3 -translate-y-1/3 blur-[100px] opacity-40"></div>
+            <div class="absolute bottom-0 left-0 w-72 h-72 bg-red-800 rounded-full -translate-x-1/3 translate-y-1/3 blur-[80px] opacity-30"></div>
+
+            <div class="relative z-10 w-full max-w-lg mx-auto mt-auto mb-auto">
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="p-1 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl shadow-black/10">
+                        <img 
+                            src="logo.png" 
+                            alt="Logo Hi Wash Laundry" 
+                            class="rounded-xl h-14 w-14 object-cover"
+                        />
+                    </div>
+                    
+                    <span class="text-3xl font-black italic tracking-tighter text-white">
+                        Hi Wash <span class="font-light not-italic">Laundry</span>
+                    </span>
+                </div>
+
+                <h1 class="text-5xl lg:text-6xl font-black mb-6 leading-[1.1] tracking-tighter">
+                    Verifikasi Akun<br/>
+                    <span class="text-[#FFE800]">Sangat Penting.</span>
+                </h1>
+                <p class="text-red-100 mb-12 text-lg font-medium leading-relaxed opacity-90 max-w-md text-justify">
+                    Langkah terakhir untuk menikmati semua fitur layanan laundry kami secara lengkap dan aman.
+                </p>
+
+                <div class="grid grid-cols-1 gap-8">
+                    <div class="flex items-center space-x-5 group transition-transform hover:translate-x-2">
+                        <div class="flex-shrink-0 w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all shadow-lg">
+                            <i class="fas fa-paper-plane text-xl text-[#FFE800]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-extrabold text-white tracking-tight">Cek Email</h3>
+                            <p class="text-red-100/70 text-sm mt-0.5 font-medium leading-relaxed">Tautan aktivasi telah dikirimkan ke kotak masuk Anda.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <h2 class="hidden lg:block text-3xl font-black text-gray-900 tracking-tighter text-center mb-2">Verifikasi Email</h2>
-            <p class="text-center text-gray-500 text-sm mb-8 leading-relaxed px-4 lg:px-0">
-                Terima kasih telah mendaftar! Sebelum memulai, mohon verifikasi alamat email Anda dengan mengeklik tautan yang baru saja kami kirimkan ke email Anda. Jika Anda tidak menerima email tersebut, kami dengan senang hati akan mengirimkan yang baru.
-            </p>
-
-            <div v-if="verificationLinkSent" class="mb-6 text-sm font-medium text-green-600 bg-green-50 p-3 rounded-lg border border-green-100 text-center">
-                Tautan verifikasi baru telah dikirim ke alamat email yang Anda berikan saat pendaftaran.
+            <!-- Bottom Waves Accent -->
+            <div class="absolute bottom-0 left-0 w-full leading-none z-0">
+                <svg class="block w-full h-24" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-16" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-white lg:fill-gray-100" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
             </div>
+        </div>
 
-            <form @submit.prevent="submit" class="space-y-6">
-                <button
-                    type="submit"
-                    :disabled="form.processing"
-                    class="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Kirim Ulang Email Verifikasi
-                </button>
+        <!-- Right Side (Form) -->
+        <div class="w-full lg:w-1/2 flex items-start lg:items-center justify-center p-6 sm:p-12 overflow-y-auto pb-12 lg:pb-0">
+            <div class="w-full max-w-md bg-white lg:rounded-3xl lg:shadow-xl p-0 lg:p-12 lg:border border-gray-100 mt-56 lg:mt-0 relative z-20">
+                
+                <div class="hidden lg:flex justify-center mb-8">
+                    <div class="p-1 bg-red-50 rounded-2xl border border-red-100 shadow-sm transition-transform duration-300 hover:scale-105">
+                        <img src="/logo.png" alt="Logo Hi Wash" class="h-16 w-16 rounded-xl object-cover">
+                    </div>
+                </div>
 
-                <div class="flex justify-center">
-                    <Link
-                        :href="route('logout')"
-                        method="post"
-                        as="button"
-                        class="text-sm font-bold text-gray-500 hover:text-red-600 transition-colors uppercase tracking-widest"
+                <h2 class="hidden lg:block text-3xl font-black text-gray-900 tracking-tighter text-center mb-2">Verifikasi Email</h2>
+                <p class="text-center text-gray-500 text-sm mb-8 leading-relaxed px-4 lg:px-0">
+                    Terima kasih telah mendaftar! Sebelum memulai, mohon verifikasi alamat email Anda dengan mengeklik tautan yang baru saja kami kirimkan ke email Anda. Jika Anda tidak menerima email tersebut, kami dengan senang hati akan mengirimkan yang baru.
+                </p>
+
+                <div v-if="verificationLinkSent" class="mb-6 text-sm font-medium text-green-600 bg-green-50 p-3 rounded-lg border border-green-100 text-center">
+                    Tautan verifikasi baru telah dikirim ke alamat email yang Anda berikan saat pendaftaran.
+                </div>
+
+                <form @submit.prevent="submit" class="space-y-6">
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Keluar
-                    </Link>
-                </div>
-            </form>
+                        Kirim Ulang Email Verifikasi
+                    </button>
+
+                    <div class="flex justify-center">
+                        <Link
+                            :href="route('logout')"
+                            method="post"
+                            as="button"
+                            class="text-sm font-bold text-gray-500 hover:text-red-600 transition-colors uppercase tracking-widest"
+                        >
+                            Keluar
+                        </Link>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </template>

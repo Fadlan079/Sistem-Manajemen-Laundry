@@ -59,60 +59,65 @@ const submit = () => {
             </div>
         </div>
         <!-- Left Side (Branding - matched with Login) -->
-        <div class="hidden lg:flex w-1/2 bg-red-600 flex-col justify-center p-16 text-white relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-96 h-96 bg-red-500 rounded-full translate-x-1/3 -translate-y-1/3 blur-[80px] opacity-60"></div>
-            <div class="absolute bottom-0 left-0 w-72 h-72 bg-red-800 rounded-full -translate-x-1/3 translate-y-1/3 blur-[80px] opacity-40"></div>
+        <div class="hidden lg:flex w-1/2 bg-[#E30613] flex-col justify-between p-16 text-white relative overflow-hidden border-r border-gray-100">
+            <!-- Decorative Blobs -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-red-500 rounded-full translate-x-1/3 -translate-y-1/3 blur-[100px] opacity-40"></div>
+            <div class="absolute bottom-0 left-0 w-72 h-72 bg-red-800 rounded-full -translate-x-1/3 translate-y-1/3 blur-[80px] opacity-30"></div>
 
-            <div class="relative z-10 w-full max-w-lg mx-auto">
-                <div class="flex items-center gap-4 mb-12">
-                    <img 
-                        src="logo.png" 
-                        alt="Logo Hi Wash Laundry" 
-                        class="rounded-full h-14 w-14 object-cover drop-shadow-sm transition-transform duration-300 hover:scale-105"
-                    />
+            <div class="relative z-10 w-full max-w-lg mx-auto mt-auto mb-auto">
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="p-1 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl shadow-black/10">
+                        <img 
+                            src="logo.png" 
+                            alt="Logo Hi Wash Laundry" 
+                            class="rounded-xl h-14 w-14 object-cover"
+                        />
+                    </div>
                     
-                    <span class="text-3xl font-bold italic tracking-tighter text-white">
+                    <span class="text-3xl font-black italic tracking-tighter text-white">
                         Hi Wash <span class="font-light not-italic">Laundry</span>
                     </span>
                 </div>
 
-                <h1 class="text-4xl lg:text-5xl font-black mb-4 leading-tight tracking-tighter">
-                    Sistem Manajemen<br/>Laundry Terpadu.
+                <h1 class="text-5xl lg:text-6xl font-black mb-6 leading-[1.1] tracking-tighter">
+                    Mulai Laundry<br/>
+                    <span class="text-[#FFE800]">Lebih Mudah.</span>
                 </h1>
-                <p class="text-red-100 mb-10 text-lg font-medium">
-                    Bergabunglah untuk merasakan efisiensi waktu, kualitas terjamin, dan pengalaman laundry yang lebih transparan.
+                <p class="text-red-100 mb-12 text-lg font-medium leading-relaxed opacity-90 max-w-md text-justify">
+                    Daftar sekarang dan nikmati kemudahan pemesanan laundry dengan standar profesional. Pakaian bersih, hati tenang.
                 </p>
 
-                <div class="space-y-6">
-                    <div class="flex items-start space-x-4 group">
-                        <div class="flex-shrink-0 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div class="grid grid-cols-1 gap-8">
+                    <div class="flex items-center space-x-5 group transition-transform hover:translate-x-2">
+                        <div class="flex-shrink-0 w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all shadow-lg">
+                            <i class="fas fa-magic text-xl text-[#FFE800]"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white tracking-tight">Real-Time Tracking</h3>
-                            <p class="text-red-100/80 text-sm mt-1 leading-relaxed">Pantau status pesanan dan estimasi penyelesaian pakaian Anda secara langsung dan akurat.</p>
+                            <h3 class="text-xl font-extrabold text-white tracking-tight">Proses Cepat</h3>
+                            <p class="text-red-100/70 text-sm mt-0.5 font-medium leading-relaxed">Daftar hanya dalam hitungan detik.</p>
                         </div>
                     </div>
 
-                    <div class="flex items-start space-x-4 group">
-                        <div class="flex-shrink-0 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <div class="flex items-center space-x-5 group transition-transform hover:translate-x-2">
+                        <div class="flex-shrink-0 w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all shadow-lg">
+                            <i class="fas fa-tags text-xl text-[#FFE800]"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white tracking-tight">Standar Higienitas</h3>
-                            <p class="text-red-100/80 text-sm mt-1 leading-relaxed">Sistem pencucian profesional dengan mesin terkalibrasi dan pemisahan ketat antar pelanggan.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start space-x-4 group">
-                        <div class="flex-shrink-0 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-white tracking-tight">Layanan Kilat</h3>
-                            <p class="text-red-100/80 text-sm mt-1 leading-relaxed">Penyelesaian cepat dengan integrasi notifikasi WhatsApp otomatis saat pakaian siap diambil.</p>
+                            <h3 class="text-xl font-extrabold text-white tracking-tight">Harga Transparan</h3>
+                            <p class="text-red-100/70 text-sm mt-0.5 font-medium leading-relaxed">Detail biaya langsung terlihat di aplikasi.</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Bottom Waves Accent (Nuance matching Mobile) -->
+            <div class="absolute bottom-0 left-0 w-full leading-none z-0">
+                <svg class="block w-full h-24" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-16" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-white lg:fill-gray-100" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
             </div>
         </div>
 
