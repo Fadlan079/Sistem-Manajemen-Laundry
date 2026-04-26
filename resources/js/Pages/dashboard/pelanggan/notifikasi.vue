@@ -13,6 +13,7 @@ const getNotifIcon = (type) => {
         case 'payment': return 'fa-credit-card text-emerald-500 bg-emerald-50 border-emerald-100';
         case 'delivery': return 'fa-truck text-amber-500 bg-amber-50 border-amber-100';
         case 'promo': return 'fa-tag text-purple-500 bg-purple-50 border-purple-100';
+        case 'system': return 'fa-exclamation-triangle text-red-500 bg-red-50 border-red-100';
         default: return 'fa-bell text-gray-400 bg-gray-50 border-gray-100';
     }
 };
@@ -29,6 +30,11 @@ const setFilter = (type) => {
 };
 
 const handleNotifClick = (notif) => {
+    if (notif.id === 'unverified-email') {
+        router.visit(route('profile.edit'));
+        return;
+    }
+
     if (!notif.read_at) {
         router.patch(route('notifications.read', { id: notif.id }), {}, { preserveScroll: true });
     }

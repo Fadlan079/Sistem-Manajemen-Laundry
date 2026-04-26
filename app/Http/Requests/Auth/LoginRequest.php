@@ -50,14 +50,6 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::user()->hasVerifiedEmail()) {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'email' => 'Akun Anda belum diverifikasi. Silakan periksa kotak masuk email Anda dan klik tautan verifikasi agar dapat masuk.',
-            ]);
-        }
-
         RateLimiter::clear($this->throttleKey());
     }
 

@@ -117,8 +117,17 @@ function handleAvatarChange(event) {
                 <div class="flex-1">
                     <div class="flex flex-col gap-1.5">
                         <div class="flex flex-col items-start gap-1">
-                            <span class="inline-flex items-center px-2 py-0.5 bg-[#FFE800] text-[#E30613] text-[8px] font-black rounded-full uppercase tracking-widest mb-1">
-                                {{ user.role }}
+                            <span 
+                                v-if="user.email_verified_at"
+                                class="inline-flex items-center px-2 py-0.5 bg-green-500 text-white text-[8px] font-black rounded-full uppercase tracking-widest mb-1 shadow-sm"
+                            >
+                                <i class="fas fa-check-circle mr-1"></i> Terverifikasi
+                            </span>
+                            <span 
+                                v-else
+                                class="inline-flex items-center px-2 py-0.5 bg-[#FFE800] text-[#E30613] text-[8px] font-black rounded-full uppercase tracking-widest mb-1 shadow-sm"
+                            >
+                                <i class="fas fa-exclamation-circle mr-1"></i> Belum Verifikasi
                             </span>
                             <h2 class="text-white font-black text-xl tracking-tight leading-none">{{ user.name }}</h2>
                         </div>
@@ -170,6 +179,29 @@ function handleAvatarChange(event) {
         <!-- Main Content Area -->
         <div class="bg-gray-50 min-h-screen pb-24 relative">
             <div class="max-w-xl mx-auto px-4 mt-6 relative z-20">
+            
+                <!-- Warning Banner for Unverified Users -->
+                <div v-if="$page.props.flash?.warning || (!user.email_verified_at && activeView === 'profile')" class="bg-[#FFE800]/20 border border-[#FFE800] rounded-2xl p-4 sm:p-5 mb-6 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-[#FFE800] text-[#E30613] flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-[#E30613] font-black text-sm tracking-tight mb-1">
+                                {{ $page.props.flash?.warning ? 'Akses Dibatasi' : 'Perhatian!' }}
+                            </h4>
+                            <p class="text-[#E30613]/80 text-[11px] font-medium leading-relaxed">
+                                {{ $page.props.flash?.warning || 'Akun Anda belum diverifikasi. Lakukan verifikasi email sekarang untuk membuka semua fitur.' }}
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        @click="activeView = 'edit-info'"
+                        class="shrink-0 w-full sm:w-auto bg-[#E30613] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
+                    >
+                        Verifikasi Sekarang
+                    </button>
+                </div>
 
                 <!-- SUMMARY VIEW -->
                 <template v-if="activeView === 'profile'">

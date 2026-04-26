@@ -54,6 +54,12 @@ const fetchNotifications = async () => {
 };
 
 const markNotifAsRead = async (notif) => {
+    if (notif.id === 'unverified-email') {
+        isNotifOpen.value = false;
+        router.visit(route('profile.edit'));
+        return;
+    }
+
     if (!notif.read_at) {
         try {
             await router.patch(route('notifications.read', { id: notif.id }), {}, {
@@ -97,6 +103,7 @@ const getNotifIcon = (type) => {
         case 'payment': return 'fa-credit-card text-emerald-500 bg-emerald-50';
         case 'delivery': return 'fa-truck text-amber-500 bg-amber-50';
         case 'promo': return 'fa-tag text-purple-500 bg-purple-50';
+        case 'system': return 'fa-exclamation-triangle text-red-500 bg-red-50 border-red-100';
         default: return 'fa-bell text-gray-400 bg-gray-50';
     }
 };

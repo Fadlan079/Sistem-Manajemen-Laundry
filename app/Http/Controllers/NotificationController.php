@@ -26,9 +26,25 @@ class NotificationController extends Controller
             ->latest();
 
         $notifications = $query->paginate(15)->withQueryString();
+        
+        $collection = $notifications->getCollection();
+
+        // Inject unverified email notification on first page
+        if ($user && !$user->hasVerifiedEmail() && $notifications->currentPage() === 1 && ($type === 'semua' || $type === 'system')) {
+            $unverifiedNotif = new \stdClass();
+            $unverifiedNotif->id = 'unverified-email';
+            $unverifiedNotif->type = 'system';
+            $unverifiedNotif->title = 'Set Up Your Account';
+            $unverifiedNotif->description = 'Verifikasi email Anda untuk membuka semua fitur aplikasi.';
+            $unverifiedNotif->created_at = now();
+            $unverifiedNotif->read_at = null;
+            $unverifiedNotif->metadata = ['action' => 'verify_email'];
+            
+            $collection->prepend($unverifiedNotif);
+        }
 
         // Group by date
-        $grouped = $notifications->getCollection()->groupBy(function($notif) {
+        $grouped = $collection->groupBy(function($notif) {
             $date = $notif->created_at;
             if ($date->isToday()) return 'Hari ini';
             if ($date->isYesterday()) return 'Kemarin';
@@ -68,6 +84,27 @@ class NotificationController extends Controller
             ->unread()
             ->count();
 
+        // Inject unverified email notification if needed
+        if ($user && !$user->hasVerifiedEmail()) {
+            $unverifiedNotif = [
+                'id' => 'unverified-email',
+                'type' => 'system',
+                'title' => 'Set Up Your Account',
+                'description' => 'Verifikasi email Anda untuk membuka semua fitur aplikasi.',
+                'created_at' => now()->toISOString(),
+                'read_at' => null,
+                'metadata' => ['action' => 'verify_email']
+            ];
+            
+            $latest->prepend($unverifiedNotif);
+            $unreadCount++;
+            
+            // limit to 5 again if it exceeded
+            if ($latest->count() > 5) {
+                $latest->pop();
+            }
+        }
+
         return response()->json([
             'notifications' => $latest,
             'unread_count' => $unreadCount
@@ -79,6 +116,10 @@ class NotificationController extends Controller
      */
     public function markAsRead($id)
     {
+        if ($id === 'unverified-email') {
+            return back();
+        }
+
         $notification = Notification::where('user_id', auth()->id())
             ->findOrFail($id);
 

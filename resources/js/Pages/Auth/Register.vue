@@ -25,7 +25,39 @@ const submit = () => {
 <template>
     <Head title="Daftar - Hi Wash Laundry" />
 
-    <div class="flex min-h-screen bg-gray-100 font-sans">
+    <div class="flex min-h-screen bg-white lg:bg-gray-100 font-sans relative">
+        <!-- Mobile Back Button -->
+        <Link
+            :href="route('home')"
+            class="lg:hidden absolute top-6 left-4 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white z-50 border border-white/30 shadow-sm active:scale-95 transition-transform"
+        >
+            <i class="fas fa-arrow-left"></i>
+        </Link>
+
+        <!-- Mobile Top Waves Decoration -->
+        <div class="lg:hidden absolute top-0 left-0 right-0 h-64 bg-[#E30613] overflow-hidden z-0">
+            <div class="absolute inset-0 opacity-10">
+                <div class="absolute top-10 left-10 w-12 h-12 bg-white rounded-full opacity-50 blur-md"></div>
+                <div class="absolute top-20 right-10 w-20 h-20 bg-[#FFE800] rounded-full opacity-60 blur-lg"></div>
+            </div>
+
+            <!-- Mobile Header Content -->
+            <div class="relative z-10 flex flex-col items-center justify-center h-full pt-4 pb-16 text-center px-6">
+                <img src="/logo.png" alt="Logo" class="h-16 w-16 rounded-full mb-4 border-2 border-white/30 shadow-xl object-cover">
+                <h2 class="text-2xl font-black text-white tracking-tight">Buat Akun</h2>
+                <p class="text-red-50 text-xs font-medium opacity-90">Lengkapi data diri Anda untuk mendaftar</p>
+            </div>
+            
+            <!-- Decorative SVG Waves (Matched with daftar-layanan.vue) -->
+            <div class="absolute bottom-0 left-0 w-full leading-none">
+                <svg class="block w-full h-12" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-[#FFE800]" d="M0,128L80,144C160,160,320,192,480,197.3C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+                <svg class="absolute bottom-0 left-0 w-full h-8" preserveAspectRatio="none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="fill-white" d="M0,64L80,90.7C160,117,320,171,480,186.7C640,203,800,181,960,154.7C1120,128,1280,96,1360,80L1440,64L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+                </svg>
+            </div>
+        </div>
         <!-- Left Side (Branding - matched with Login) -->
         <div class="hidden lg:flex w-1/2 bg-red-600 flex-col justify-center p-16 text-white relative overflow-hidden">
             <div class="absolute top-0 right-0 w-96 h-96 bg-red-500 rounded-full translate-x-1/3 -translate-y-1/3 blur-[80px] opacity-60"></div>
@@ -85,13 +117,13 @@ const submit = () => {
         </div>
 
         <!-- Right Side (Form) -->
-        <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 overflow-y-auto">
-            <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 lg:p-12 border border-gray-100 my-8">
+        <div class="w-full lg:w-1/2 flex items-start lg:items-center justify-center p-6 sm:p-12 overflow-y-auto pb-32 lg:pb-12">
+            <div class="w-full max-w-md bg-white lg:rounded-3xl lg:shadow-xl p-0 lg:p-12 lg:border border-gray-100 mt-56 lg:mt-0 relative z-20">
 
-                <h2 class="text-3xl font-black text-gray-900 tracking-tighter text-center mb-2">Buat Akun</h2>
-                <p class="text-center text-gray-500 text-sm mb-10">Lengkapi data diri Anda untuk mendaftar.</p>
+                <h2 class="hidden lg:block text-3xl font-black text-gray-900 tracking-tighter text-center mb-2">Buat Akun</h2>
+                <p class="hidden lg:block text-center text-gray-500 text-sm mb-8 lg:mb-10">Lengkapi data diri Anda untuk mendaftar.</p>
 
-                <form @submit.prevent="submit" class="space-y-5">
+                <form id="register-form" @submit.prevent="submit" class="space-y-5">
                     <!-- Nama -->
                     <div>
                         <div class="relative group">
@@ -138,7 +170,8 @@ const submit = () => {
                             <input
                                 v-model="form.phone"
                                 type="tel"
-                                placeholder="Nomor Handphone (Opsional)"
+                                placeholder="Nomor Handphone"
+                                required
                                 autocomplete="tel"
                                 class="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600/20 focus:border-red-600 outline-none transition-all font-medium text-gray-700"
                             />
@@ -154,7 +187,8 @@ const submit = () => {
                             </span>
                             <textarea
                                 v-model="form.address"
-                                placeholder="Alamat Detail (Opsional)"
+                                placeholder="Alamat Detail"
+                                required
                                 rows="2"
                                 autocomplete="street-address"
                                 class="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600/20 focus:border-red-600 outline-none transition-all font-medium text-gray-700 resize-none"
@@ -210,34 +244,37 @@ const submit = () => {
                     <!-- Role (hidden, auto pelanggan) -->
                     <input type="hidden" v-model="form.role" />
 
-
-                <div class="mt-6 space-y-3">
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Selesaikan Pendaftaran
-                    </button>
-
-                    <Link
-                        :href="route('home')"
-                        class="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 text-gray-500 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 hover:text-gray-700 transition-all"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                        Kembali ke Beranda
-                    </Link>
-                </div>
-
-                    <p class="text-center text-sm text-gray-500 mt-6">
-                        Sudah terdaftar sebelumnya?
-                        <Link :href="route('login')" class="text-red-600 font-bold hover:underline ml-1 transition-colors">
-                            Masuk Sekarang
-                        </Link>
-                    </p>
+                    <!-- Submit Button & Login Link -->
+                    <div class="space-y-4 mt-8">
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="hidden lg:block w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Selesaikan Pendaftaran
+                        </button>
+                        
+                        <p class="text-center text-sm text-gray-500 pt-2">
+                            Sudah terdaftar sebelumnya?
+                            <Link :href="route('login')" class="text-red-600 font-bold hover:underline ml-1 transition-colors">
+                                Masuk Sekarang
+                            </Link>
+                        </p>
+                    </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white z-[100] px-6 pt-5 pb-6 shadow-[0_-15px_40px_-5px_rgba(0,0,0,0.3)] rounded-t-[32px] border-t border-gray-100">
+            <div class="max-w-md mx-auto">
+                <button
+                    form="register-form"
+                    type="submit"
+                    :disabled="form.processing"
+                    class="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-4 rounded-2xl shadow-xl shadow-red-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                    Selesaikan Pendaftaran
+                </button>
             </div>
         </div>
     </div>
