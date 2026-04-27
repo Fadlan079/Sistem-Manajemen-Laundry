@@ -289,8 +289,8 @@ function formatRupiah(val) {
                 <!-- Filter Tabs -->
                 <div class="max-w-4xl mx-auto mb-10 px-4 relative">
                     <!-- Right shadow indicator for scroll -->
-                    <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg to-transparent pointer-events-none md:hidden z-10"></div>
-                    <div class="flex overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:justify-center gap-2 snap-x scrollbar-hide relative">
+                    <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg to-transparent pointer-events-none z-10"></div>
+                    <div class="flex overflow-x-auto flex-nowrap pb-2 -mx-4 px-4 md:mx-0 md:px-0 gap-2 snap-x scrollbar-hide relative">
                         <button v-for="tab in categoriesList" :key="tab.name"
                             @click="activeTab = tab.name"
                             :class="[
@@ -300,18 +300,16 @@ function formatRupiah(val) {
                         >
                             <span v-if="tab.name === 'Semua'" class="flex items-center gap-1.5">
                                 SEMUA
-                                <span class="flex items-center gap-1">
-                                    <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
-                                    <span class="opacity-70 text-[9px]">{{ tab.count }}</span>
-                                </span>
+                                <span class="flex items-center justify-center min-w-[18px] h-[18px] bg-secondary text-yellow-950 rounded-full text-[9px] font-black leading-none shadow-sm px-1">{{ tab.count }}</span>
                             </span>
                             <span v-else-if="tab.name === 'On sale'" class="flex items-center gap-1.5">
                                 <i class="fas fa-fire text-orange-500"></i>
                                 ON SALE
-                                <span class="opacity-70 text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">{{ tab.count }}</span>
+                                <span class="flex items-center justify-center min-w-[18px] h-[18px] bg-secondary text-yellow-950 rounded-full text-[9px] font-black leading-none shadow-sm px-1">{{ tab.count }}</span>
                             </span>
-                            <span v-else>
+                            <span v-else class="flex items-center gap-1.5">
                                 {{ tab.name.toUpperCase() }}
+                                <span class="flex items-center justify-center min-w-[18px] h-[18px] bg-secondary text-yellow-950 rounded-full text-[9px] font-black leading-none shadow-sm px-1">{{ tab.count }}</span>
                             </span>
                         </button>
                     </div>

@@ -30,9 +30,9 @@ const currentYear = new Date().getFullYear();
             <a href="https://www.facebook.com/people/HiWash-Laundry/61557078466426/?ref=NONE_xav_ig_profile_page_web#" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
               <i class="fab fa-facebook text-lg"></i>
             </a>
-            <a href="https://api.whatsapp.com/send?phone=6285186869231" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
+            <!-- <a href="https://api.whatsapp.com/send?phone=6285186869231" class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300">
               <i class="fab fa-whatsapp text-lg"></i>
-            </a>
+            </a> -->
           </div>
         </div>
 
