@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: {
@@ -12,16 +12,73 @@ defineProps({
 });
 
 const showPassword = ref(false);
+const turnstileToken = ref('');
+const turnstileWidgetId = ref(null);
+const turnstileContainer = ref(null);
+const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 const form = useForm({
     email: '',
     password: '',
     remember: false,
+    'cf-turnstile-response': '',
+});
+
+const renderTurnstile = () => {
+    if (!window.turnstile || !turnstileContainer.value) return;
+    turnstileWidgetId.value = window.turnstile.render(turnstileContainer.value, {
+        sitekey: siteKey,
+        theme: 'light',
+        size: 'flexible',
+        callback: (token) => {
+            turnstileToken.value = token;
+            form['cf-turnstile-response'] = token;
+        },
+        'expired-callback': () => {
+            turnstileToken.value = '';
+            form['cf-turnstile-response'] = '';
+        },
+        'error-callback': () => {
+            turnstileToken.value = '';
+            form['cf-turnstile-response'] = '';
+        },
+    });
+};
+
+onMounted(() => {
+    // If turnstile is already loaded (script cached), render immediately
+    if (window.turnstile) {
+        renderTurnstile();
+    } else {
+        // Otherwise wait for script to finish loading
+        const interval = setInterval(() => {
+            if (window.turnstile) {
+                clearInterval(interval);
+                renderTurnstile();
+            }
+        }, 100);
+        // Stop polling after 10 seconds
+        setTimeout(() => clearInterval(interval), 10000);
+    }
+});
+
+onUnmounted(() => {
+    if (window.turnstile && turnstileWidgetId.value !== null) {
+        window.turnstile.remove(turnstileWidgetId.value);
+    }
 });
 
 const submit = () => {
+    form['cf-turnstile-response'] = turnstileToken.value;
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: () => {
+            form.reset('password');
+            if (form.hasErrors && window.turnstile && turnstileWidgetId.value !== null) {
+                window.turnstile.reset(turnstileWidgetId.value);
+                turnstileToken.value = '';
+                form['cf-turnstile-response'] = '';
+            }
+        },
     });
 };
 </script>
@@ -193,13 +250,50 @@ const submit = () => {
                         </Link>
                     </div>
 
-                    <div class="space-y-3 mt-6">
+                    <!-- Cloudflare Turnstile: Loading Placeholder -->
+                    <div v-if="!turnstileToken" class="rounded-md border border-gray-200 bg-[#1a1a1a] px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <!-- Spinning dots (like Cloudflare UI) -->
+                            <div class="relative w-7 h-7 flex-shrink-0">
+                                <svg class="animate-spin w-7 h-7" viewBox="0 0 28 28" fill="none">
+                                    <circle cx="14" cy="14" r="11" stroke="#2d6a4f" stroke-width="2.5" stroke-opacity="0.2"/>
+                                    <path d="M14 3 A11 11 0 0 1 25 14" stroke="#52b788" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="14" cy="3" r="1.8" fill="#52b788"/>
+                                </svg>
+                            </div>
+                            <span class="text-sm font-medium text-white tracking-wide">Melakukan verifikasi...</span>
+                        </div>
+                        <!-- Cloudflare Logo -->
+                        <div class="flex flex-col items-end flex-shrink-0">
+                            <svg height="18" viewBox="0 0 109 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M73.8 15.8c-.3-4.5-4.1-8-8.7-8-2.8 0-5.3 1.3-6.9 3.4-1-2-3-3.4-5.4-3.4-3.4 0-6.1 2.7-6.1 6.1v.5c-3.6.8-6.3 4-6.3 7.9 0 4.4 3.6 8 8 8h24.5c3.9 0 7-3.1 7-7 0-3.2-2.2-5.9-5.1-6.8-.4-.4-.7-.9-.7-1.4v-.3z" fill="#F38020"/>
+                                <path d="M78.5 22.5l-.5-.1h-25c-.4 0-.7.3-.7.8 0 .4.3.8.7.8H78c.7 0 1.3.6 1.3 1.3s-.6 1.3-1.3 1.3H53c-.4 0-.7.3-.7.7 0 .4.3.7.7.7h25.4c2.2 0 4-1.8 4-4s-1.7-4-3.9-4.5z" fill="white"/>
+                                <text x="88" y="28" font-size="13" font-family="Arial" font-weight="bold" fill="white">CLOUDFLARE</text>
+                            </svg>
+                            <div class="flex gap-1 mt-0.5">
+                                <a href="https://www.cloudflare.com/privacypolicy/" class="text-[9px] text-gray-400 hover:text-white underline" target="_blank">Privasi</a>
+                                <span class="text-gray-600 text-[9px]">•</span>
+                                <a href="https://support.cloudflare.com/" class="text-[9px] text-gray-400 hover:text-white underline" target="_blank">Bantuan</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actual Turnstile widget container (renders here after script loads) -->
+                    <div ref="turnstileContainer" :class="turnstileToken ? 'block' : 'hidden'"></div>
+
+                    <div v-if="form.errors['cf-turnstile-response']" class="-mt-2">
+                        <p class="text-xs font-medium text-red-500">{{ form.errors['cf-turnstile-response'] }}</p>
+                    </div>
+
+                    <div class="space-y-3 mt-2">
                         <button
                             type="submit"
-                            :disabled="form.processing"
+                            :disabled="form.processing || !turnstileToken"
                             class="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Masuk
+                            <span v-if="form.processing">Memverifikasi...</span>
+                            <span v-else-if="!turnstileToken">Menunggu verifikasi...</span>
+                            <span v-else>Masuk</span>
                         </button>
                     </div>
 
