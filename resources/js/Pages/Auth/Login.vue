@@ -2,11 +2,14 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     canResetPassword: {
         type: Boolean,
     },
     status: {
+        type: String,
+    },
+    turnstile_site_key: {
         type: String,
     },
 });
@@ -15,7 +18,6 @@ const showPassword = ref(false);
 const turnstileToken = ref('');
 const turnstileWidgetId = ref(null);
 const turnstileContainer = ref(null);
-const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 const form = useForm({
     email: '',
@@ -25,9 +27,9 @@ const form = useForm({
 });
 
 const renderTurnstile = () => {
-    if (!window.turnstile || !turnstileContainer.value) return;
+    if (!window.turnstile || !turnstileContainer.value || !props.turnstile_site_key) return;
     turnstileWidgetId.value = window.turnstile.render(turnstileContainer.value, {
-        sitekey: siteKey,
+        sitekey: props.turnstile_site_key,
         theme: 'light',
         size: 'flexible',
         callback: (token) => {
