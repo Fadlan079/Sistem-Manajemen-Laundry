@@ -12,6 +12,12 @@
         <link rel="icon" href="/logo.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
+        <meta property="og:title" content="HiWash Laundry">
+        <meta property="og:description" content="Solusi laundry modern dengan sistematis, cepat, dan terpercaya!">
+        <meta property="og:image" content="{{ asset('thumbnail.png') }}">
+        <meta property="og:url" content="https://hiwash.my.id/">
+        <meta property="og:type" content="website">
+
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
