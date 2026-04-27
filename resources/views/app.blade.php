@@ -14,7 +14,7 @@
 
         <meta property="og:title" content="HiWash Laundry">
         <meta property="og:description" content="Solusi laundry modern dengan sistematis, cepat, dan terpercaya!">
-        <meta property="og:image" content="{{ asset('thumbnail.png') }}">
+        <meta property="og:image" content="{{ asset('logo.png') }}">
         <meta property="og:url" content="https://hiwash.my.id/">
         <meta property="og:type" content="website">
 
