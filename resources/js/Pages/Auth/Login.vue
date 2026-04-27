@@ -31,7 +31,7 @@ const renderTurnstile = () => {
     turnstileWidgetId.value = window.turnstile.render(turnstileContainer.value, {
         sitekey: props.turnstile_site_key,
         theme: 'light',
-        size: 'flexible',
+        size: 'normal',
         callback: (token) => {
             turnstileToken.value = token;
             form['cf-turnstile-response'] = token;
