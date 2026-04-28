@@ -276,7 +276,7 @@ class PesananMasukController extends Controller
     {
         // For operator editing, we usually just update the main order table logic (status/price)
         $validated = $request->validate([
-            'status'           => ['required', Rule::in(['pending', 'dijemput', 'diproses', 'selesai', 'diantar'])],
+            'status'           => ['required', Rule::in(['pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan'])],
             'total_price'      => 'required|numeric|min:0',
         ]);
 
@@ -291,12 +291,14 @@ class PesananMasukController extends Controller
             'selesai' => 'Pesanan Telah Selesai',
             'diantar' => 'Pesanan Sedang Diantar',
             'dijemput' => 'Pesanan Telah Dijemput',
+            'dibatalkan' => 'Pesanan Dibatalkan',
         ];
 
         if (isset($statusLabels[$validated['status']])) {
+            $type = $validated['status'] === 'dibatalkan' ? 'cancel' : 'order';
             Notification::create([
                 'user_id' => $order->user_id,
-                'type' => 'order',
+                'type' => $type,
                 'title' => $statusLabels[$validated['status']],
                 'description' => "Status pesanan #INV-" . $order->created_at->format('Ymd') . "-" . str_pad($order->id, 4, '0', STR_PAD_LEFT) . " kini: " . strtolower($statusLabels[$validated['status']]) . ".",
                 'metadata' => ['order_id' => $order->id, 'status' => $validated['status']]

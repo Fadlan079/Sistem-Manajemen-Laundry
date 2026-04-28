@@ -317,6 +317,15 @@ class CustomerDashboardController extends Controller
             'status' => 'dibatalkan',
             'cancel_reason' => $request->input('reason', 'Dibatalkan oleh pelanggan')
         ]);
+
+        Notification::create([
+            'user_id'     => $order->user_id,
+            'type'        => 'cancel',
+            'title'       => 'Pesanan Dibatalkan',
+            'description' => "Pesanan #INV-" . $order->created_at->format('Ymd') . "-" . str_pad($order->id, 4, '0', STR_PAD_LEFT) . " telah berhasil dibatalkan.",
+            'metadata'    => ['order_id' => $order->id]
+        ]);
+
         return redirect()->route('pelanggan.aktivitas')->with('success', 'Pesanan berhasil dibatalkan.');
     }
 

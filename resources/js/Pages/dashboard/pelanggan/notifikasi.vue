@@ -12,6 +12,7 @@ const getNotifIcon = (type) => {
         case 'order': return 'fa-shopping-basket text-blue-500 bg-blue-50 border-blue-100';
         case 'payment': return 'fa-credit-card text-emerald-500 bg-emerald-50 border-emerald-100';
         case 'delivery': return 'fa-truck text-amber-500 bg-amber-50 border-amber-100';
+        case 'cancel': return 'fa-ban text-rose-500 bg-rose-50 border-rose-100';
         case 'promo': return 'fa-tag text-purple-500 bg-purple-50 border-purple-100';
         case 'system': return 'fa-exclamation-triangle text-red-500 bg-red-50 border-red-100';
         default: return 'fa-bell text-gray-400 bg-gray-50 border-gray-100';
@@ -21,6 +22,7 @@ const getNotifIcon = (type) => {
 const filterTypes = [
     { label: 'Semua', value: 'semua' },
     { label: 'Pesanan', value: 'order' },
+    { label: 'Batal', value: 'cancel' },
     { label: 'Pembayaran', value: 'payment' },
     { label: 'Promo', value: 'promo' },
 ];

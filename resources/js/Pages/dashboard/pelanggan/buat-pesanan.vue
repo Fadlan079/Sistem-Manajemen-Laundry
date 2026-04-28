@@ -50,7 +50,6 @@ onMounted(() => {
 const deliveryOptions = [
     { value: 'antar_jemput', label: 'Antar Jemput', fee: 10000, icon: 'fas fa-truck', description: 'Kurir menjemput cucian kotor & mengantar cucian bersih.' },
     { value: 'jemput',       label: 'Jemput Saja',  fee: 5000, icon: 'fas fa-motorcycle', description: 'Kurir menjemput cucian kotor, Anda ambil sendiri ke outlet.' },
-    { value: 'antar',        label: 'Antar Saja',   fee: 5000, icon: 'fas fa-box-open', description: 'Anda antar ke outlet, kurir mengantar cucian bersih.' },
 ];
 
 const weightOptions = [
@@ -735,7 +734,7 @@ const goBack = () => {
                     </section>
 
                     <!-- Warning Reminder -->
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-900 shadow-sm">
+                    <div v-if="isKgService" class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-900 shadow-sm">
                         <i class="fas fa-exclamation-triangle mt-0.5"></i>
                         <div>
                             <h4 class="text-[10px] font-black uppercase tracking-widest text-amber-800">Penting</h4>
