@@ -169,7 +169,7 @@ function formatRupiah(val) {
             <div v-if="popularServicesAll.length > 0" class="mb-16 md:mb-24 px-4 md:px-8">
                 <div class="text-center mb-8 md:mb-16">
                     <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-[8px] md:text-xs font-bold uppercase tracking-widest mb-2 md:mb-4 inline-block shadow-sm">Top Rated</span>
-                    <h2 class="text-xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Rating <span class="text-primary">Tertinggi</span></h2>
+                    <h2 class="text-xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-4 tracking-tight">Layanan <span class="text-primary">Rating Tertinggi</span></h2>
                     <p class="text-muted text-[10px] md:text-sm max-w-2xl mx-auto">3 layanan dengan ulasan terbaik dari pelanggan kami.</p>
                 </div>
 

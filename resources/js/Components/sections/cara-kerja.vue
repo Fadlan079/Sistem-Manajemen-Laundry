@@ -13,13 +13,13 @@
         Cara Pesan di Aplikasi <span class="text-primary">HiWash</span>
       </h2>
       <p class="text-gray-500 mt-4 text-sm max-w-xl mx-auto leading-relaxed">
-        Ikuti 5 langkah mudah berikut untuk memesan layanan laundry profesional kami langsung dari genggaman Anda.
+        Ikuti 5 langkah mudah berikut untuk memesan layanan Laundry Express Samarinda kami langsung dari genggaman Anda.
       </p>
     </div>
 
     <!-- STEPS GRID -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-8 relative">
-      
+
       <!-- Horizontal line for desktop -->
       <div class="hidden md:block absolute top-10 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
 
@@ -46,7 +46,7 @@
         </div>
         <h3 class="font-black text-gray-900 text-sm uppercase tracking-tight">Metode Kirim</h3>
         <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-          Pilih Antar-Jemput atau antar sendiri ke outlet kami.
+          Pilih layanan antar-jemput atau jemput saja.
         </p>
       </div>
 

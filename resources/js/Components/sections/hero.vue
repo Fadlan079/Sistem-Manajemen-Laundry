@@ -83,11 +83,11 @@ onUnmounted(() => {
 
         <div class="w-full lg:w-1/2 text-left">
           <h1 class="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-3 lg:mb-4 tracking-tighter">
-            Laundry Beres,<br/>
-            <span class="text-secondary text-shadow">Hidup Jadi Ringan</span>
+            LAUNDRY EXPRESS<br/>
+            <span class="text-secondary text-shadow">SAMARINDA</span>
           </h1>
           <p class="text-sm sm:text-base lg:text-lg mb-6 lg:mb-8 max-w-md mx-auto lg:mx-0 opacity-90 leading-relaxed">
-            HiWash Laundry siap membantu Anda dengan layanan cepat, bersih, wangi, dan bisa dilacak real-time secara transparan.
+            HiWash adalah One-Stop Laundry Express Samarinda. Nikmati layanan kami yang cepat, bersih, wangi, dan bisa dilacak real-time.
           </p>
 
           <div class="grid grid-cols-2 lg:flex lg:flex-wrap items-center justify-start gap-3 lg:gap-4">

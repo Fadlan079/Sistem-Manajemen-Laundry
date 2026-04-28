@@ -13,11 +13,14 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
         <!-- <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer data-cfasync="false"></script> -->
 
-        <meta property="og:title" content="HiWash Laundry">
-        <meta property="og:description" content="Solusi laundry modern dengan sistematis, cepat, dan terpercaya!">
+        <meta property="og:title" content="Laundry Express Samarinda | HiWash">
+        <meta property="og:description" content="HiWash adalah One-Stop Laundry Express Samarinda. Kami menyediakan layanan laundry yang cepat, bersih, dan bisa dilacak secara real-time.">
         <meta property="og:image" content="{{ asset('logo.png') }}">
         <meta property="og:url" content="https://hiwash.my.id/">
         <meta property="og:type" content="website">
+
+        <meta name="description" content="HiWash adalah layanan Laundry Express Samarinda terbaik. Kami melayani proses cuci cepat, bersih, dan wangi dengan sistem yang terintegrasi.">
+        <meta name="keywords" content="Laundry Express Samarinda, One-Stop Laundry Express, laundry samarinda, hiwash, cuci cepat samarinda, laundry terdekat">
 
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
