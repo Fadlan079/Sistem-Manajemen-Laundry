@@ -40,12 +40,14 @@ const groupedOrders = computed(() => {
 function getBadgeClasses(color) {
     if (color === 'green') return 'bg-green-50 text-green-600 border border-green-100';
     if (color === 'yellow') return 'bg-yellow-50 text-yellow-600 border border-yellow-100';
+    if (color === 'red') return 'bg-red-50 text-red-600 border border-red-100';
     return 'bg-blue-50 text-blue-600 border border-blue-100';
 }
 
 function getBadgeIcon(color) {
     if (color === 'green') return 'fas fa-check-circle';
-    if (color === 'yellow') return 'fas fa-clock'; // Or exclamation
+    if (color === 'yellow') return 'fas fa-clock';
+    if (color === 'red') return 'fas fa-times-circle';
     return 'fas fa-info-circle';
 }
 </script>
@@ -85,15 +87,21 @@ function getBadgeIcon(color) {
                 <div class="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 mb-8">
                     <button
                         @click="activeTab = 'aktif'"
-                        class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all"
+                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
                         :class="activeTab === 'aktif' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
                         Aktif
                     </button>
                     <button
                         @click="activeTab = 'riwayat'"
-                        class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all"
+                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
                         :class="activeTab === 'riwayat' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
                         Selesai
+                    </button>
+                    <button
+                        @click="activeTab = 'dibatalkan'"
+                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
+                        :class="activeTab === 'dibatalkan' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
+                        Dibatalkan
                     </button>
                 </div>
 

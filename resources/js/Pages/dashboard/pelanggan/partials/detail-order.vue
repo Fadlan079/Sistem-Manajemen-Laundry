@@ -39,7 +39,21 @@ const steps = computed(() => {
 const isExpanded = ref(false);
 const isChangingPaymentMethod = ref(false);
 const isSuccessModalOpen = ref(false);
+const isCancelModalOpen = ref(false);
 const successType = ref('payment'); // 'payment' or 'order'
+
+const cancelForm = useForm({
+    reason: '',
+    customReason: ''
+});
+
+const cancellationReasons = [
+    'Salah pilih layanan',
+    'Ingin mengubah jadwal penjemputan',
+    'Menemukan harga lebih murah',
+    'Hanya ingin mencoba aplikasi',
+    'Alasan lainnya'
+];
 
 const triggerSuccess = async (type = 'payment') => {
     successType.value = type;
@@ -240,11 +254,20 @@ function konfirmasiBayar() {
     payForm.post(route('pelanggan.aktivitas.bayar', props.order.dbId));
 }
 
+function submitPembatalan() {
+    const finalReason = cancelForm.reason === 'Alasan lainnya' ? cancelForm.customReason : cancelForm.reason;
+    cancelForm.transform((data) => ({
+        ...data,
+        reason: finalReason
+    })).post(route('pelanggan.aktivitas.batal', props.order.dbId), {
+        onSuccess: () => {
+            isCancelModalOpen.value = false;
+        }
+    });
+}
+
 function batalkanPesanan() {
-    if (confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
-        // Here we'd send inertia delete/cancel request
-        router.post(route('pelanggan.aktivitas.batal', props.order.dbId));
-    }
+    isCancelModalOpen.value = true;
 }
 
 function getStepIndex() {
@@ -555,6 +578,9 @@ const estimatedTotalCostText = computed(() => {
                 <div v-else-if="order.dbStatus === 'diantar'" class="flex items-center gap-2 bg-purple-50 text-purple-600 font-bold py-1.5 px-4 rounded-full border border-purple-100 text-[10px] uppercase tracking-widest">
                     <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Mengantar
                 </div>
+                <div v-else-if="order.dbStatus === 'dibatalkan'" class="flex items-center gap-2 bg-red-50 text-red-600 font-bold py-1.5 px-4 rounded-full border border-red-100 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-times-circle"></i> Pesanan Dibatalkan
+                </div>
             </div>
 
             <!-- Flash success -->
@@ -712,7 +738,7 @@ const estimatedTotalCostText = computed(() => {
 
                     <!-- Not Calculated Note -->
                     <template v-if="order.isKg && !order.isCalculated">
-                        <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mt-4 flex gap-3 text-blue-700 text-[11px] items-start shadow-sm">
+                        <div v-if="order.dbStatus !== 'dibatalkan'" class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mt-4 flex gap-3 text-blue-700 text-[11px] items-start shadow-sm">
                             <i class="fas fa-lightbulb mt-0.5 text-base"></i>
                             <p class="leading-relaxed font-bold">Berat & harga layanan di atas masih berupa perkiraan. Harga akhir akan ditentukan <span class="text-blue-900 underline">setelah pesanan dijemput</span> dan ditimbang.</p>
                         </div>
@@ -732,6 +758,15 @@ const estimatedTotalCostText = computed(() => {
                             Batalkan Pesanan
                         </button>
                     </template>
+
+                    <!-- Cancel Reason Display -->
+                    <div v-if="order.dbStatus === 'dibatalkan' && order.cancel_reason" class="bg-red-50 border border-red-100 rounded-xl p-4 mt-4 flex gap-3 text-red-700 text-[11px] items-start shadow-sm">
+                        <i class="fas fa-exclamation-triangle mt-0.5 text-base"></i>
+                        <div class="space-y-1">
+                            <p class="font-black uppercase tracking-widest text-[9px] text-red-400">Alasan Pembatalan:</p>
+                            <p class="leading-relaxed font-bold">{{ order.cancel_reason }}</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -916,7 +951,16 @@ const estimatedTotalCostText = computed(() => {
 
             <!-- Calculated: Pay Now via Midtrans -->
             <div v-if="order.isCalculated" class="flex-1 flex justify-end">
-                <div v-if="!isCOD" class="flex flex-col gap-2 items-end">
+                <div v-if="order.dbStatus === 'dibatalkan'" class="flex items-center gap-3 bg-red-50 px-4 py-2.5 rounded-2xl border border-red-100">
+                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-red-400 shadow-sm shrink-0">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-red-900 uppercase tracking-wide">Dibatalkan</p>
+                        <p class="text-[8px] text-red-500 font-medium leading-tight">Pesanan ini tidak aktif</p>
+                    </div>
+                </div>
+                <div v-else-if="!isCOD" class="flex flex-col gap-2 items-end">
                     <button type="button" @click="bayarMidtrans"
                         :disabled="isSnapLoading || isCheckingStatus"
                         class="px-8 py-3.5 rounded-full font-bold text-white text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
@@ -947,10 +991,16 @@ const estimatedTotalCostText = computed(() => {
             </div>
             
             <!-- Not Calculated: Wait for courier -->
-            <button v-else type="button" disabled
-                class="px-6 py-3.5 rounded-full font-bold text-white text-xs bg-gray-400 cursor-not-allowed shadow-none flex items-center justify-center gap-2">
-                Tunggu Finalisasi
-            </button>
+            <template v-else>
+                <button v-if="order.dbStatus === 'dibatalkan'" type="button" disabled
+                    class="px-6 py-3.5 rounded-full font-bold text-red-500 text-xs bg-red-50 border border-red-100 cursor-not-allowed shadow-none flex items-center justify-center gap-2">
+                    <i class="fas fa-times-circle"></i> Pesanan Dibatalkan
+                </button>
+                <button v-else type="button" disabled
+                    class="px-6 py-3.5 rounded-full font-bold text-white text-xs bg-gray-400 cursor-not-allowed shadow-none flex items-center justify-center gap-2">
+                    Tunggu Finalisasi
+                </button>
+            </template>
         </div>
     </AppLayout>
 
@@ -1009,6 +1059,76 @@ const estimatedTotalCostText = computed(() => {
                         >
                             {{ successType === 'payment' ? 'Tutup & Lihat Detail' : 'Siap, Saya Tunggu!' }}
                         </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </Teleport>
+
+    <!-- Cancellation Modal -->
+    <Teleport to="body">
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="isCancelModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isCancelModalOpen = false"></div>
+                
+                <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div class="h-2 bg-[#E30613]"></div>
+                    
+                    <div class="p-8 space-y-6">
+                        <div class="text-center space-y-2">
+                            <div class="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                                <i class="fas fa-exclamation-circle text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-black text-gray-900 tracking-tight">Batalkan Pesanan?</h2>
+                            <p class="text-xs text-gray-500 font-bold leading-relaxed">Sayang sekali Anda harus membatalkan. Beritahu kami alasannya agar kami bisa lebih baik lagi.</p>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div v-for="reason in cancellationReasons" :key="reason"
+                                @click="cancelForm.reason = reason"
+                                class="p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between"
+                                :class="cancelForm.reason === reason ? 'border-[#E30613] bg-red-50/30' : 'border-gray-50 bg-gray-50/50 hover:border-gray-200'"
+                            >
+                                <span class="text-[11px] font-bold text-gray-700">{{ reason }}</span>
+                                <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                    :class="cancelForm.reason === reason ? 'bg-[#E30613] border-[#E30613] text-white' : 'border-gray-300 bg-white'">
+                                    <i v-if="cancelForm.reason === reason" class="fas fa-check text-[8px]"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Reason Textarea -->
+                            <textarea 
+                                v-if="cancelForm.reason === 'Alasan lainnya'"
+                                v-model="cancelForm.customReason"
+                                rows="2"
+                                placeholder="Tulis alasan Anda di sini..."
+                                class="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-[11px] font-bold focus:ring-0 focus:border-[#E30613] outline-none transition-all mt-2"
+                            ></textarea>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button 
+                                @click="isCancelModalOpen = false"
+                                class="flex-1 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all active:scale-95"
+                            >
+                                Kembali
+                            </button>
+                            <button 
+                                @click="submitPembatalan"
+                                :disabled="!cancelForm.reason || (cancelForm.reason === 'Alasan lainnya' && !cancelForm.customReason) || cancelForm.processing"
+                                class="flex-[2] py-3.5 bg-[#E30613] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <i v-if="cancelForm.processing" class="fas fa-spinner fa-spin mr-2"></i>
+                                Ya, Batalkan
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

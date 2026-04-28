@@ -43,13 +43,21 @@ class CustomerDashboardController extends Controller
             $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
             $dbStatus = $order->status;
 
-            // Tentukan type (aktif atau riwayat)
-            $type = in_array($dbStatus, ['selesai']) ? 'riwayat' : 'aktif';
+            // Tentukan type (aktif, riwayat, atau dibatalkan)
+            $type = 'aktif';
+            if (in_array($dbStatus, ['selesai'])) {
+                $type = 'riwayat';
+            } elseif ($dbStatus === 'dibatalkan') {
+                $type = 'dibatalkan';
+            }
 
             // Penentuan UI Badge Status
             if ($dbStatus === 'selesai') {
                 $badgeText = ucfirst($dbStatus);
                 $badgeColor = 'green';
+            } elseif ($dbStatus === 'dibatalkan') {
+                $badgeText = 'Dibatalkan';
+                $badgeColor = 'red';
             } elseif ($dbStatus === 'diantar') {
                 $badgeText = 'Sedang Diantar';
                 $badgeColor = 'blue';
@@ -199,6 +207,7 @@ class CustomerDashboardController extends Controller
                 'pickup_timestamp' => $order->deliveries->where('type', 'pickup')->first()?->scheduled_at,
                 'pickup_date_text' => $order->deliveries->where('type', 'pickup')->first()?->scheduled_at ? \Carbon\Carbon::parse($order->deliveries->where('type', 'pickup')->first()->scheduled_at)->translatedFormat('l, d F Y - H:i') : null,
                 'estimated_weight' => $estimatedRangeText,
+                'cancel_reason'    => $order->cancel_reason,
                 'review'        => $order->review ? [
                     'rating'  => (int) $order->review->rating,
                     'comment' => $order->review->comment,
@@ -304,7 +313,10 @@ class CustomerDashboardController extends Controller
             return redirect()->back()->with('error', 'Pesanan sudah diproses dan tidak dapat dibatalkan.');
         }
 
-        $order->delete();
+        $order->update([
+            'status' => 'dibatalkan',
+            'cancel_reason' => $request->input('reason', 'Dibatalkan oleh pelanggan')
+        ]);
         return redirect()->route('pelanggan.aktivitas')->with('success', 'Pesanan berhasil dibatalkan.');
     }
 

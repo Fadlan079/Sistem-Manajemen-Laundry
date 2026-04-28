@@ -227,6 +227,32 @@ const totalEstimatedCostText = computed(() => {
 // Step Logic
 const currentStep = ref(1);
 const totalSteps = 5;
+const isCancelModalOpen = ref(false);
+
+const cancelForm = useForm({
+    reason: '',
+    customReason: ''
+});
+
+const cancellationReasons = [
+    'Harga terlalu mahal',
+    'Ingin ganti layanan',
+    'Jadwal tidak tersedia',
+    'Masalah teknis',
+    'Hanya mencoba aplikasi',
+    'Alasan lainnya'
+];
+
+const confirmCancel = () => {
+    isCancelModalOpen.value = true;
+};
+
+const submitCancel = () => {
+    // In this context, canceling means discarding the draft and going back
+    // We could potentially log the reason if there was a route for it
+    isCancelModalOpen.value = false;
+    window.history.back();
+};
 
 const steps = [
     { id: 1, name: 'Layanan' },
@@ -283,7 +309,7 @@ function addToCart() {
 }
 
 const goBack = () => {
-    window.history.back();
+    confirmCancel();
 };
 </script>
 
@@ -294,8 +320,8 @@ const goBack = () => {
         <!-- Red Header Section -->
         <div class="bg-[#E30613] pt-24 lg:pt-32 pb-24 lg:pb-32 relative overflow-hidden">
             <!-- Back Button -->
-            <button 
-                @click="currentStep === 1 ? goBack() : prevStep()" 
+            <button
+                @click="currentStep === 1 ? goBack() : prevStep()"
                 class="absolute top-[110px] lg:top-[140px] left-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-30 backdrop-blur-sm border border-white/20 shadow-lg active:scale-95"
             >
                 <i class="fas fa-arrow-left"></i>
@@ -334,6 +360,7 @@ const goBack = () => {
                         :style="{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }"
                     ></div>
                 </div>
+.
 
                 <div v-for="step in steps" :key="step.id" class="relative z-10 flex flex-col items-center">
                     <div
@@ -569,14 +596,14 @@ const goBack = () => {
 
                                     <!-- Quick Address Selector -->
                                     <div v-if="addresses.length > 0" class="flex overflow-x-auto pb-1 gap-2 mb-1 scrollbar-hide no-scrollbar">
-                                        <button 
-                                            v-for="addr in addresses" 
+                                        <button
+                                            v-for="addr in addresses"
                                             :key="addr.id"
                                             type="button"
                                             @click="form.pickup_address = addr.address"
                                             class="px-3 py-1.5 rounded-lg border-2 text-[10px] font-black transition-all flex items-center gap-2 shadow-sm active:scale-95 shrink-0 whitespace-nowrap"
-                                            :class="form.pickup_address === addr.address 
-                                                ? 'bg-red-50 border-[#E30613] text-[#E30613]' 
+                                            :class="form.pickup_address === addr.address
+                                                ? 'bg-red-50 border-[#E30613] text-[#E30613]'
                                                 : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'"
                                         >
                                             <i :class="addr.label.toLowerCase().includes('rumah') ? 'fas fa-home' : (addr.label.toLowerCase().includes('kantor') ? 'fas fa-building' : 'fas fa-map-pin')"></i>
@@ -787,7 +814,7 @@ const goBack = () => {
                             <i v-if="form.processing" class="fas fa-spinner fa-spin"></i>
                             <span v-if="!form.processing">Pesan Sekarang</span>
                         </button>
-                        
+
                         <button v-if="currentStep === totalSteps" type="button" @click="addToCart"
                             :disabled="isSubmitDisabled"
                             class="flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-[#E30613] border-2 border-[#E30613] hover:bg-red-50 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs"
@@ -842,6 +869,75 @@ const goBack = () => {
                 </button>
             </div>
         </div>
+
+        <!-- Cancellation Modal (Discard Draft) -->
+        <Teleport to="body">
+            <transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="isCancelModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isCancelModalOpen = false"></div>
+                    
+                    <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div class="h-2 bg-[#E30613]"></div>
+                        
+                        <div class="p-8 space-y-6">
+                            <div class="text-center space-y-2">
+                                <div class="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                                    <i class="fas fa-exclamation-circle text-2xl"></i>
+                                </div>
+                                <h2 class="text-xl font-black text-gray-900 tracking-tight">Batalkan Pesanan?</h2>
+                                <p class="text-xs text-gray-500 font-bold leading-relaxed">Sayang sekali Anda harus membatalkan. Beritahu kami alasannya agar kami bisa lebih baik lagi.</p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div v-for="reason in cancellationReasons" :key="reason"
+                                    @click="cancelForm.reason = reason"
+                                    class="p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between"
+                                    :class="cancelForm.reason === reason ? 'border-[#E30613] bg-red-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-gray-200'"
+                                >
+                                    <span class="text-[11px] font-bold text-gray-700">{{ reason }}</span>
+                                    <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                        :class="cancelForm.reason === reason ? 'bg-[#E30613] border-[#E30613] text-white' : 'border-gray-300 bg-white'">
+                                        <i v-if="cancelForm.reason === reason" class="fas fa-check text-[8px]"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Custom Reason Textarea -->
+                                <textarea 
+                                    v-if="cancelForm.reason === 'Alasan lainnya'"
+                                    v-model="cancelForm.customReason"
+                                    rows="2"
+                                    placeholder="Tulis alasan Anda di sini..."
+                                    class="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-[11px] font-bold focus:ring-0 focus:border-[#E30613] outline-none transition-all mt-2"
+                                ></textarea>
+                            </div>
+
+                            <div class="flex gap-3">
+                                <button 
+                                    @click="isCancelModalOpen = false"
+                                    class="flex-1 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all active:scale-95"
+                                >
+                                    Kembali
+                                </button>
+                                <button 
+                                    @click="submitCancel"
+                                    :disabled="!cancelForm.reason || (cancelForm.reason === 'Alasan lainnya' && !cancelForm.customReason)"
+                                    class="flex-[2] py-3.5 bg-[#E30613] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Ya, Batalkan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </Teleport>
     </AppLayout>
 </template>
 
