@@ -14,7 +14,9 @@ return new class extends Migration
     {
         // Add 'cart' to orders status enum
         // Using DB::statement because change() on enum is tricky in some Laravel versions/DBs
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -22,6 +24,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        }
     }
 };

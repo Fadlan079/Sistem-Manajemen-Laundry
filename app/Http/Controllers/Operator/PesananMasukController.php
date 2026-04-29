@@ -276,7 +276,11 @@ class PesananMasukController extends Controller
     {
         // For operator editing, we usually just update the main order table logic (status/price)
         $validated = $request->validate([
-            'status'           => ['required', Rule::in(['pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan'])],
+            'status'           => [
+                'required', 
+                Rule::in(['pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan']),
+                new \App\Rules\ValidOrderStatusTransition($order->status)
+            ],
             'total_price'      => 'required|numeric|min:0',
         ]);
 

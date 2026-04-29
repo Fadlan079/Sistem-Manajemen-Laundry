@@ -12,7 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('pending', 'dijemput', 'diantar', 'selesai') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('pending', 'dijemput', 'diantar', 'selesai') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -20,6 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('dijemput', 'diantar', 'selesai') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE deliveries MODIFY COLUMN status ENUM('dijemput', 'diantar', 'selesai') NOT NULL");
+        }
     }
 };

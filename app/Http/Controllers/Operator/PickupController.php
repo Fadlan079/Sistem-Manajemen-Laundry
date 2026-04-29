@@ -205,12 +205,11 @@ class PickupController extends Controller
 
             // Update order and order items based on KG
             if ($delivery->order) {
-                // Determine base delivery fee logic
-                // The current total_price is just the delivery fee (since qty was 0)
-                $deliveryFee = $delivery->order->total_price;
-                
-                // Get the first order item to update its Qty and calculate new price
+                // Determine base delivery fee by subtracting the old item price from the current total
                 $orderItem = $delivery->order->orderItems()->first();
+                $oldItemTotal = $orderItem ? ($orderItem->qty * $orderItem->price) : 0;
+                $deliveryFee = $delivery->order->total_price - $oldItemTotal;
+                
                 if ($orderItem) {
                     $orderItem->update([
                         'qty' => $request->kg,

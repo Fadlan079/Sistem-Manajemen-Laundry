@@ -11,7 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan') NOT NULL DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -19,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('cart', 'pending', 'dijemput', 'diproses', 'selesai', 'diantar') NOT NULL DEFAULT 'pending'");
+        }
     }
 };
