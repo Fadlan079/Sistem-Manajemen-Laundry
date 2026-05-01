@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
 import Topbar from '@/Components/Topbar.vue';
+import { usePushNotifications } from '@/Composables/usePushNotifications.js';
 
 defineProps({
     title: {
@@ -16,6 +17,19 @@ const isSidebarOpen = ref(false);
 // Close sidebar on navigation (mobile)
 watch(() => usePage().url, () => {
     isSidebarOpen.value = false;
+});
+
+// Register service worker & auto-subscribe if permission already granted
+const { init: initPush, isSupported, isSubscribed, permissionStatus, subscribe } = usePushNotifications();
+
+onMounted(async () => {
+    if (isSupported.value) {
+        await initPush();
+        // Prompt for permission after a short delay if not yet decided
+        if (Notification.permission === 'default') {
+            setTimeout(() => subscribe(), 3000);
+        }
+    }
 });
 </script>
 

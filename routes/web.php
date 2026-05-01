@@ -171,6 +171,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/notifications/latest', [\App\Http\Controllers\NotificationController::class, 'getLatest'])->name('notifications.latest');
     Route::patch('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+
+    // Web Push Subscriptions
+    Route::post('/push/subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 });
 
 // ─────────────────────────────────────────────
@@ -194,3 +198,8 @@ Route::get('/test-midtrans-seed', function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Test push (local only)
+if (app()->isLocal()) {
+    require __DIR__.'/test_push.php';
+}

@@ -46,4 +46,10 @@ return [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
 
+    'vapid' => [
+        'subject'     => env('VAPID_SUBJECT', 'mailto:admin@hiwash.com'),
+        'public_key'  => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+
 ];
