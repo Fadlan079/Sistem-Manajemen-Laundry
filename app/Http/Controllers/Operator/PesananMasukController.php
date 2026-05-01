@@ -71,6 +71,7 @@ class PesananMasukController extends Controller
                 'unit'           => $o->service?->unit ?? '/kg',
                 'fee'            => (float) $fee,
                 'isKg'           => in_array(strtolower($o->service?->unit ?? ''), ['/kg', 'kg']),
+                'actual_weight'  => (float) ($item?->actual_weight ?? 0),
                 'laundry_notes'  => $o->notes,
             ];
         });
@@ -79,13 +80,13 @@ class PesananMasukController extends Controller
             'total'    => Order::count(),
             'selesai'  => Order::where('status', 'selesai')->count(),
             'diproses' => Order::where('status', 'diproses')->count(),
-            'pending'  => Order::where('status', 'pending')->count(),
+            'pending'  => Order::where('status', 'dibuat')->count(),
         ];
 
         $statusDist = [
             Order::where('status', 'selesai')->count(),
             Order::where('status', 'diproses')->count(),
-            Order::where('status', 'pending')->count(),
+            Order::where('status', 'dibuat')->count(),
             Order::where('status', 'diantar')->count(),
             Order::where('status', 'dijemput')->count(),
         ];
@@ -181,25 +182,27 @@ class PesananMasukController extends Controller
         
         $baseServicePrice = (float) $service->price;
         $extraPricing = 0;
-        $extraLabels = [];
+        $extraList = [];
         
         if (!empty($validated['extra_services'])) {
             if (in_array('express', $validated['extra_services'])) {
-                $extraPricing += $baseServicePrice * 0.5;
-                $extraLabels[] = 'Express';
+                $extraPrice = $baseServicePrice * 0.5;
+                $extraPricing += $extraPrice;
+                $extraList[] = ['type' => 'express', 'label' => 'Express (24 Jam)', 'price' => $extraPrice];
             }
             if (in_array('treatment', $validated['extra_services'])) {
-                $extraPricing += $isKg ? 2000 : 5000;
-                $extraLabels[] = 'Treatment Khusus';
+                $extraPrice = $isKg ? 2000 : 5000;
+                $extraPricing += $extraPrice;
+                $extraList[] = ['type' => 'treatment', 'label' => 'Treatment Khusus', 'price' => $extraPrice];
             }
             if (in_array('own_perfume', $validated['extra_services'])) {
-                $extraLabels[] = 'Pewangi Sendiri';
+                $extraList[] = ['type' => 'own_perfume', 'label' => 'Pewangi Sendiri', 'price' => 0];
             }
         }
         
         $combinedUnitPrice = $baseServicePrice + $extraPricing;
         
-        // Calculate costs directly for both pcs and kg since operator input is final
+        // Operator input is always final (actual weight or fixed qty)
         if ($isKg && !empty($validated['weight'])) {
             $fixedWeight = $validated['weight'];
             $totalPrice += ($fixedWeight * $combinedUnitPrice);
@@ -212,28 +215,27 @@ class PesananMasukController extends Controller
         $order = Order::create([
             'user_id'          => $user->id,
             'service_id'       => $service->id,
-            'status'           => 'pending', 
+            'status'           => 'dibuat', 
             'total_price'      => $totalPrice, 
             'pickup_address'   => $validated['pickup_address'] ?? '-',
             'delivery_address' => $validated['delivery_address'] ?? '-',
             'notes'            => $validated['laundry_notes'] ?? null,
         ]);
 
-        // 2. Create Order Item
-        $extraStr = !empty($extraLabels) ? ' [+ ' . implode(', ', $extraLabels) . ']' : '';
-
-        if ($isKg) {
-            $itemName = 'Berat Aktual: ' . $fixedWeight . ' kg - ' . $service->name . $extraStr;
-        } else {
-            $itemName = $service->name . $extraStr . ' (' . $fixedQty . ' ' . trim($service->unit, '/') . ')';
-        }
-
-        OrderItem::create([
-            'order_id'  => $order->id,
-            'item_name' => $itemName,
-            'qty'       => $isKg ? $fixedWeight : $fixedQty, 
-            'price'     => $combinedUnitPrice,
+        // 2. Create Order Item with new structure (operator always inputs actual weight/qty)
+        $orderItem = OrderItem::create([
+            'order_id'     => $order->id,
+            'service_id'   => $service->id,
+            'item_name'    => $service->name, // Clean name
+            'qty'          => $isKg ? $fixedWeight : $fixedQty,
+            // actual_weight = weight set directly by operator (already weighed)
+            'actual_weight'=> $isKg ? $fixedWeight : null,
+            'price'        => $baseServicePrice,
         ]);
+
+        foreach ($extraList as $ext) {
+            $orderItem->extras()->create($ext);
+        }
 
         // 3. Create Payment
         Payment::create([
@@ -278,10 +280,11 @@ class PesananMasukController extends Controller
         $validated = $request->validate([
             'status'           => [
                 'required', 
-                Rule::in(['pending', 'dijemput', 'diproses', 'selesai', 'diantar', 'dibatalkan']),
+                Rule::in(['dibuat', 'dijemput', 'diproses', 'selesai', 'diantar', 'diterima', 'dibatalkan']),
                 new \App\Rules\ValidOrderStatusTransition($order->status)
             ],
             'total_price'      => 'required|numeric|min:0',
+            'actual_weight'    => 'nullable|numeric|min:0.1',
         ]);
 
         $order->update([
@@ -289,12 +292,29 @@ class PesananMasukController extends Controller
             'total_price' => $validated['total_price'],
         ]);
 
+        // Clear snap_token if price changed to force regeneration
+        $order->payments()->update(['snap_token' => null]);
+
+        if ($request->filled('actual_weight')) {
+            OrderItem::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'service_id' => $order->service_id,
+                    'qty' => $request->actual_weight,
+                    'actual_weight' => $request->actual_weight,
+                    'price' => $order->service?->price ?? 0,
+                    'item_name' => $order->service?->name ?? 'Laundry Item'
+                ]
+            );
+        }
+
         // Trigger notification
         $statusLabels = [
             'diproses' => 'Pesanan Sedang Diproses',
             'selesai' => 'Pesanan Telah Selesai',
             'diantar' => 'Pesanan Sedang Diantar',
             'dijemput' => 'Pesanan Telah Dijemput',
+            'diterima' => 'Pesanan Telah Diterima',
             'dibatalkan' => 'Pesanan Dibatalkan',
         ];
 

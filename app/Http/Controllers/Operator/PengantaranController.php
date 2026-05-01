@@ -190,7 +190,7 @@ class PengantaranController extends Controller
         // Update status Order Parent
         if ($delivery->order) {
             $delivery->order->update([
-                'status' => 'selesai'
+                'status' => 'diterima'
             ]);
 
             Notification::create([

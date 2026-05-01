@@ -43,9 +43,11 @@ class CustomerDashboardController extends Controller
             $invoice = 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
             $dbStatus = $order->status;
 
-            // Tentukan type (aktif, riwayat, atau dibatalkan)
+            // Tentukan type (aktif, riwayat, dibatalkan, atau diterima)
             $type = 'aktif';
-            if (in_array($dbStatus, ['selesai'])) {
+            if ($dbStatus === 'diterima') {
+                $type = 'diterima';
+            } elseif (in_array($dbStatus, ['selesai'])) {
                 $type = 'riwayat';
             } elseif ($dbStatus === 'dibatalkan') {
                 $type = 'dibatalkan';
@@ -61,7 +63,10 @@ class CustomerDashboardController extends Controller
             } elseif ($dbStatus === 'diantar') {
                 $badgeText = 'Sedang Diantar';
                 $badgeColor = 'blue';
-            } elseif (!$isCalculated && $dbStatus === 'pending') {
+            } elseif ($dbStatus === 'diterima') {
+                $badgeText = 'Telah Diterima';
+                $badgeColor = 'green';
+            } elseif (!$isCalculated && $dbStatus === 'dibuat') {
                 $badgeText = 'Menunggu Penjemputan';
                 $badgeColor = 'blue';
             } elseif ($isCalculated && $paymentStatus === 'UNPAID') {
@@ -141,50 +146,80 @@ class CustomerDashboardController extends Controller
 
     public function detailAktivitas(Request $request, $id)
     {
-        $order = Order::with(['service', 'orderItems', 'payments', 'review', 'deliveries.courier'])
+        $order = Order::with([
+            'service',
+            'orderItems.service',
+            'orderItems.extras',
+            'payments',
+            'review',
+            'deliveries.courier',
+        ])
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
-        $steps = ['Diterima', 'Dicuci', 'Dikeringkan', 'Selesai', 'Diantar'];
         $statusMap = [
-            'pending'  => 'Diterima',
-            'diproses' => 'Dicuci',
+            'dibuat'   => 'Menunggu',
+            'pending'  => 'Menunggu', // Fallback for old orders in db
+            'dijemput' => 'Dijemput',
+            'diproses' => 'Diproses',
             'selesai'  => 'Selesai',
             'diantar'  => 'Diantar',
+            'diterima' => 'Diterima',
+            'dibatalkan' => 'Dibatalkan',
         ];
 
         $payment       = $order->payments->first();
         $paymentStatus = $payment && $payment->status === 'paid' ? 'PAID' : 'UNPAID';
         $methodLabel   = ['cash' => 'Tunai', 'transfer' => 'Transfer Bank', 'e-wallet' => 'E-Wallet / QRIS'];
 
-        $isKg          = in_array(strtolower($order->service->unit ?? '/kg'), ['/kg', 'kg']);
-        $qty           = $order->orderItems->sum('qty');
-        $servicePrice  = (float) $order->orderItems->sum(fn($i) => $i->price * $i->qty);
-        // Delivery fee is initially the total price. But when updated, total_price is servicePrice + fee
-        $fee           = (float) $order->total_price - $servicePrice;
+        $firstItem   = $order->orderItems->first();
+        $isKg        = in_array(strtolower($order->service->unit ?? '/kg'), ['/kg', 'kg']);
+        $qty         = (float) ($firstItem?->actual_weight ?? $firstItem?->qty ?? 0);
 
+        // If actual_weight is set → order has been weighed (is calculated)
+        $isCalculated = $firstItem && ($firstItem->actual_weight !== null && $firstItem->actual_weight > 0)
+                        || (!$isKg && $qty > 0);
+
+        // Base service price from order item (already the original price)
+        $unitPrice    = (float) ($firstItem?->price ?? $order->service->price ?? 0);
+        $servicePrice = $isCalculated ? $unitPrice * $qty : 0;
+        
         $hasPickup   = $order->deliveries->where('type', 'pickup')->isNotEmpty();
         $hasDelivery = $order->deliveries->where('type', 'delivery')->isNotEmpty();
 
-        $isCalculated = $qty > 0; // If qty > 0, it means it has been updated by courier/admin or is fixed qty initially
-        
-        $estimatedRangeText = null;
-        if ($isKg && !$isCalculated) {
-            $firstItem = $order->orderItems->first();
-            if ($firstItem && str_contains($firstItem->item_name, 'Estimasi Berat:')) {
-                // Extracts the string between "Estimasi Berat: " and " - "
-                $part = explode('Estimasi Berat: ', $firstItem->item_name)[1] ?? '';
-                $estimatedRangeText = trim(explode(' - ', $part)[0] ?? '');
-            }
+        // Calculate explicit fee based on delivery records
+        $fee = 0;
+        if ($hasPickup && $hasDelivery) {
+            $fee = 10000;
+        } elseif ($hasPickup || $hasDelivery) {
+            $fee = 5000;
         }
+
+        // Estimated weight — from enum column, with Indonesian label
+        $weightLabels = [
+            'kurang_dari_3'  => 'Kurang dari 3 kg',
+            '3_sampai_5'     => '3 sampai 5 kg',
+            '5_sampai_10'    => '5 sampai 10 kg',
+            'lebih_dari_10'  => 'Lebih dari 10 kg',
+        ];
+        $estimatedWeightLabel = $firstItem?->estimated_weight_option
+            ? ($weightLabels[$firstItem->estimated_weight_option] ?? null)
+            : null;
+
+        // Extras
+        $extras = $firstItem?->extras?->map(fn($e) => [
+            'type'  => $e->type,
+            'label' => $e->label,
+            'price' => (float) $e->price,
+        ])->values()->toArray() ?? [];
 
         return Inertia::render('dashboard/pelanggan/partials/detail-order', [
             'auth'  => ['user' => $request->user()],
             'order' => [
                 'id'            => 'ORD-' . $order->id,
                 'dbId'          => $order->id,
-                'service'       => $order->orderItems->first()?->item_name ?? $order->service->name ?? '-',
-                'service_price' => (float) ($order->orderItems->first()?->price ?? $order->service->price ?? 0),
+                'service'       => $order->service->name ?? $firstItem?->item_name ?? '-',
+                'service_price' => $unitPrice,
                 'unit'          => $order->service->unit ?? '/kg',
                 'isKg'          => $isKg,
                 'items_qty'     => $qty,
@@ -201,13 +236,23 @@ class CustomerDashboardController extends Controller
                 'paymentMethodRaw' => $payment ? $payment->method : 'cash',
                 'paymentMethod' => $methodLabel[$payment?->method ?? 'transfer'] ?? 'Transfer Bank',
                 'invoice'       => 'INV-' . $order->created_at->format('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
-                'pickup_address' => $order->pickup_address,
-                'laundry_notes'  => $order->notes,
-                'courier_notes'  => $order->deliveries->where('type', 'pickup')->first()?->notes,
+                'pickup_address'   => $order->pickup_address,
+                'laundry_notes'    => $order->notes,
+                'courier_notes'    => $order->deliveries->where('type', 'pickup')->first()?->notes,
                 'pickup_timestamp' => $order->deliveries->where('type', 'pickup')->first()?->scheduled_at,
-                'pickup_date_text' => $order->deliveries->where('type', 'pickup')->first()?->scheduled_at ? \Carbon\Carbon::parse($order->deliveries->where('type', 'pickup')->first()->scheduled_at)->translatedFormat('l, d F Y - H:i') : null,
-                'estimated_weight' => $estimatedRangeText,
-                'cancel_reason'    => $order->cancel_reason,
+                'pickup_date_text' => $order->deliveries->where('type', 'pickup')->first()?->scheduled_at
+                    ? \Carbon\Carbon::parse($order->deliveries->where('type', 'pickup')->first()->scheduled_at)->translatedFormat('l, d F Y - H:i')
+                    : null,
+                // Structured weight info
+                'estimated_weight'       => $estimatedWeightLabel,
+                'estimated_weight_option'=> $firstItem?->estimated_weight_option,
+                'actual_weight'          => $firstItem?->actual_weight ? (float) $firstItem->actual_weight : null,
+                // Discount info
+                'use_discount'    => (bool) $firstItem?->use_discount,
+                'discount_amount' => (float) ($firstItem?->discount_amount ?? 0),
+                // Extras
+                'extras'          => $extras,
+                'cancel_reason'   => $order->cancel_reason,
                 'review'        => $order->review ? [
                     'rating'  => (int) $order->review->rating,
                     'comment' => $order->review->comment,
@@ -220,8 +265,8 @@ class CustomerDashboardController extends Controller
                     $c = $d->courier;
                     if (!$c && !$d->external_courier_name) return null;
                     return [
-                        'name' => $c ? $c->name : $d->external_courier_name,
-                        'phone' => $c ? $c->phone : $d->external_courier_phone,
+                        'name'   => $c ? $c->name : $d->external_courier_name,
+                        'phone'  => $c ? $c->phone : $d->external_courier_phone,
                         'status' => $d->status,
                     ];
                 })(),
@@ -231,8 +276,8 @@ class CustomerDashboardController extends Controller
                     $c = $d->courier;
                     if (!$c && !$d->external_courier_name) return null;
                     return [
-                        'name' => $c ? $c->name : $d->external_courier_name,
-                        'phone' => $c ? $c->phone : $d->external_courier_phone,
+                        'name'   => $c ? $c->name : $d->external_courier_name,
+                        'phone'  => $c ? $c->phone : $d->external_courier_phone,
                         'status' => $d->status,
                     ];
                 })(),
@@ -465,31 +510,35 @@ class CustomerDashboardController extends Controller
         $isKg = in_array(strtolower($service->unit), ['/kg', 'kg']);
         $fixedQty = 0;
         
+        $baseServicePrice = (float) $service->price;
+        $discountAmountPerUnit = 0;
+        
         $useDiscount = $request->input('use_discount', false);
         if ($useDiscount && $service->is_discount_today) {
-            $baseServicePrice = (float) $service->discounted_price;
-        } else {
-            $baseServicePrice = (float) $service->price;
+            $discountAmountPerUnit = $baseServicePrice - (float) $service->discounted_price;
         }
 
         $extraPricing = 0;
-        $extraLabels = [];
+        $extraList = [];
         
         if (!empty($validated['extra_services'])) {
             if (in_array('express', $validated['extra_services'])) {
-                $extraPricing += (float)$service->price * 0.5; // Extra based on original price
-                $extraLabels[] = 'Express (24 Jam)';
+                $extraPrice = $baseServicePrice * 0.5;
+                $extraPricing += $extraPrice; // Extra based on original price
+                $extraList[] = ['type' => 'express', 'label' => 'Express (24 Jam)', 'price' => $extraPrice];
             }
             if (in_array('treatment', $validated['extra_services'])) {
-                $extraPricing += $isKg ? 2000 : 5000;
-                $extraLabels[] = 'Treatment Khusus';
+                $extraPrice = $isKg ? 2000 : 5000;
+                $extraPricing += $extraPrice;
+                $extraList[] = ['type' => 'treatment', 'label' => 'Treatment Khusus', 'price' => $extraPrice];
             }
             if (in_array('own_perfume', $validated['extra_services'])) {
-                $extraLabels[] = 'Pewangi Sendiri';
+                $extraList[] = ['type' => 'own_perfume', 'label' => 'Pewangi Sendiri', 'price' => 0];
             }
         }
         
-        $combinedUnitPrice = $baseServicePrice + $extraPricing;
+        // Price per unit = original base price + extra features - discount
+        $combinedUnitPrice = $baseServicePrice + $extraPricing - $discountAmountPerUnit;
         
         if (!$isKg && !empty($validated['item_qty'])) {
             $fixedQty = $validated['item_qty'];
@@ -503,31 +552,36 @@ class CustomerDashboardController extends Controller
         $order = Order::create([
             'user_id'          => $user->id,
             'service_id'       => $service->id,
-            'status'           => 'pending',
+            'status'           => 'dibuat',
             'total_price'      => $totalPrice, // Courier updates if KG, else fixed
             'pickup_address'   => $finalAddress,
             'delivery_address' => $user->address ?? $finalAddress,
             'notes'            => $validated['laundry_notes'] ?? null,
         ]);
 
-        // 2. Create Order Item
-        $extraStr = !empty($extraLabels) ? ' [+ ' . implode(', ', $extraLabels) . ']' : '';
-        if ($useDiscount && $service->is_discount_today) {
-            $extraStr .= ' [DISKON 20%]';
-        }
+        // 2. Create Order Item & Extras
+        $weightMap = [
+            '<3'   => 'kurang_dari_3',
+            '3-5'  => '3_sampai_5',
+            '5-10' => '5_sampai_10',
+            '>10'  => 'lebih_dari_10',
+        ];
+        $estimatedOption = isset($validated['estimated_weight']) ? ($weightMap[$validated['estimated_weight']] ?? null) : null;
 
-        if ($isKg) {
-            $itemName = 'Estimasi Berat: ' . ($validated['estimated_weight'] ?? 'N/A') . ' - ' . $service->name . $extraStr;
-        } else {
-            $itemName = $service->name . $extraStr . ' (' . $fixedQty . ' ' . trim($service->unit, '/') . ')';
-        }
-
-        OrderItem::create([
-            'order_id'  => $order->id,
-            'item_name' => $itemName,
-            'qty'       => $fixedQty, // 0 if KG (updated by courier), >0 if fixed
-            'price'     => $combinedUnitPrice,
+        $orderItem = OrderItem::create([
+            'order_id'                => $order->id,
+            'service_id'              => $service->id,
+            'item_name'               => $service->name, // Clean name
+            'qty'                     => $fixedQty,
+            'estimated_weight_option' => $estimatedOption,
+            'price'                   => $baseServicePrice, // Always store the original base price
+            'use_discount'            => $useDiscount,
+            'discount_amount'         => $discountAmountPerUnit,
         ]);
+
+        foreach ($extraList as $ext) {
+            $orderItem->extras()->create($ext);
+        }
 
         // 3. Create Payment (pending, method and amount placeholder)
         Payment::create([
@@ -624,8 +678,8 @@ class CustomerDashboardController extends Controller
             ],
             'expiry' => [
                 'start_time' => now()->format('Y-m-d H:i:s O'),
-                'unit'       => 'seconds',
-                'duration'   => 30,
+                'unit'       => 'minutes',
+                'duration'   => 1440, // 24 hours
             ],
         ];
 

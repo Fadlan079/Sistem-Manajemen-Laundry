@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Notification;
+use App\Models\OrderItem;
 
 class KurirDashboardController extends Controller
 {
@@ -115,7 +116,7 @@ class KurirDashboardController extends Controller
         $payload = ['status' => 'selesai'];
 
         // Jika ini pickup dan ada isian berat (kg)
-        if ($delivery->type === 'pickup' && $request->has('kg')) {
+        if ($delivery->type === 'pickup' && $request->filled('kg')) {
             $request->validate([
                 'kg' => 'required|numeric|min:0.5',
                 'notes' => 'nullable|string|max:1000',
@@ -135,17 +136,35 @@ class KurirDashboardController extends Controller
                 // Harga pengantaran tersimpan di total_price awal order saat checkout
                 $deliveryFee = $delivery->order->total_price;
                 
-                $orderItem = $delivery->order->orderItems()->first();
-                if ($orderItem) {
-                    $orderItem->update([
+                $orderItem = OrderItem::updateOrCreate(
+                    ['order_id' => $delivery->order_id],
+                    [
+                        'service_id' => $delivery->order->service_id,
                         'qty' => $request->kg,
-                    ]);
+                        'actual_weight' => $request->kg,
+                        'price' => $delivery->order->service?->price ?? 0,
+                        'item_name' => $delivery->order->service?->name ?? 'Laundry Item'
+                    ]
+                );
 
-                    // Recalculate price
-                    $newTotal = $deliveryFee + ($request->kg * $orderItem->price);
+                if ($orderItem) {
+                    // Recalculate price with extras and discount
+                    $basePrice = $orderItem->price;
+                    $discount = $orderItem->discount_amount ?? 0;
+                    $extrasPrice = 0;
+                    foreach ($orderItem->extras as $extra) {
+                        $extrasPrice += $extra->price;
+                    }
+                    
+                    $unitPrice = $basePrice + $extrasPrice - $discount;
+                    $newTotal = $deliveryFee + ($request->kg * $unitPrice);
+                    
                     $delivery->order->update([
                         'total_price' => $newTotal
                     ]);
+
+                    // Clear snap_token to force regeneration with new price
+                    $delivery->order->payments()->update(['snap_token' => null]);
                 }
             }
         } else {
@@ -171,7 +190,7 @@ class KurirDashboardController extends Controller
         // Update status Order Parent
         if ($delivery->order) {
             if ($delivery->type === 'pickup') {
-                if (in_array($delivery->order->status, ['pending', 'dijemput'])) {
+                if (in_array($delivery->order->status, ['dibuat', 'dijemput'])) {
                     $delivery->order->update([
                         'status' => 'diproses'
                     ]);
@@ -179,11 +198,9 @@ class KurirDashboardController extends Controller
             } else if ($delivery->type === 'delivery') {
                 // Delivery is finished
                 if (in_array($delivery->order->status, ['diproses', 'selesai', 'diantar'])) {
-                    // Update ke order 'selesai'
-                    // Tetapi pastikan jika ordernya 'selesai' belum di trigger, itu tetap 'selesai' atau apa.
-                    // Tunggu: status di DB itu "selesai", jadi kalau diantar kita sudah "selesai".
+                    // Update ke order 'diterima' karena sudah sampai ke tangan pelanggan
                     $delivery->order->update([
-                        'status' => 'selesai'
+                        'status' => 'diterima'
                     ]);
 
                     Notification::create([

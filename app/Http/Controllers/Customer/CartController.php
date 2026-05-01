@@ -96,11 +96,12 @@ class CartController extends Controller
         $isKg = in_array(strtolower($service->unit), ['/kg', 'kg']);
         $fixedQty = 0;
         
+        $baseServicePrice = (float) $service->price;
+        $discountAmountPerUnit = 0;
+        
         $useDiscount = $request->input('use_discount', false);
         if ($useDiscount && $service->is_discount_today) {
-            $baseServicePrice = (float) $service->discounted_price;
-        } else {
-            $baseServicePrice = (float) $service->price;
+            $discountAmountPerUnit = $baseServicePrice - (float) $service->discounted_price;
         }
 
         $extraPricing = 0;
@@ -120,7 +121,7 @@ class CartController extends Controller
             }
         }
         
-        $combinedUnitPrice = $baseServicePrice + $extraPricing;
+        $combinedUnitPrice = $baseServicePrice + $extraPricing - $discountAmountPerUnit;
         
         if (!$isKg && !empty($validated['item_qty'])) {
             $fixedQty = $validated['item_qty'];
@@ -149,17 +150,19 @@ class CartController extends Controller
         }
 
         OrderItem::create([
-            'order_id'  => $order->id,
-            'item_name' => $itemName,
-            'qty'       => $fixedQty,
-            'price'     => $combinedUnitPrice,
+            'order_id'        => $order->id,
+            'item_name'       => $itemName,
+            'qty'             => $fixedQty,
+            'price'           => $baseServicePrice,
+            'use_discount'    => $useDiscount,
+            'discount_amount' => $discountAmountPerUnit,
         ]);
 
         Payment::create([
             'order_id' => $order->id,
             'amount'   => 0,
             'method'   => $validated['payment_preference'],
-            'status'   => 'pending',
+            'status'   => 'dibuat',
         ]);
 
         $scheduledAt = Carbon::parse($validated['pickup_date'] . ' ' . $validated['pickup_time']);
@@ -168,7 +171,7 @@ class CartController extends Controller
             Delivery::create([
                 'order_id'     => $order->id,
                 'courier_id'   => null,
-                'status'       => 'pending', // Use pending for cart
+                'status'       => 'dibuat', // Use pending for cart
                 'type'         => 'pickup',
                 'scheduled_at' => $scheduledAt,
                 'notes'        => $validated['courier_notes'] ?? null,
@@ -178,7 +181,7 @@ class CartController extends Controller
             Delivery::create([
                 'order_id'   => $order->id,
                 'courier_id' => null,
-                'status'     => 'pending', // Use pending for cart
+                'status'     => 'dibuat', // Use pending for cart
                 'type'       => 'delivery',
             ]);
         }
@@ -199,7 +202,7 @@ class CartController extends Controller
         $orders = $user->orders()->whereIn('id', $orderIds)->where('status', 'cart')->get();
 
         foreach ($orders as $order) {
-            $order->update(['status' => 'pending']);
+            $order->update(['status' => 'dibuat']);
             
             // Update deliveries status from 'pending' to active status
             foreach ($order->deliveries as $delivery) {

@@ -22,13 +22,14 @@ class ValidOrderStatusTransition implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         $allowedTransitions = [
-            'cart' => ['pending'],
-            'pending' => ['dijemput', 'diproses', 'dibatalkan'],
+            'cart' => ['dibuat'],
+            'dibuat' => ['dijemput', 'diproses', 'dibatalkan'],
             'dijemput' => ['diproses', 'dibatalkan'],
             'diproses' => ['selesai'],
-            'selesai' => ['diantar'], // Wait, what if there's no delivery? Then it stays in selesai.
-            'diantar' => ['selesai'],
-            'dibatalkan' => [], // Cannot move out of canceled
+            'selesai' => ['diantar', 'diterima'], 
+            'diantar' => ['diterima'],
+            'diterima' => [],
+            'dibatalkan' => [], 
         ];
 
         // If the status isn't changing, it's valid

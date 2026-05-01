@@ -21,7 +21,7 @@ class OperatorDashboardController extends Controller
 
         // ── Pesanan Stats ──────────────────────────────────────────
         $pesanan = [
-            'antrian'        => Order::where('status', 'pending')->count(),
+            'antrian'        => Order::where('status', 'dibuat')->count(),
             'diproses'       => Order::where('status', 'diproses')->count(),
             'selesai_hari_ini' => Order::where('status', 'selesai')->whereDate('updated_at', $today)->count(),
             'total_bulan_ini'  => Order::whereDate('created_at', '>=', $thisMonth)->count(),
@@ -121,7 +121,7 @@ class OperatorDashboardController extends Controller
         $statusDist = [
             Order::where('status', 'selesai')->count(),
             Order::where('status', 'diproses')->count(),
-            Order::where('status', 'pending')->count(),
+            Order::where('status', 'dibuat')->count(),
             Order::where('status', 'diantar')->count(),
             Order::where('status', 'dijemput')->count(),
         ];

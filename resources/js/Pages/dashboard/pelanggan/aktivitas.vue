@@ -84,24 +84,30 @@ function getBadgeIcon(color) {
             <div class="max-w-xl mx-auto px-4 mt-6 relative z-20">
 
                 <!-- Segmented Tabs -->
-                <div class="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 mb-8">
+                <div class="flex flex-wrap bg-white rounded-xl shadow-sm border border-gray-100 p-1 mb-8 gap-1">
                     <button
                         @click="activeTab = 'aktif'"
-                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
+                        class="flex-1 min-w-[70px] py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all"
                         :class="activeTab === 'aktif' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
                         Aktif
                     </button>
                     <button
                         @click="activeTab = 'riwayat'"
-                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
+                        class="flex-1 min-w-[70px] py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all"
                         :class="activeTab === 'riwayat' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
                         Selesai
                     </button>
                     <button
+                        @click="activeTab = 'diterima'"
+                        class="flex-1 min-w-[70px] py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all"
+                        :class="activeTab === 'diterima' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
+                        Diterima
+                    </button>
+                    <button
                         @click="activeTab = 'dibatalkan'"
-                        class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all"
+                        class="flex-1 min-w-[70px] py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all"
                         :class="activeTab === 'dibatalkan' ? 'bg-[#E30613] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'">
-                        Dibatalkan
+                        Batal
                     </button>
                 </div>
 
@@ -157,15 +163,15 @@ function getBadgeIcon(color) {
                                 </Link>
 
                                 <!-- Card Actions -->
-                                <div class="flex items-center justify-end" :class="activeTab === 'riwayat' ? 'gap-3' : ''">
-                                    <template v-if="activeTab === 'aktif'">
+                                <div class="flex items-center justify-end" :class="activeTab === 'riwayat' || activeTab === 'diterima' ? 'gap-3' : ''">
+                                    <template v-if="activeTab === 'aktif' || activeTab === 'riwayat' || activeTab === 'dibatalkan'">
                                         <Link :href="route('pelanggan.aktivitas.detail', order.dbId)"
                                               class="bg-[#E30613] hover:bg-black text-white px-5 py-2.5 rounded-lg text-xs font-bold tracking-wide shadow-sm transition-colors block text-center w-max ml-auto">
                                             Detail Pesanan
                                         </Link>
                                     </template>
 
-                                    <template v-if="activeTab === 'riwayat'">
+                                    <template v-if="activeTab === 'diterima'">
                                         <Link v-if="!order.is_reviewed"
                                               :href="route('pelanggan.aktivitas.ulasan', order.dbId)"
                                               class="flex-1 text-center bg-white border border-gray-200 hover:bg-gray-50 text-[#E30613] px-3 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-colors">

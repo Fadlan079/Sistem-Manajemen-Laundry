@@ -57,6 +57,11 @@ class Service extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function discounts()
+    {
+        return $this->hasMany(Discount::class);
+    }
+
     public function reviews()
     {
         return $this->hasMany(Review::class);

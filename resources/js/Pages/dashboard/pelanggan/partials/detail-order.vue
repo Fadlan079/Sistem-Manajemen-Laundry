@@ -33,6 +33,7 @@ const steps = computed(() => {
     s.push('Diproses');
     s.push('Selesai');
     if (props.order.hasDelivery) s.push('Diantar');
+    s.push('Diterima');
     return s;
 });
 
@@ -271,13 +272,25 @@ function batalkanPesanan() {
 }
 
 function getStepIndex() {
-    let current = 'Dibuat';
-    if (props.order.dbStatus === 'pending') current = 'Dibuat';
-    else if (props.order.dbStatus === 'dijemput') current = 'Dijemput';
-    else if (props.order.dbStatus === 'diproses') current = 'Diproses';
-    else if (props.order.dbStatus === 'diantar') current = 'Diantar';
-    else if (props.order.dbStatus === 'selesai') current = 'Selesai';
-    return steps.value.indexOf(current);
+    const status = props.order.dbStatus;
+    if (status === 'diterima') return steps.value.length;
+    if (status === 'dibatalkan') return steps.value.indexOf('Dibuat');
+
+    let activeLabel = 'Dibuat';
+    
+    if (status === 'pending' || status === 'dibuat' || status === 'dijemput') {
+        // Jika sedang dibuat atau sedang dijemput, maka step aktif adalah 'Dijemput' (atau 'Diproses' jika tidak ada pickup)
+        activeLabel = props.order.hasPickup ? 'Dijemput' : 'Diproses';
+    } else if (status === 'diproses') {
+        activeLabel = 'Diproses';
+    } else if (status === 'selesai') {
+        activeLabel = 'Selesai';
+    } else if (status === 'diantar') {
+        activeLabel = 'Diantar';
+    }
+
+    const idx = steps.value.indexOf(activeLabel);
+    return idx === -1 ? 0 : idx;
 }
 
 function formatRupiah(val) {
@@ -454,10 +467,10 @@ async function cetakNota() {
 }
 
 const estimatedKG = computed(() => {
-    if (!props.order.isKg || props.order.isCalculated || !props.order.estimated_weight) return { min: 0, max: 0 };
-    const key = props.order.estimated_weight;
-    const minMap = { '<3': 1, '3-5': 3, '5-10': 5, '>10': 10 };
-    const maxMap = { '<3': 3, '3-5': 5, '5-10': 10, '>10': 15 };
+    if (!props.order.isKg || props.order.isCalculated || !props.order.estimated_weight_option) return { min: 0, max: 0 };
+    const key = props.order.estimated_weight_option;
+    const minMap = { 'kurang_dari_3': 1, '3_sampai_5': 3, '5_sampai_10': 5, 'lebih_dari_10': 10 };
+    const maxMap = { 'kurang_dari_3': 3, '3_sampai_5': 5, '5_sampai_10': 10, 'lebih_dari_10': 15 };
     return {
         min: minMap[key] || 0,
         max: maxMap[key] || 0
@@ -473,8 +486,15 @@ const estimatedServiceCostText = computed(() => {
 
 const estimatedTotalCostText = computed(() => {
     if (!props.order.isKg || props.order.isCalculated) return formatRupiah(props.order.total);
-    const minTot = (props.order.service_price * estimatedKG.value.min) + props.order.fee;
-    const maxTot = (props.order.service_price * estimatedKG.value.max) + props.order.fee;
+    
+    let extraSum = 0;
+    if (props.order.extras) {
+        props.order.extras.forEach(e => extraSum += e.price);
+    }
+    const finalUnitPrice = props.order.service_price + extraSum - (props.order.discount_amount || 0);
+
+    const minTot = (finalUnitPrice * estimatedKG.value.min) + props.order.fee;
+    const maxTot = (finalUnitPrice * estimatedKG.value.max) + props.order.fee;
     return `${formatRupiah(minTot)} - ${formatRupiah(maxTot)}`;
 });
 </script>
@@ -522,7 +542,7 @@ const estimatedTotalCostText = computed(() => {
                     <!-- Active Progress Line -->
                     <div
                         class="h-full bg-[#E30613] transition-all duration-500 ease-in-out"
-                        :style="{ width: `${(getStepIndex() / (steps.length - 1)) * 100}%` }"
+                        :style="{ width: `${Math.min(100, (getStepIndex() / (steps.length - 1)) * 100)}%` }"
                     ></div>
                 </div>
 
@@ -573,10 +593,13 @@ const estimatedTotalCostText = computed(() => {
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Siapkan Tunai / Bayar via Sistem</p>
                 </div>
                 <div v-else-if="order.dbStatus === 'selesai' && order.paymentStatus === 'PAID'" class="flex items-center gap-2 bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] uppercase tracking-widest">
-                    <i class="fas fa-box"></i> Pesanan Siap Diantar
+                    <i class="fas fa-box"></i> {{ order.hasDelivery ? 'Pesanan Siap Diantar' : 'Siap Diambil di Outlet' }}
                 </div>
                 <div v-else-if="order.dbStatus === 'diantar'" class="flex items-center gap-2 bg-purple-50 text-purple-600 font-bold py-1.5 px-4 rounded-full border border-purple-100 text-[10px] uppercase tracking-widest">
                     <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Mengantar
+                </div>
+                <div v-else-if="order.dbStatus === 'diterima'" class="flex items-center gap-2 bg-[#E30613]/10 text-[#E30613] font-bold py-1.5 px-4 rounded-full border border-[#E30613]/20 text-[10px] uppercase tracking-widest">
+                    <i class="fas fa-check-double"></i> Pesanan Telah Diterima
                 </div>
                 <div v-else-if="order.dbStatus === 'dibatalkan'" class="flex items-center gap-2 bg-red-50 text-red-600 font-bold py-1.5 px-4 rounded-full border border-red-100 text-[10px] uppercase tracking-widest">
                     <i class="fas fa-times-circle"></i> Pesanan Dibatalkan
@@ -590,15 +613,82 @@ const estimatedTotalCostText = computed(() => {
             </div>
 
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div class="p-5 border-b border-gray-100 flex items-center gap-4 bg-gray-50/30">
-                    <div class="w-12 h-12 bg-[#E30613] text-white rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-center text-xl shrink-0">
-                        <i class="fas fa-tshirt"></i>
-                    </div>
-                    <div>
-                        <h2 class="font-black text-gray-900 text-sm tracking-tight uppercase">{{ order.service }}</h2>
-                        <p v-if="order.isKg && !order.isCalculated" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Menunggu Penimbangan</p>
-                        <p v-else-if="order.isKg && order.isCalculated" class="text-[11px] font-black text-[#E30613] mt-0.5">Selesai Ditimbang</p>
-                        <p v-else class="text-[11px] font-black text-[#E30613] mt-0.5 uppercase tracking-tighter">Per Satuan/Item</p>
+                <!-- Service Header -->
+                <div class="p-5 border-b border-gray-100 bg-gray-50/30">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-[#E30613] text-white rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-center text-xl shrink-0">
+                            <i class="fas fa-tshirt"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <!-- Status badge -->
+                            <span v-if="order.isKg && !order.isCalculated"
+                                class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full mb-1.5">
+                                <i class="fas fa-clock"></i> Menunggu Penimbangan
+                            </span>
+                            <span v-else-if="order.isKg && order.isCalculated"
+                                class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full mb-1.5">
+                                <i class="fas fa-check"></i> Sudah Ditimbang
+                            </span>
+                            <span v-else
+                                class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full mb-1.5">
+                                <i class="fas fa-box"></i> Per Satuan / Item
+                            </span>
+
+                            <!-- Info rows -->
+                            <div class="space-y-1.5 mt-1">
+                                <!-- Jenis Layanan -->
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 w-28">Jenis Layanan</span>
+                                    <span class="text-[13px] font-black text-gray-900 leading-tight">{{ order.service }}</span>
+                                </div>
+
+                                <!-- Berat: jika sudah ditimbang tampilkan actual_weight, jika belum tampilkan estimasi -->
+                                <div v-if="order.isKg" class="flex items-baseline gap-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 w-28">
+                                        {{ order.isCalculated ? 'Berat Aktual' : 'Estimasi Berat' }}
+                                    </span>
+                                    <span v-if="order.isCalculated && order.actual_weight"
+                                        class="text-[13px] font-black text-[#E30613]">
+                                        {{ order.actual_weight }} kg
+                                    </span>
+                                    <span v-else-if="!order.isCalculated && order.estimated_weight"
+                                        class="text-[13px] font-bold text-gray-700">
+                                        {{ order.estimated_weight }}
+                                    </span>
+                                    <span v-else class="text-[12px] text-gray-400 italic">Belum ditentukan</span>
+                                </div>
+
+                                <!-- Jumlah item jika PCS -->
+                                <div v-else-if="order.items_qty > 0" class="flex items-baseline gap-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 w-28">Jumlah</span>
+                                    <span class="text-[13px] font-black text-gray-900">
+                                        {{ order.items_qty }} {{ order.unit.replace('/', '') }}
+                                    </span>
+                                </div>
+
+                                <!-- Diskon -->
+                                <div v-if="order.use_discount && order.discount_amount > 0" class="flex items-baseline gap-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 w-28">Diskon</span>
+                                    <span class="text-[12px] font-black text-emerald-600">
+                                        - {{ formatRupiah(order.discount_amount) }}
+                                    </span>
+                                </div>
+
+                                <!-- Layanan Ekstra -->
+                                <div v-if="order.extras && order.extras.length > 0" class="flex items-start gap-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 w-28 mt-0.5">Layanan Ekstra</span>
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="extra in order.extras" :key="extra.type"
+                                            class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                                            :class="extra.type === 'own_perfume' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-[#E30613] bg-red-50 border-red-100'">
+                                            <i :class="extra.type === 'express' ? 'fas fa-bolt' : extra.type === 'treatment' ? 'fas fa-magic' : 'fas fa-spray-can'"></i>
+                                            {{ extra.label }}
+                                            <template v-if="extra.price > 0">(+{{ formatRupiah(extra.price) }})</template>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -708,16 +798,40 @@ const estimatedTotalCostText = computed(() => {
                         <div class="flex justify-between text-xs font-bold">
                             <span class="text-gray-500 uppercase tracking-tighter">
                                 Biaya Layanan
-                                <span v-if="order.isKg && !order.isCalculated && order.estimated_weight" class="text-gray-300">(~{{ estimatedKG.min }}-{{ estimatedKG.max }} kg)</span>
-                                <span v-else-if="order.isKg && order.isCalculated" class="text-gray-300">({{ order.items_qty }} kg)</span>
-                                <span v-else class="text-gray-300">({{ order.items_qty }} {{ order.unit.replace('/', '') }})</span>
+                                <!-- KG belum ditimbang: tampilkan range estimasi -->
+                                <span v-if="order.isKg && !order.isCalculated && order.estimated_weight" class="text-gray-300 normal-case font-normal"><br>~{{ estimatedKG.min }}&ndash;{{ estimatedKG.max }} kg</span>
+                                <!-- KG sudah ditimbang: tampilkan berat aktual -->
+                                <span v-else-if="order.isKg && order.isCalculated && order.actual_weight" class="text-xs text-primary font-black ml-1">({{ order.actual_weight }} kg)</span>
+                                <!-- PCS -->
+                                <span v-else-if="!order.isKg && order.items_qty > 0" class="text-gray-300">({{ order.items_qty }} {{ order.unit.replace('/', '') }})</span>
                             </span>
                             <span class="text-gray-900">{{ estimatedServiceCostText }}</span>
                         </div>
 
-                        <!-- Extra Info on service price -->
+                        <!-- Harga per satuan -->
                         <div v-if="order.isCalculated" class="text-[9px] text-gray-400 -mt-2 font-black uppercase tracking-widest">
                             {{ formatRupiah(order.service_price) }}{{ order.unit }}
+                        </div>
+
+                        <!-- Biaya Ekstra (per baris) -->
+                        <template v-if="order.extras && order.extras.filter(e => e.price > 0).length > 0">
+                            <div v-for="extra in order.extras.filter(e => e.price > 0)" :key="extra.type"
+                                class="flex justify-between text-xs font-bold">
+                                <span class="text-gray-500 uppercase tracking-tighter flex items-center gap-1">
+                                    <i :class="extra.type === 'express' ? 'fas fa-bolt' : 'fas fa-magic'" class="text-gray-300"></i>
+                                    {{ extra.label }}
+                                </span>
+                                <span class="text-gray-700">+ {{ formatRupiah(extra.price) }}{{ order.isKg ? order.unit : '/item' }}</span>
+                            </div>
+                        </template>
+
+                        <!-- Diskon -->
+                        <div v-if="order.use_discount && order.discount_amount > 0" class="flex justify-between text-xs font-bold">
+                            <span class="text-emerald-600 uppercase tracking-tighter flex items-center gap-1">
+                                <i class="fas fa-percent text-emerald-400"></i> Diskon
+                            </span>
+                            <span v-if="!order.isCalculated" class="text-emerald-600">- {{ formatRupiah(order.discount_amount) }}{{ order.unit }}</span>
+                            <span v-else class="text-emerald-600">- {{ formatRupiah(order.discount_amount * order.items_qty) }}</span>
                         </div>
 
                         <!-- Ongkos Kirim -->

@@ -65,14 +65,14 @@ class OrderController extends Controller
             'total'    => Order::where('status', '!=', 'cart')->count(),
             'selesai'  => Order::where('status', 'selesai')->count(),
             'diproses' => Order::where('status', 'diproses')->count(),
-            'pending'  => Order::where('status', 'pending')->count(),
+            'pending'  => Order::where('status', 'dibuat')->count(),
         ];
 
         // ── Chart 1: Status Distribution (Doughnut) ────────
         $statusDist = [
             Order::where('status', 'selesai')->count(),
             Order::where('status', 'diproses')->count(),
-            Order::where('status', 'pending')->count(),
+            Order::where('status', 'dibuat')->count(),
             Order::where('status', 'diantar')->count(),
         ];
 
@@ -136,7 +136,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'user_id'          => 'required|exists:users,id',
             'service_id'       => 'required|exists:services,id',
-            'status'           => ['required', Rule::in(['pending', 'diproses', 'selesai', 'diantar'])],
+            'status'           => ['required', Rule::in(['dibuat', 'diproses', 'selesai', 'diantar'])],
             'total_price'      => 'required|numeric|min:0',
             'pickup_address'   => 'required|string',
             'delivery_address' => 'required|string',
@@ -152,7 +152,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'user_id'          => 'required|exists:users,id',
             'service_id'       => 'required|exists:services,id',
-            'status'           => ['required', Rule::in(['pending', 'diproses', 'selesai', 'diantar'])],
+            'status'           => ['required', Rule::in(['dibuat', 'diproses', 'selesai', 'diantar'])],
             'total_price'      => 'required|numeric|min:0',
             'pickup_address'   => 'required|string',
             'delivery_address' => 'required|string',

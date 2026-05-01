@@ -163,7 +163,7 @@ class PickupController extends Controller
         }
 
         // Change order status to 'dijemput' when courier is assigned
-        if ($delivery->order && $delivery->order->status === 'pending') {
+        if ($delivery->order && $delivery->order->status === 'dibuat') {
             $delivery->order->update([
                 'status' => 'dijemput'
             ]);
@@ -228,7 +228,7 @@ class PickupController extends Controller
         $delivery->update($payload);
 
         // 2. Ubah status order dari dijemput (atau pending) menjadi diproses
-        if ($delivery->order && in_array($delivery->order->status, ['pending', 'dijemput'])) {
+        if ($delivery->order && in_array($delivery->order->status, ['dibuat', 'dijemput'])) {
             $delivery->order->update([
                 'status' => 'diproses'
             ]);

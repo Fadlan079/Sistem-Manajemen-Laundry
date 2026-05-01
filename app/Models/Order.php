@@ -31,11 +31,6 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function orderProcesses()
-    {
-        return $this->hasMany(OrderProcess::class);
-    }
-
     public function deliveries()
     {
         return $this->hasMany(Delivery::class);

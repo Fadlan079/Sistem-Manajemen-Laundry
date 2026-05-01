@@ -86,6 +86,8 @@ const editForm = useForm({
     id: null,
     status: 'pending',
     total_price: 0,
+    actual_weight: null,
+    isKg: false,
 });
 
 function openCreateForm() {
@@ -97,6 +99,8 @@ function openEditForm(o) {
     editForm.id = o.id;
     editForm.status = o.status;
     editForm.total_price = o.total_price;
+    editForm.isKg = o.isKg;
+    editForm.actual_weight = o.isKg ? (o.actual_weight || o.items_qty) : null;
     showEditModal.value = true;
 }
 
@@ -224,22 +228,24 @@ const detailSteps = computed(() => {
     if (!viewingOrder.value) return ['Dibuat', 'Diproses', 'Selesai'];
     const steps = ['Dibuat'];
     // Assume pickup if status includes dijemput or beyond
-    const hasPickup = ['dijemput', 'diproses', 'selesai', 'diantar'].includes(viewingOrder.value.status);
+    const hasPickup = ['dijemput', 'diproses', 'selesai', 'diantar', 'diterima'].includes(viewingOrder.value.status);
     if (hasPickup) steps.push('Dijemput');
     steps.push('Diproses', 'Selesai');
-    const hasDelivery = viewingOrder.value.status === 'diantar';
+    const hasDelivery = ['diantar', 'diterima'].includes(viewingOrder.value.status);
     if (hasDelivery) steps.push('Diantar');
+    steps.push('Diterima');
     return steps;
 });
 
 const detailStepIndex = computed(() => {
     if (!viewingOrder.value) return 0;
     const statusToStep = {
-        pending:  0,
+        dibuat:   0,
         dijemput: 1,
         diproses: detailSteps.value.indexOf('Diproses'),
         selesai:  detailSteps.value.indexOf('Selesai'),
-        diantar:  detailSteps.value.length - 1,
+        diantar:  detailSteps.value.indexOf('Diantar'),
+        diterima: detailSteps.value.length - 1,
     };
     return statusToStep[viewingOrder.value.status] ?? 0;
 });
@@ -716,11 +722,12 @@ async function cetakNota(o) {
                             <div class="space-y-1">
                                 <label class="text-[10px] font-black uppercase tracking-widest text-muted">Status</label>
                                 <select v-model="editForm.status" required class="w-full px-4 py-2 bg-surface border border-border rounded-sm text-sm focus:border-primary outline-none transition uppercase tracking-widest font-bold">
-                                    <option value="pending">Pending</option>
+                                    <option value="dibuat">Dibuat</option>
                                     <option value="dijemput">Dijemput</option>
                                     <option value="diproses">Diproses</option>
                                     <option value="selesai">Selesai</option>
                                     <option value="diantar">Diantar</option>
+                                    <option value="diterima">Diterima</option>
                                 </select>
                             </div>
                             <div class="space-y-1">
@@ -729,7 +736,15 @@ async function cetakNota(o) {
                                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold text-sm">Rp</span>
                                     <input v-model="editForm.total_price" type="number" required class="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-sm text-sm font-mono focus:border-primary outline-none transition" />
                                 </div>
-                                <p class="text-[9px] text-gray-500 mt-1">Ubah manual jika berat aktual berbeda.</p>
+                                <p class="text-[9px] text-gray-500 mt-1">Ubah manual jika harga berbeda.</p>
+                            </div>
+                            <div class="space-y-1" v-if="editForm.isKg">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Berat Aktual (Kg)</label>
+                                <div class="relative">
+                                    <input v-model="editForm.actual_weight" type="number" step="0.1" min="0.1" required class="w-full px-4 pr-10 py-2 bg-surface border border-border rounded-sm text-sm font-bold focus:border-primary outline-none transition" />
+                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold text-xs">Kg</span>
+                                </div>
+                                <p class="text-[9px] text-gray-500 mt-1">Isi berat pasti pakaian setelah ditimbang.</p>
                             </div>
                             <div class="flex justify-end gap-3 pt-4 border-t border-border mt-4">
                                 <button type="button" @click="showEditModal = false" class="px-5 py-2 border border-border rounded-sm text-xs font-black uppercase tracking-widest text-muted hover:text-text transition-colors">Batal</button>
