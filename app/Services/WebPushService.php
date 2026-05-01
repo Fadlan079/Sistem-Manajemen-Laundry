@@ -8,20 +8,33 @@ use Minishlink\WebPush\Subscription;
 
 class WebPushService
 {
-    protected WebPush $webPush;
+    protected ?WebPush $webPush = null;
 
     public function __construct()
     {
-        $auth = [
-            'VAPID' => [
-                'subject'    => config('services.vapid.subject'),
-                'publicKey'  => config('services.vapid.public_key'),
-                'privateKey' => config('services.vapid.private_key'),
-            ],
-        ];
+        $publicKey  = config('services.vapid.public_key');
+        $privateKey = config('services.vapid.private_key');
+        $subject    = config('services.vapid.subject');
 
-        $this->webPush = new WebPush($auth);
-        $this->webPush->setReuseVAPIDHeaders(true);
+        // Skip init if VAPID keys are not configured
+        if (!$publicKey || !$privateKey) {
+            return;
+        }
+
+        try {
+            $auth = [
+                'VAPID' => [
+                    'subject'    => $subject,
+                    'publicKey'  => $publicKey,
+                    'privateKey' => $privateKey,
+                ],
+            ];
+            $this->webPush = new WebPush($auth);
+            $this->webPush->setReuseVAPIDHeaders(true);
+        } catch (\Throwable $e) {
+            \Log::warning('[WebPush] Init failed: ' . $e->getMessage());
+            $this->webPush = null;
+        }
     }
 
     /**
@@ -29,7 +42,16 @@ class WebPushService
      */
     public function sendToUser(int $userId, string $title, string $body, array $data = []): void
     {
-        $subscriptions = PushSubscription::where('user_id', $userId)->get();
+        // Skip if WebPush is not configured
+        if (!$this->webPush) return;
+
+        try {
+            $subscriptions = PushSubscription::where('user_id', $userId)->get();
+        } catch (\Throwable $e) {
+            // Table may not exist yet in production (migration not run)
+            \Log::warning('[WebPush] Cannot query push_subscriptions: ' . $e->getMessage());
+            return;
+        }
 
         if ($subscriptions->isEmpty()) {
             return;
@@ -46,7 +68,7 @@ class WebPushService
         foreach ($subscriptions as $sub) {
             try {
                 $subscription = Subscription::create([
-                    'endpoint'        => $sub->endpoint,
+                    'endpoint' => $sub->endpoint,
                     'keys' => [
                         'p256dh' => $sub->p256dh_key,
                         'auth'   => $sub->auth_token,
@@ -54,20 +76,24 @@ class WebPushService
                 ]);
 
                 $this->webPush->queueNotification($subscription, $payload);
-            } catch (\Exception $e) {
-                \Log::warning('Push subscription invalid, removing: ' . $e->getMessage());
+            } catch (\Throwable $e) {
+                \Log::warning('[WebPush] Subscription invalid, removing: ' . $e->getMessage());
                 $sub->delete();
             }
         }
 
-        // Send all queued notifications and clean up expired/invalid ones
-        foreach ($this->webPush->flush() as $report) {
-            if (!$report->isSuccess()) {
-                // Endpoint gone (410) or not found (404) → remove from DB
-                if (in_array($report->getResponse()?->getStatusCode(), [404, 410])) {
-                    PushSubscription::where('endpoint', $report->getEndpoint())->delete();
+        // Send all queued and clean up expired/invalid
+        try {
+            foreach ($this->webPush->flush() as $report) {
+                if (!$report->isSuccess()) {
+                    $statusCode = $report->getResponse()?->getStatusCode();
+                    if (in_array($statusCode, [404, 410])) {
+                        PushSubscription::where('endpoint', $report->getEndpoint())->delete();
+                    }
                 }
             }
+        } catch (\Throwable $e) {
+            \Log::error('[WebPush] Flush error: ' . $e->getMessage());
         }
     }
 }
