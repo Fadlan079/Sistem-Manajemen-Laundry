@@ -94,7 +94,7 @@ export function usePushNotifications() {
 
             // Send subscription to backend
             const subJson = subscription.toJSON();
-            await fetch(route('push.subscribe'), {
+            await fetch('/push/subscribe', {
                 method:  'POST',
                 headers: {
                     'Content-Type':     'application/json',
@@ -124,7 +124,7 @@ export function usePushNotifications() {
             const subscription   = await registration.pushManager.getSubscription();
 
             if (subscription) {
-                await fetch(route('push.unsubscribe'), {
+                await fetch('/push/unsubscribe', {
                     method:  'POST',
                     headers: {
                         'Content-Type': 'application/json',
