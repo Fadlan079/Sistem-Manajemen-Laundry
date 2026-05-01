@@ -30,8 +30,10 @@ export function usePushNotifications() {
     async function registerServiceWorker() {
         if (!isSupported.value) return null;
         try {
+            console.log('[Push] Registering Service Worker...');
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             await navigator.serviceWorker.ready;
+            console.log('[Push] Service Worker ready.');
             return registration;
         } catch (err) {
             console.error('[Push] Service Worker registration failed:', err);
@@ -48,8 +50,13 @@ export function usePushNotifications() {
     }
 
     async function subscribe() {
-        if (!isSupported.value || !VAPID_PUBLIC_KEY) {
-            console.warn('[Push] Not supported or VAPID key missing.');
+        console.log('[Push] Starting subscription process...');
+        if (!isSupported.value) {
+            console.warn('[Push] Browser not supported.');
+            return;
+        }
+        if (!VAPID_PUBLIC_KEY) {
+            console.warn('[Push] VAPID public key missing. Check your .env and rebuild (npm run dev).');
             return;
         }
 
@@ -57,21 +64,26 @@ export function usePushNotifications() {
 
         try {
             const registration = await registerServiceWorker();
-            if (!registration) return;
+            if (!registration) {
+                console.error('[Push] Could not get SW registration.');
+                return;
+            }
 
             // Check existing
             let subscription = await getExistingSubscription(registration);
+            console.log('[Push] Existing subscription:', subscription);
 
             if (!subscription) {
-                // Request permission + subscribe
+                console.log('[Push] Requesting permission...');
                 const permission = await Notification.requestPermission();
                 permissionStatus.value = permission;
+                console.log('[Push] Permission status:', permission);
 
                 if (permission !== 'granted') {
-                    console.log('[Push] Permission denied by user.');
                     return;
                 }
 
+                console.log('[Push] Creating new subscription via PushManager...');
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly:      true,
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),

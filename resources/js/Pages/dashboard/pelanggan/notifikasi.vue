@@ -1,6 +1,14 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/app.vue';
+import { usePushNotifications } from '@/Composables/usePushNotifications.js';
+import { onMounted } from 'vue';
+
+const { isSupported, isSubscribed, permissionStatus, subscribe, isLoading, init: initPush } = usePushNotifications();
+
+onMounted(() => {
+    initPush();
+});
 
 const props = defineProps({
     notifications: Object,
@@ -87,9 +95,31 @@ const formatTime = (date) => {
 
         <div class="bg-gray-50 min-h-screen pb-32">
             <div class="max-w-2xl mx-auto px-4 mt-8 relative z-20">
-                
                 <!-- Action Header -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                    
+                    <!-- Push Notification Banner -->
+                    <div v-if="isSupported && permissionStatus !== 'granted'" class="w-full bg-blue-600 rounded-2xl p-6 text-white shadow-lg border border-blue-400 mb-6 relative overflow-hidden group">
+                        <!-- Decorative background -->
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        
+                        <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+                            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                                <i class="fa-solid fa-mobile-screen-button text-2xl animate-bounce"></i>
+                            </div>
+                            <div class="flex-1 text-center sm:text-left">
+                                <h3 class="text-lg font-black uppercase tracking-tight mb-1">Dapatkan Notifikasi di HP</h3>
+                                <p class="text-xs text-blue-100 font-medium leading-relaxed">Jangan lewatkan pembaruan pesanan Anda. Aktifkan notifikasi browser sekarang!</p>
+                            </div>
+                            <button 
+                                @click="subscribe"
+                                :disabled="isLoading"
+                                class="bg-white text-blue-600 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[11px] hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
+                            >
+                                {{ isLoading ? 'Menghubungkan...' : 'Aktifkan Sekarang' }}
+                            </button>
+                        </div>
+                    </div>
                     <!-- Filters -->
                     <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-sm overflow-x-auto no-scrollbar">
                         <button 
