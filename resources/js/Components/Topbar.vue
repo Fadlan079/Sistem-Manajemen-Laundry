@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { usePage, router } from '@inertiajs/vue3';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
@@ -13,6 +13,32 @@ defineProps({
 });
 
 defineEmits(['toggle-sidebar']);
+
+// Global Search Logic
+const searchStr = ref(page.props.filters?.search || '');
+
+watch(() => page.props.filters?.search, (newVal) => {
+    if (newVal !== undefined && newVal !== searchStr.value) {
+        searchStr.value = newVal || '';
+    }
+});
+
+let timeout;
+watch(searchStr, (value) => {
+    // Prevent redundant requests if it matches current URL state
+    if (value === (page.props.filters?.search || '')) return;
+
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+        const url = new URL(window.location.href);
+        if (value) {
+            url.searchParams.set('search', value);
+        } else {
+            url.searchParams.delete('search');
+        }
+        router.get(url.pathname + url.search, {}, { preserveState: true, preserveScroll: true, replace: true });
+    }, 300);
+});
 </script>
 
 <template>
@@ -43,6 +69,7 @@ defineEmits(['toggle-sidebar']);
                 </div>
                 <input 
                     type="text" 
+                    v-model="searchStr"
                     placeholder="Search..." 
                     class="block w-full pl-10 pr-3 py-2 border border-border rounded-full bg-container text-sm placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all shadow-sm"
                 >

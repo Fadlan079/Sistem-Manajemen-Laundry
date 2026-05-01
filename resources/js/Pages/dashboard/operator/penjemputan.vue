@@ -10,7 +10,7 @@ const props = defineProps({
     filters: Object,
 });
 
-const searchStr = ref(props.filters.search || '');
+const searchStr = computed(() => props.filters.search || '');
 const dateFilter = ref(props.filters.date || '');
 
 const tabs = computed(() => [
@@ -20,23 +20,7 @@ const tabs = computed(() => [
     { id: 'terlama', name: 'Terlama', count: props.stats.terlama, active: props.filters.tab === 'terlama', alert: true },
 ]);
 
-// Custom debounce function
-const debounce = (cb, delay) => {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => cb(...args), delay);
-    };
-};
-
-// Handle search with debounce
-watch(searchStr, debounce((value) => {
-    router.get(route('operator.penjemputan'), {
-        tab: props.filters.tab,
-        search: value,
-        date: dateFilter.value
-    }, { preserveState: true, preserveScroll: true, replace: true });
-}, 300));
+// Removed local search watcher because Topbar handles it
 
 // Handle date filter change
 watch(dateFilter, (value) => {
@@ -234,15 +218,6 @@ function highlight(text, query) {
                         </button>
                     </div>
 
-                    <!-- Search Box -->
-                    <div class="w-full sm:max-w-xs relative text-sm">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-muted"></i>
-                        <input type="text" v-model="searchStr" placeholder="Cari INV-..., nama, atau no. HP..."
-                            class="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-muted/60 text-text" />
-                        <span v-if="searchStr" class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                            {{ deliveries.total }} hasil
-                        </span>
-                    </div>
                 </div>
             </div>
 

@@ -2,13 +2,13 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
-import { Line } from 'vue-chartjs';
+import { Line, Doughnut } from 'vue-chartjs';
 import {
     Chart as ChartJS, Title, Tooltip, Legend,
-    LineElement, LinearScale, PointElement, CategoryScale, Filler
+    LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement
 } from 'chart.js';
 
-ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler);
+ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement);
 
 const user = computed(() => usePage().props.auth.user);
 
@@ -21,6 +21,7 @@ const props = defineProps({
     urgentPickups:  Array,
     urgentPayments: Array,
     weeklyTrend:    Array,
+    statusDist:     Array,
 });
 
 const formatRupiah = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v ?? 0);
@@ -69,6 +70,24 @@ const chartOptions = {
         y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 9 }, color: '#aaa', precision: 0 } },
         x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 }, color: '#aaa' } },
     },
+};
+
+const chartStatusData = computed(() => ({
+    labels: ['Selesai', 'Diproses', 'Pending', 'Diantar', 'Dijemput'],
+    datasets: [{
+        data: props.statusDist ?? [0,0,0,0,0],
+        backgroundColor: ['#059669','#d97706','#6366f1','#3b82f6','#14b8a6'],
+        borderWidth: 0, hoverOffset: 4
+    }]
+}));
+
+const doughnutOptions = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'right', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } },
+        tooltip: { backgroundColor: '#111', titleFont: { size: 10 }, bodyFont: { size: 12, weight: 'bold' }, padding: 12, cornerRadius: 4, displayColors: true }
+    },
+    cutout: '70%'
 };
 
 const totalAlert = computed(() =>
@@ -251,7 +270,7 @@ const totalAlert = computed(() =>
                 </div>
             </div>
 
-            <!-- ══ ROW 4: Chart + Urgent Pickups ══ -->
+            <!-- ══ ROW 4: Charts ══ -->
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <!-- Chart -->
                 <div class="lg:col-span-3 bg-surface border border-border rounded-xl p-5 shadow-sm">
@@ -270,8 +289,21 @@ const totalAlert = computed(() =>
                     </div>
                 </div>
 
+                <!-- Doughnut -->
+                <div class="lg:col-span-2 bg-surface border border-border rounded-xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-black text-text">Status Pesanan</h3>
+                    </div>
+                    <div class="h-48">
+                        <Doughnut :data="chartStatusData" :options="doughnutOptions" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ ROW 5: Urgents ══ -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Urgent Pickups -->
-                <div class="lg:col-span-2 bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
+                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-sm font-black text-text">Jemput Menunggu</h3>
                         <Link :href="route('operator.penjemputan', { tab: 'belum-diassign' })"
@@ -302,43 +334,9 @@ const totalAlert = computed(() =>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ══ ROW 5: Recent Orders + Urgent Payments ══ -->
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <!-- Recent Orders -->
-                <div class="lg:col-span-3 bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-border">
-                        <h3 class="text-sm font-black text-text">Pesanan Terbaru</h3>
-                        <Link :href="route('operator.pesanan.masuk')" class="text-[10px] font-bold text-primary hover:underline">Lihat Semua →</Link>
-                    </div>
-                    <div v-if="!recentOrders?.length" class="text-sm text-muted italic text-center py-10">Belum ada pesanan.</div>
-                    <div v-else>
-                        <div v-for="o in recentOrders" :key="o.id"
-                            class="flex items-center gap-3 px-5 py-3 border-b border-border/60 hover:bg-container/40 transition last:border-b-0">
-                            <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0 uppercase">
-                                {{ o.customer?.charAt(0) }}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-[10px] font-mono font-bold text-primary">{{ o.invoice }}</span>
-                                    <span class="text-xs font-bold text-text truncate">{{ o.customer }}</span>
-                                </div>
-                                <p class="text-[10px] text-muted">{{ o.service }} · {{ o.date }}</p>
-                            </div>
-                            <div class="flex flex-col items-end gap-1 shrink-0">
-                                <span :class="getStatus(o.status).cls" class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1">
-                                    <span :class="getStatus(o.status).dot" class="w-1.5 h-1.5 rounded-full"></span>
-                                    {{ getStatus(o.status).label }}
-                                </span>
-                                <span class="text-[10px] font-mono font-bold text-text">{{ formatRupiah(o.total) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Urgent Payments -->
-                <div class="lg:col-span-2 bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
+                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-sm font-black text-text">Tagihan Menunggu</h3>
                         <Link :href="route('operator.pembayaran', { tab: 'belum-lunas' })"
@@ -377,6 +375,37 @@ const totalAlert = computed(() =>
                         class="mt-3 w-full text-center text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-lg transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-money-bill-wave"></i> Proses Pembayaran
                     </Link>
+                </div>
+            </div>
+
+            <!-- ══ ROW 6: Recent Orders ══ -->
+            <div class="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+                    <h3 class="text-sm font-black text-text">Pesanan Terbaru</h3>
+                    <Link :href="route('operator.pesanan.masuk')" class="text-[10px] font-bold text-primary hover:underline">Lihat Semua →</Link>
+                </div>
+                <div v-if="!recentOrders?.length" class="text-sm text-muted italic text-center py-10">Belum ada pesanan.</div>
+                <div v-else>
+                    <div v-for="o in recentOrders" :key="o.id"
+                        class="flex items-center gap-3 px-5 py-3 border-b border-border/60 hover:bg-container/40 transition last:border-b-0">
+                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0 uppercase">
+                            {{ o.customer?.charAt(0) }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] font-mono font-bold text-primary">{{ o.invoice }}</span>
+                                <span class="text-xs font-bold text-text truncate">{{ o.customer }}</span>
+                            </div>
+                            <p class="text-[10px] text-muted">{{ o.service }} · {{ o.date }}</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 shrink-0">
+                            <span :class="getStatus(o.status).cls" class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span :class="getStatus(o.status).dot" class="w-1.5 h-1.5 rounded-full"></span>
+                                {{ getStatus(o.status).label }}
+                            </span>
+                            <span class="text-[10px] font-mono font-bold text-text">{{ formatRupiah(o.total) }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

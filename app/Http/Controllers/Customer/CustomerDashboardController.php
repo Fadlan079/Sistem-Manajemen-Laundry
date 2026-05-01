@@ -601,6 +601,9 @@ class CustomerDashboardController extends Controller
         $user = $request->user();
         $midtransOrderId = 'ORD-' . $order->id . '-' . time();
 
+        // Sandbox: set expiry to 30 seconds for faster simulation testing
+        $expiryTime = now()->addSeconds(30);
+
         $params = [
             'transaction_details' => [
                 'order_id'     => $midtransOrderId,
@@ -618,6 +621,11 @@ class CustomerDashboardController extends Controller
                     'quantity' => 1,
                     'name'     => substr($order->service->name ?? 'Layanan Laundry', 0, 50),
                 ],
+            ],
+            'expiry' => [
+                'start_time' => now()->format('Y-m-d H:i:s O'),
+                'unit'       => 'seconds',
+                'duration'   => 30,
             ],
         ];
 

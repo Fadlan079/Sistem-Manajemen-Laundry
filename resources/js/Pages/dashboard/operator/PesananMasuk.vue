@@ -3,16 +3,6 @@ import { Head, usePage, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, onMounted, watch } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 import QrcodeVue from 'qrcode.vue';
-import { Line, Doughnut, Bar } from 'vue-chartjs';
-import {
-    Chart as ChartJS, Title, Tooltip, Legend,
-    LineElement, LinearScale, PointElement, CategoryScale,
-    Filler, ArcElement, BarElement
-} from 'chart.js';
-
-
-ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale,
-    PointElement, CategoryScale, Filler, ArcElement, BarElement);
 
 const props = defineProps({
     orders:    Object,   
@@ -26,12 +16,12 @@ const props = defineProps({
 const flash = computed(() => usePage().props.flash ?? {});
 
 // Search / Filter
-const search       = ref(props.filters?.search ?? '');
+const search       = computed(() => props.filters?.search ?? '');
 const statusFilter = ref(props.filters?.status ?? '');
 const dateFilter   = ref(props.filters?.date   ?? '');
 
 let searchTimeout = null;
-watch([search, statusFilter, dateFilter], () => {
+watch([statusFilter, dateFilter], () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
         router.get(route('operator.pesanan.masuk'), {
@@ -42,22 +32,40 @@ watch([search, statusFilter, dateFilter], () => {
     }, 350);
 });
 
-const isChartExpanded = ref(true);
-onMounted(() => {
-    const saved = localStorage.getItem('operator-pesanan-chart-expanded');
-    if (saved !== null) isChartExpanded.value = saved === 'true';
+const tabs = computed(() => [
+    { id: '', name: 'Semua Status', active: statusFilter.value === '' },
+    { id: 'pending', name: 'Pending', active: statusFilter.value === 'pending' },
+    { id: 'dijemput', name: 'Dijemput', active: statusFilter.value === 'dijemput' },
+    { id: 'diproses', name: 'Diproses', active: statusFilter.value === 'diproses' },
+    { id: 'selesai', name: 'Selesai', active: statusFilter.value === 'selesai' },
+    { id: 'diantar', name: 'Diantar', active: statusFilter.value === 'diantar' },
+]);
 
+const selectTab = (tabId) => {
+    statusFilter.value = tabId;
+};
+
+// Utility to highlight search term in text
+function highlight(text, query) {
+    if (!query || !text) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return String(text).replace(regex, '<mark class="bg-yellow-200 text-yellow-900 rounded px-0.5">$1</mark>');
+}
+
+
+
+// Modals CRUD
+const showAddModal = ref(false);
+const showEditModal = ref(false);
+
+onMounted(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('action') === 'add') {
         openCreateForm();
         window.history.replaceState({}, '', window.location.pathname);
     }
 });
-watch(isChartExpanded, v => localStorage.setItem('operator-pesanan-chart-expanded', v));
-
-// Modals CRUD
-const showAddModal = ref(false);
-const showEditModal = ref(false);
 
 const addForm = useForm({
     user_id: '',
@@ -330,214 +338,177 @@ async function cetakNota(o) {
     printingId.value = null;
 }
 
-// Chart Configs
-const tooltipDefaults = { backgroundColor: '#0A0A0B', titleFont: { family: 'Space Mono', size: 10 }, bodyFont: { family: 'Inter', size: 12, weight: 'bold' }, padding: 12, cornerRadius: 4 };
-const doughnutOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } }, tooltip: { ...tooltipDefaults, displayColors: true } }, cutout: '70%' };
-const lineOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { ...tooltipDefaults, displayColors: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, border: { display: false }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' } }, x: { grid: { display: false }, border: { display: false }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' } } } };
-const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } }, tooltip: { ...tooltipDefaults } }, scales: { x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' } }, y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, border: { display: false }, ticks: { font: { family: 'Space Mono', size: 9 }, color: '#888' } } } };
 
-const statCards = computed(() => [
-    { label: 'Total Pesanan',   value: props.stats?.total    ?? 0, icon: 'fa-shopping-bag',  color: 'text-blue-600',   bg: 'bg-blue-500/10' },
-    { label: 'Pesanan Selesai', value: props.stats?.selesai  ?? 0, icon: 'fa-circle-check',  color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { label: 'Sedang Diproses', value: props.stats?.diproses ?? 0, icon: 'fa-spinner',       color: 'text-amber-600',  bg: 'bg-amber-500/10' },
-    { label: 'Menunggu',        value: props.stats?.pending  ?? 0, icon: 'fa-clock',         color: 'text-rose-600',   bg: 'bg-rose-500/10' },
-]);
-
-const chartStatusData = computed(() => ({ labels: ['Selesai', 'Diproses', 'Pending', 'Diantar', 'Dijemput'], datasets: [{ data: props.chartData?.statusDist ?? [0,0,0,0,0], backgroundColor: ['#059669','#d97706','#6366f1','#3b82f6','#14b8a6'], borderWidth: 0, hoverOffset: 4 }] }));
-const chartTrendData = computed(() => ({ labels: (props.chartData?.weeklyTrend ?? []).map(d => d.label), datasets: [{ label: 'Pesanan Masuk', data: (props.chartData?.weeklyTrend ?? []).map(d => d.value), borderColor: '#5B4CF3', backgroundColor: 'rgba(91,76,243,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#fff', pointBorderColor: '#5B4CF3', pointBorderWidth: 2, pointHoverRadius: 6 }] }));
-const chartPaymentData = computed(() => ({ labels: ['Transfer Bank', 'Tunai', 'E-Wallet'], datasets: [{ data: props.chartData?.paymentMethods ?? [0,0,0], backgroundColor: ['#5B4CF3','#059669','#0891b2'], borderWidth: 0, hoverOffset: 4 }] }));
-const barSvcColors = ['#3b82f6','#d97706','#8b5cf6'];
-const chartServiceData = computed(() => {
-    const names  = props.chartData?.serviceNames ?? [];
-    const months = props.chartData?.topServices  ?? [];
-    return { labels: months.map(m => m.label), datasets: names.map((name, i) => ({ label: name, data: months.map(m => m[name] ?? 0), backgroundColor: barSvcColors[i] ?? '#888', borderRadius: 4 })) };
-});
 </script>
 
 <template>
     <Head title="Pesanan Masuk - Hi Wash Operator" />
 
     <DashboardLayout title="Pesanan Masuk">
-        <div class="space-y-10 pb-20">
+        <div class="space-y-6 pb-20">
 
-            <!-- Flash -->
-            <div v-if="flash.success" class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-sm px-5 py-3 text-sm font-bold">
-                <i class="fa-solid fa-circle-check"></i> {{ flash.success }}
-            </div>
-            <div v-if="flash.error" class="flex items-center gap-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-sm px-5 py-3 text-sm font-bold">
-                <i class="fa-solid fa-circle-xmark"></i> {{ flash.error }}
-            </div>
-
-            <!-- Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div v-for="(stat, i) in statCards" :key="i"
-                    class="bg-surface border border-border p-6 rounded-sm shadow-sm relative group hover:border-primary/50 transition-all overflow-hidden">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity"><i :class="['fa-solid', stat.icon]" class="text-6xl"></i></div>
-                    <div class="flex items-center gap-4 mb-4">
-                        <div :class="[stat.bg, stat.color]" class="w-10 h-10 rounded-full flex items-center justify-center text-sm"><i :class="['fa-solid', stat.icon]"></i></div>
-                        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">{{ stat.label }}</span>
-                    </div>
-                    <h3 class="text-3xl font-black text-text tracking-tighter">{{ stat.value.toLocaleString('id-ID') }}</h3>
-                </div>
-            </div>
-
-            <!-- Chart Section (Collapsible) -->
-            <div class="bg-surface border border-border rounded-sm shadow-sm overflow-hidden">
-                <button @click="isChartExpanded = !isChartExpanded"
-                    class="w-full flex items-center justify-between px-6 py-4 hover:bg-container/50 transition-colors">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs"><i class="fa-solid fa-chart-pie"></i></div>
-                        <h3 class="text-xs font-black uppercase tracking-[0.3em] text-text">Visual Analitik - Tren Order</h3>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <i :class="['fa-solid transition-transform duration-300', isChartExpanded ? 'fa-chevron-up' : 'fa-chevron-down text-primary']"></i>
-                    </div>
-                </button>
-                <transition enter-active-class="transition-all duration-500 ease-out" leave-active-class="transition-all duration-300 ease-in"
-                    enter-from-class="max-h-0 opacity-0" enter-to-class="max-h-[2000px] opacity-100" leave-from-class="max-h-[2000px] opacity-100" leave-to-class="max-h-0 opacity-0">
-                    <div v-show="isChartExpanded" class="p-6 border-t border-dashed border-border overflow-hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
-                            <div class="flex flex-col space-y-4">
-                                <div class="border-b border-dashed border-border pb-2"><h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Status Pesanan</h4></div>
-                                <div class="h-48 md:h-56 w-full relative"><Doughnut :data="chartStatusData" :options="doughnutOptions" /></div>
-                            </div>
-                            <div class="flex flex-col space-y-4">
-                                <div class="border-b border-dashed border-border pb-2"><h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-text">Trend Pesanan 7 Hari Terakhir</h4></div>
-                                <div class="h-48 md:h-56 w-full relative"><Line :data="chartTrendData" :options="lineOptions" /></div>
-                            </div>
-                        </div>
-                    </div>
-                </transition>
-            </div>
-
-            <!-- Header Tabel  -->
+            <!-- Header and Action -->
             <div class="flex items-center justify-between pb-4 border-b border-border">
                 <div class="flex flex-col">
                     <h2 class="text-xl font-black text-text tracking-tighter">Manajemen Pesanan</h2>
                     <p class="text-xs text-muted">Kelola data pesanan masuk pelanggan</p>
                 </div>
                 <button @click="openCreateForm"
-                    class="px-5 py-2.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-3">
+                    class="px-5 py-2.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-md hover:bg-primary-hover transition-all shadow-md flex items-center gap-3">
                     <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Tambah Pesanan</span>
                 </button>
             </div>
 
-            <!-- Table Filters Option -->
-            <div class="space-y-4">
-                <div class="flex flex-col md:flex-row gap-3 justify-between items-end">
-                    <div class="w-full md:max-w-md relative group">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
-                        <input v-model="search" type="text" placeholder="Cari nama pelanggan atau no. invoice..."
-                            class="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm" />
-                    </div>
+            <!-- Flash -->
+            <div v-if="flash.success" class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md px-5 py-3 text-sm font-medium">
+                <i class="fa-solid fa-circle-check"></i> {{ flash.success }}
+            </div>
+            <div v-if="flash.error" class="flex items-center gap-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md px-5 py-3 text-sm font-medium">
+                <i class="fa-solid fa-circle-xmark"></i> {{ flash.error }}
+            </div>
 
-                    <div class="flex flex-col sm:flex-row gap-3 items-end w-full md:w-auto">
-                        <div class="relative w-full sm:w-auto">
-                            <i class="fa-solid fa-calendar-days absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none text-xs"></i>
-                            <input type="date" v-model="dateFilter" class="w-full sm:w-[175px] pl-9 pr-8 py-3 border border-border bg-surface text-text rounded-sm text-sm outline-none focus:border-primary transition" />
+            <!-- Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6">
+                <!-- Total -->
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-muted">Total Pesanan</h3>
+                        <div class="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-shopping-bag text-sm"></i>
                         </div>
-                        <select v-model="statusFilter" class="w-full sm:w-auto px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
-                            <option value="">Semua Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="dijemput">Dijemput</option>
-                            <option value="diproses">Diproses</option>
-                            <option value="selesai">Selesai</option>
-                            <option value="diantar">Diantar</option>
-                        </select>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-semibold text-text">{{ stats?.total ?? 0 }}</p>
+                        <p class="text-xs text-muted mt-2 font-medium">Keseluruhan data</p>
                     </div>
                 </div>
 
-                <!-- Data Table -->
-                <div class="bg-surface border border-border rounded-sm shadow-xl overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                            <tr class="bg-container/50 border-b border-border">
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">No. Invoice</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Pelanggan</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Layanan</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Status</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Total</th>
-                                <th class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-border">
-                            <tr v-if="orders.data.length === 0">
-                                <td colspan="6" class="px-6 py-12 text-center text-muted italic text-sm">
-                                    <i class="fa-solid fa-inbox text-2xl mb-2 block opacity-40"></i>
-                                    Tidak ada pesanan.
-                                </td>
-                            </tr>
-                            <tr v-for="o in orders.data" :key="o.id" class="hover:bg-container/30 transition-colors group">
-                                <td class="px-6 py-4">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold text-text group-hover:text-primary transition-colors font-mono text-sm">{{ o.invoice }}</span>
-                                        <span class="font-mono text-[10px] text-muted mt-0.5">{{ o.date }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 shrink-0 uppercase">
-                                            {{ o.customer.charAt(0) }}
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-text text-sm">{{ o.customer }}</p>
-                                            <p class="text-[10px] text-muted">{{ o.customer_email }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="text-xs font-bold text-text">{{ o.service }}</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-2">
-                                        <div :class="getStatus(o.status).dot" class="w-2 h-2 rounded-full shrink-0"></div>
-                                        <span :class="getStatus(o.status).cls" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap">
-                                            {{ getStatus(o.status).label }}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="font-mono font-bold text-text bg-container/50 px-3 py-1.5 rounded-sm border border-border flex w-fit text-xs">
-                                        {{ formatRupiah(o.total_price) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        <button @click="cetakNota(o)" :disabled="printingId === o.id"
-                                            class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-slate-700 hover:border-slate-700 hover:text-white transition-all disabled:opacity-50" title="Cetak Nota PDF">
-                                            <i v-if="printingId === o.id" class="fa-solid fa-spinner fa-spin text-xs"></i>
-                                            <i v-else class="fa-solid fa-file-pdf text-xs"></i>
-                                        </button>
-                                        <button @click="openEditForm(o)"
-                                            class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-amber-600 hover:bg-amber-600 hover:border-amber-600 hover:text-white transition-all" title="Edit Pesanan">
-                                            <i class="fa-solid fa-pencil text-xs"></i>
-                                        </button>
-                                        <button @click="openDetail(o)"
-                                            class="w-8 h-8 flex items-center justify-center rounded-sm border border-border text-muted hover:bg-primary hover:border-primary hover:text-white transition-all" title="Lihat Detail">
-                                            <i class="fa-solid fa-eye text-xs"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <!-- Selesai -->
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-muted">Pesanan Selesai</h3>
+                        <div class="w-8 h-8 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i class="fa-solid fa-circle-check text-sm"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-semibold text-text">{{ stats?.selesai ?? 0 }}</p>
+                        <p class="text-xs text-emerald-600 mt-2 font-medium">Berhasil diselesaikan</p>
+                    </div>
                 </div>
 
-                <!-- Pagination -->
-                <div v-if="orders.links && orders.links.length > 3" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 pt-2">
-                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest">
-                        Menampilkan {{ orders.from ?? 0 }}–{{ orders.to ?? 0 }} dari {{ orders.total }} pesanan
-                    </p>
-                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                        <template v-for="(link, key) in orders.links" :key="key">
-                            <button
-                                @click="link.url && router.get(link.url, { search: search, status: statusFilter, date: dateFilter }, { preserveState: true, preserveScroll: true })"
-                                :disabled="!link.url" v-html="link.label"
-                                :class="[ link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container', 'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors', !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' , key === 0 ? 'rounded-l-md' : '', key === orders.links.length - 1 ? 'rounded-r-md' : '' ]"
-                            ></button>
-                        </template>
-                    </nav>
+                <!-- Diproses -->
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-muted">Sedang Diproses</h3>
+                        <div class="w-8 h-8 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <i class="fa-solid fa-spinner text-sm fa-spin-pulse"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-semibold text-text">{{ stats?.diproses ?? 0 }}</p>
+                        <p class="text-xs text-amber-600 mt-2 font-medium">Sedang dikerjakan</p>
+                    </div>
                 </div>
+
+                <!-- Menunggu -->
+                <div class="bg-surface border border-border rounded-lg p-5 flex flex-col shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-muted">Menunggu</h3>
+                        <div class="w-8 h-8 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center">
+                            <i class="fa-solid fa-clock text-sm"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-semibold text-text">{{ stats?.pending ?? 0 }}</p>
+                        <p class="text-xs text-rose-600 mt-2 font-medium">Belum diproses</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs & Filter -->
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-surface p-2 border-b border-border mt-4">
+                <div class="flex items-center overflow-x-auto hide-scrollbar gap-1 w-full lg:w-auto">
+                    <button v-for="(tab, index) in tabs" :key="index" @click="selectTab(tab.id)"
+                        class="px-4 py-2.5 text-sm font-medium transition-all rounded-md flex items-center gap-2 whitespace-nowrap"
+                        :class="tab.active ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-primary hover:bg-primary/5'">
+                        {{ tab.name }}
+                    </button>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                    <!-- Date Filter -->
+                    <div class="w-full sm:w-auto relative text-sm">
+                        <input type="date" v-model="dateFilter"
+                            class="w-full sm:w-[150px] px-3 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-text" />
+                        <button v-if="dateFilter" @click="dateFilter = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 bg-surface pl-1">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Data -->
+            <div class="space-y-3 mt-2">
+                <div v-if="orders.data.length === 0" class="text-center py-12 text-muted text-sm border border-border rounded-lg bg-surface">
+                    <i class="fa-solid fa-inbox text-2xl mb-2 block opacity-40"></i>
+                    Tidak ada pesanan ditemukan.
+                </div>
+
+                <template v-for="o in orders.data" :key="o.id">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between border rounded-lg bg-surface p-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-4"
+                        :class="search && (o.customer.toLowerCase().includes(search.toLowerCase()) || o.invoice?.toLowerCase().includes(search.toLowerCase())) ? 'border-yellow-300 ring-1 ring-yellow-300' : 'border-border'">
+
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2.5 mb-1 flex-wrap">
+                                <span class="font-medium text-primary text-xs font-mono" v-html="highlight(o.invoice, search)"></span>
+                                <span class="font-semibold text-text text-base truncate max-w-[200px]" :title="o.customer" v-html="highlight(o.customer, search)"></span>
+                                <span :class="getStatus(o.status).cls" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-current whitespace-nowrap">{{ getStatus(o.status).label }}</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
+                                <div class="flex items-center gap-1.5"><i class="fa-regular fa-calendar text-xs"></i> {{ o.date }}</div>
+                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-shirt text-xs"></i> {{ o.service }}</div>
+                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> {{ o.customer_email }}</div>
+                            </div>
+                        </div>
+
+                        <div class="w-full lg:w-48 shrink-0 flex items-center lg:border-l border-border lg:pl-4">
+                            <div class="flex flex-col">
+                                <span class="font-medium text-text font-mono text-lg">{{ formatRupiah(o.total_price) }}</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest mt-0.5" :class="o.payment_status === 'berhasil' ? 'text-emerald-500' : 'text-amber-500'">{{ o.payment_status === 'berhasil' ? 'LUNAS' : o.payment_status }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0 w-full lg:w-auto justify-end mt-2 lg:mt-0">
+                            <button @click="cetakNota(o)" :disabled="printingId === o.id"
+                                class="w-9 h-9 flex items-center justify-center rounded-md transition-colors border border-border text-muted hover:bg-slate-700 hover:text-white bg-surface disabled:opacity-50" title="Cetak Nota PDF">
+                                <i v-if="printingId === o.id" class="fa-solid fa-spinner fa-spin text-xs"></i>
+                                <i v-else class="fa-solid fa-file-pdf text-xs"></i>
+                            </button>
+                            <button @click="openEditForm(o)"
+                                class="w-9 h-9 flex items-center justify-center rounded-md transition-colors border border-border text-amber-600 hover:bg-amber-600 hover:text-white bg-surface" title="Edit Pesanan">
+                                <i class="fa-solid fa-pencil text-xs"></i>
+                            </button>
+                            <button @click="openDetail(o)"
+                                class="px-3 py-2 rounded-md font-medium text-sm transition-colors border border-border text-text hover:bg-container bg-surface">
+                                Detail
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="orders.links && orders.links.length > 3" class="mt-6 flex justify-center">
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    <template v-for="(link, key) in orders.links" :key="key">
+                        <button
+                            @click="link.url && router.get(link.url, { search: search, status: statusFilter, date: dateFilter }, { preserveState: true, preserveScroll: true })"
+                            :disabled="!link.url" v-html="link.label"
+                            :class="[ link.active ? 'z-10 bg-primary border-primary text-white' : 'bg-surface border-border text-muted hover:bg-container', 'relative inline-flex items-center px-3 py-1.5 border text-sm font-medium transition-colors', !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' , key === 0 ? 'rounded-l-md' : '', key === orders.links.length - 1 ? 'rounded-r-md' : '' ]"
+                        ></button>
+                    </template>
+                </nav>
             </div>
         </div>
 

@@ -117,6 +117,15 @@ class OperatorDashboardController extends Controller
             ];
         });
 
+        // ── Status Distribution ───────────────────────────────────
+        $statusDist = [
+            Order::where('status', 'selesai')->count(),
+            Order::where('status', 'diproses')->count(),
+            Order::where('status', 'pending')->count(),
+            Order::where('status', 'diantar')->count(),
+            Order::where('status', 'dijemput')->count(),
+        ];
+
         return Inertia::render('dashboard/operator/operator', [
             'pesanan'         => $pesanan,
             'pickup'          => $pickup,
@@ -126,6 +135,7 @@ class OperatorDashboardController extends Controller
             'urgentPickups'   => $urgentPickups,
             'urgentPayments'  => $urgentPayments,
             'weeklyTrend'     => $weeklyTrend,
+            'statusDist'      => $statusDist,
         ]);
     }
 }
