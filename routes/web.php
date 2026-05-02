@@ -48,29 +48,29 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-        Route::get('/manajemen-users',          [UserController::class, 'index'])->name('users');
-        Route::post('/manajemen-users',           [UserController::class, 'store'])->name('users.store');
-        Route::put('/manajemen-users/{user}',     [UserController::class, 'update'])->name('users.update');
-        Route::delete('/manajemen-users/{user}',  [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/manajemen-users', [UserController::class, 'index'])->name('users');
+        Route::post('/manajemen-users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/manajemen-users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/manajemen-users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        Route::get('/manajemen-order',           [OrderController::class, 'index'])->name('orders');
-        Route::post('/manajemen-order',            [OrderController::class, 'store'])->name('orders.store');
-        Route::put('/manajemen-order/{order}',     [OrderController::class, 'update'])->name('orders.update');
-        Route::delete('/manajemen-order/{order}',  [OrderController::class, 'destroy'])->name('orders.destroy');
+        Route::get('/manajemen-order', [OrderController::class, 'index'])->name('orders');
+        Route::post('/manajemen-order', [OrderController::class, 'store'])->name('orders.store');
+        Route::put('/manajemen-order/{order}', [OrderController::class, 'update'])->name('orders.update');
+        Route::delete('/manajemen-order/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
 
-        Route::get('/layanan-laundry',           [ServiceController::class, 'index'])->name('services');
-        Route::post('/layanan-laundry',            [ServiceController::class, 'store'])->name('services.store');
-        Route::put('/layanan-laundry/{service}',   [ServiceController::class, 'update'])->name('services.update');
-        Route::delete('/layanan-laundry/{service}',[ServiceController::class, 'destroy'])->name('services.destroy');
+        Route::get('/layanan-laundry', [ServiceController::class, 'index'])->name('services');
+        Route::post('/layanan-laundry', [ServiceController::class, 'store'])->name('services.store');
+        Route::put('/layanan-laundry/{service}', [ServiceController::class, 'update'])->name('services.update');
+        Route::delete('/layanan-laundry/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
 
-        Route::get('/pickup-delivery',              [DeliveryController::class, 'index'])->name('pickup');
-        Route::post('/pickup-delivery',              [DeliveryController::class, 'store'])->name('pickup.store');
-        Route::put('/pickup-delivery/{delivery}',   [DeliveryController::class, 'update'])->name('pickup.update');
-        Route::delete('/pickup-delivery/{delivery}',[DeliveryController::class, 'destroy'])->name('pickup.destroy');
+        Route::get('/pickup-delivery', [DeliveryController::class, 'index'])->name('pickup');
+        Route::post('/pickup-delivery', [DeliveryController::class, 'store'])->name('pickup.store');
+        Route::put('/pickup-delivery/{delivery}', [DeliveryController::class, 'update'])->name('pickup.update');
+        Route::delete('/pickup-delivery/{delivery}', [DeliveryController::class, 'destroy'])->name('pickup.destroy');
 
         // Banners
-        Route::post('/banners',            [BannerController::class, 'store'])->name('banners.store');
-        Route::put('/banners/{banner}',    [BannerController::class, 'update'])->name('banners.update');
+        Route::post('/banners', [BannerController::class, 'store'])->name('banners.store');
+        Route::put('/banners/{banner}', [BannerController::class, 'update'])->name('banners.update');
         Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
     });
 
@@ -96,7 +96,7 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         Route::get('/pengantaran', [PengantaranController::class, 'index'])->name('pengantaran');
         Route::put('/pengantaran/{delivery}/assign', [PengantaranController::class, 'assignCourier'])->name('pengantaran.assign');
         Route::put('/pengantaran/{delivery}/diantar', [PengantaranController::class, 'markAsDelivered'])->name('pengantaran.diantar');
-        
+
         Route::get('/pembayaran', [PembayaranController::class, 'index'])->name('pembayaran');
         Route::put('/pembayaran/{order}', [PembayaranController::class, 'processPayment'])->name('pembayaran.process');
 
@@ -113,7 +113,7 @@ Route::middleware(['auth', 'verified', 'role:kurir'])
     ->group(function () {
         Route::get('/dashboard', [KurirDashboardController::class, 'index'])->name('dashboard');
         Route::put('/deliveries/{delivery}/selesai', [KurirDashboardController::class, 'markAsCompleted'])->name('deliveries.selesai');
-        
+
         // Return view for detail order
         Route::get('/pesanan/{id}', [KurirDashboardController::class, 'detail'])->name('detail');
     });
@@ -187,19 +187,22 @@ Route::get('/search/services', [HomeController::class, 'searchServices'])->name(
 //  TEMP: Midtrans Test Seed (local only)
 // ─────────────────────────────────────────────
 Route::get('/test-midtrans-seed', function () {
-    if (!app()->isLocal()) abort(403);
+    if (!app()->isLocal())
+        abort(403);
     $user = \App\Models\User::where('email', 'pelanggan@test.com')->first();
-    if (!$user) return 'User not found';
+    if (!$user)
+        return 'User not found';
     $order = \App\Models\Order::where('user_id', $user->id)->latest()->first();
-    if (!$order) return 'No order found';
+    if (!$order)
+        return 'No order found';
     $order->update(['total_price' => 35000]);
     \App\Models\OrderItem::where('order_id', $order->id)->update(['qty' => 5]);
     return "Done! Order #{$order->id} simulated. Total=35000, Qty=5kg. Visit: /pelanggan/aktivitas/{$order->id}";
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 // Test push (local only)
 if (app()->isLocal()) {
-    require __DIR__.'/test_push.php';
+    require __DIR__ . '/test_push.php';
 }

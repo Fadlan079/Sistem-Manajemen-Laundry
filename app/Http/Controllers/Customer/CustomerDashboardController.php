@@ -183,7 +183,7 @@ class CustomerDashboardController extends Controller
         // Base service price from order item (already the original price)
         $unitPrice    = (float) ($firstItem?->price ?? $order->service->price ?? 0);
         $servicePrice = $isCalculated ? $unitPrice * $qty : 0;
-        
+
         $hasPickup   = $order->deliveries->where('type', 'pickup')->isNotEmpty();
         $hasDelivery = $order->deliveries->where('type', 'delivery')->isNotEmpty();
 
@@ -509,10 +509,10 @@ class CustomerDashboardController extends Controller
 
         $isKg = in_array(strtolower($service->unit), ['/kg', 'kg']);
         $fixedQty = 0;
-        
+
         $baseServicePrice = (float) $service->price;
         $discountAmountPerUnit = 0;
-        
+
         $useDiscount = $request->input('use_discount', false);
         if ($useDiscount && $service->is_discount_today) {
             $discountAmountPerUnit = $baseServicePrice - (float) $service->discounted_price;
@@ -520,7 +520,7 @@ class CustomerDashboardController extends Controller
 
         $extraPricing = 0;
         $extraList = [];
-        
+
         if (!empty($validated['extra_services'])) {
             if (in_array('express', $validated['extra_services'])) {
                 $extraPrice = $baseServicePrice * 0.5;
@@ -536,10 +536,10 @@ class CustomerDashboardController extends Controller
                 $extraList[] = ['type' => 'own_perfume', 'label' => 'Pewangi Sendiri', 'price' => 0];
             }
         }
-        
+
         // Price per unit = original base price + extra features - discount
         $combinedUnitPrice = $baseServicePrice + $extraPricing - $discountAmountPerUnit;
-        
+
         if (!$isKg && !empty($validated['item_qty'])) {
             $fixedQty = $validated['item_qty'];
             $totalPrice += ($fixedQty * $combinedUnitPrice);
@@ -746,7 +746,7 @@ class CustomerDashboardController extends Controller
 
         try {
             $status = \Midtrans\Transaction::status($payment->midtrans_order_id);
-            
+
             // Log status for debugging if needed
             // \Log::info('Midtrans Status for ' . $payment->midtrans_order_id . ': ' . $status->transaction_status);
 
@@ -781,7 +781,7 @@ class CustomerDashboardController extends Controller
             return response()->json(['status' => $status->transaction_status, 'message' => 'Status pembayaran: ' . $status->transaction_status]);
         } catch (\Exception $e) {
             $errorMessage = $e->getMessage();
-            
+
             if (str_contains($errorMessage, '404') && str_contains($errorMessage, "Transaction doesn't exist")) {
                 return response()->json([
                     'status' => 'pending',

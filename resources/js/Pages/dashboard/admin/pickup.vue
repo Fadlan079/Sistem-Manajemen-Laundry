@@ -3,15 +3,10 @@ import { Head, usePage, useForm, router, Link } from '@inertiajs/vue3';
 import { computed, ref, onMounted, watch } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 import { Line, Doughnut, Bar } from 'vue-chartjs';
-import { 
+import {
     Chart as ChartJS, Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement, BarElement
 } from 'chart.js';
-import Modal from '@/Components/Modal.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import TextInput from '@/Components/TextInput.vue';
-import InputError from '@/Components/InputError.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, LinearScale, PointElement, CategoryScale, Filler, ArcElement, BarElement);
 
@@ -74,7 +69,7 @@ const chartStatusData = computed(() => {
         labels: ['Selesai', 'Diperjalanan', 'Menunggu'],
         datasets: [{
             data: props.chartData.statusDist,
-            backgroundColor: ['#059669', '#3b82f6', '#d97706'], 
+            backgroundColor: ['#059669', '#3b82f6', '#d97706'],
             borderWidth: 0,
             hoverOffset: 4
         }]
@@ -120,7 +115,7 @@ const chartTimeData = computed(() => {
         labels: ['Selesai', 'Sedang Diproses'],
         datasets: [{
             data: props.chartData.timeDist,
-            backgroundColor: ['#059669', '#f59e0b'], 
+            backgroundColor: ['#059669', '#f59e0b'],
             borderWidth: 0,
             hoverOffset: 4
         }]
@@ -199,8 +194,8 @@ const getTypeClass = (type) => {
                     @click="tab = 'pickup'"
                     :class="[
                         'px-6 py-4 text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap',
-                        tab === 'pickup' 
-                            ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                        tab === 'pickup'
+                            ? 'text-primary border-b-2 border-primary bg-primary/5'
                             : 'text-muted hover:text-text hover:bg-container'
                     ]"
                 >
@@ -210,8 +205,8 @@ const getTypeClass = (type) => {
                     @click="tab = 'delivery'"
                     :class="[
                         'px-6 py-4 text-xs font-black tracking-widest uppercase transition-all whitespace-nowrap',
-                        tab === 'delivery' 
-                            ? 'text-primary border-b-2 border-primary bg-primary/5' 
+                        tab === 'delivery'
+                            ? 'text-primary border-b-2 border-primary bg-primary/5'
                             : 'text-muted hover:text-text hover:bg-container'
                     ]"
                 >
@@ -222,12 +217,12 @@ const getTypeClass = (type) => {
 
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div v-for="(stat, index) in pickupStats" :key="index" 
+                <div v-for="(stat, index) in pickupStats" :key="index"
                     class="bg-surface border border-border p-6 rounded-sm shadow-sm relative group hover:border-primary/50 transition-all overflow-hidden">
                     <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity">
                         <i :class="['fa-solid', stat.icon]" class="text-6xl"></i>
                     </div>
-                    
+
                     <div class="flex items-center gap-4 mb-4">
                         <div :class="[stat.bg, stat.color]" class="w-10 h-10 rounded-full flex items-center justify-center text-sm">
                             <i :class="['fa-solid', stat.icon]"></i>
@@ -241,7 +236,7 @@ const getTypeClass = (type) => {
 
             <!-- Chart Section (Collapsible) -->
             <div class="bg-surface border border-border rounded-sm shadow-sm overflow-hidden">
-                <button 
+                <button
                     @click="isChartExpanded = !isChartExpanded"
                     class="w-full flex items-center justify-between px-6 py-4 hover:bg-container/50 transition-colors group"
                 >
@@ -260,7 +255,7 @@ const getTypeClass = (type) => {
                     </div>
                 </button>
 
-                <transition 
+                <transition
                     enter-active-class="transition-all duration-500 ease-out"
                     leave-active-class="transition-all duration-300 ease-in"
                     enter-from-class="max-h-0 opacity-0"
@@ -305,7 +300,7 @@ const getTypeClass = (type) => {
                     <!-- Search -->
                     <div class="w-full md:max-w-md relative group">
                         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
-                        <input v-model="search" type="text" placeholder="Cari alamat, nama pelanggan, atau kurir..." 
+                        <input v-model="search" type="text" placeholder="Cari alamat, nama pelanggan, atau kurir..."
                             class="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm">
                     </div>
 

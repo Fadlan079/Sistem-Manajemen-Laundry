@@ -34,12 +34,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'cartCount' => fn () => $request->user() 
-                ? $request->user()->orders()->where('status', 'cart')->count() 
+            'cartCount' => fn() => $request->user()
+                ? $request->user()->orders()->where('status', 'cart')->count()
                 : 0,
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
             ],
             'turnstile_site_key' => config('services.turnstile.site_key'),
         ];
