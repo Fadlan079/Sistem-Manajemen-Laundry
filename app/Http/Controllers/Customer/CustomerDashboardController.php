@@ -55,8 +55,11 @@ class CustomerDashboardController extends Controller
 
             // Penentuan UI Badge Status
             if ($dbStatus === 'selesai') {
-                $badgeText = ucfirst($dbStatus);
+                $badgeText = 'Selesai';
                 $badgeColor = 'green';
+            } elseif ($dbStatus === 'antri') {
+                $badgeText = 'Antrean';
+                $badgeColor = 'yellow';
             } elseif ($dbStatus === 'dibatalkan') {
                 $badgeText = 'Dibatalkan';
                 $badgeColor = 'red';
@@ -66,12 +69,15 @@ class CustomerDashboardController extends Controller
             } elseif ($dbStatus === 'diterima') {
                 $badgeText = 'Telah Diterima';
                 $badgeColor = 'green';
-            } elseif (!$isCalculated && $dbStatus === 'dibuat') {
-                $badgeText = 'Menunggu Penjemputan';
+            } elseif ($dbStatus === 'dijemput') {
+                $badgeText = 'Penjemputan';
                 $badgeColor = 'blue';
-            } elseif ($isCalculated && $paymentStatus === 'UNPAID') {
-                $badgeText = 'Menunggu Pembayaran';
-                $badgeColor = 'yellow';
+            } elseif ($dbStatus === 'diproses') {
+                $badgeText = 'Diproses';
+                $badgeColor = 'blue';
+            } elseif ($dbStatus === 'dibuat') {
+                $badgeText = 'Baru';
+                $badgeColor = 'blue';
             } else {
                 $badgeText = ucfirst($dbStatus);
                 $badgeColor = 'blue';

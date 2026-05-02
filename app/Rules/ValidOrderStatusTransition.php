@@ -22,13 +22,15 @@ class ValidOrderStatusTransition implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         $allowedTransitions = [
-            'cart' => ['dibuat'],
-            'dibuat' => ['dijemput', 'diproses', 'dibatalkan'],
-            'dijemput' => ['diproses', 'dibatalkan'],
-            'diproses' => ['selesai'],
-            'selesai' => ['diantar', 'diterima'], 
-            'diantar' => ['diterima'],
-            'diterima' => [],
+            'cart'       => ['dibuat'],
+            'pending'    => ['antri', 'dijemput', 'diproses', 'dibatalkan'],
+            'dibuat'     => ['antri', 'dijemput', 'diproses', 'dibatalkan'],
+            'antri'      => ['dijemput', 'diproses', 'dibatalkan'],
+            'dijemput'   => ['diproses', 'dibatalkan'],
+            'diproses'   => ['selesai'],
+            'selesai'    => ['diantar', 'diterima'], 
+            'diantar'    => ['diterima'],
+            'diterima'   => [],
             'dibatalkan' => [], 
         ];
 

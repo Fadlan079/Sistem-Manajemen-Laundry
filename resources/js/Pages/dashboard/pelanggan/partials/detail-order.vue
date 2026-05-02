@@ -28,10 +28,9 @@ const page = usePage();
 const flash = computed(() => page.props.flash ?? {});
 
 const steps = computed(() => {
-    let s = ['Dibuat'];
+    let s = ['Dibuat', 'Antri'];
     if (props.order.hasPickup) s.push('Dijemput');
-    s.push('Diproses');
-    s.push('Selesai');
+    s.push('Diproses', 'Selesai');
     if (props.order.hasDelivery) s.push('Diantar');
     s.push('Diterima');
     return s;
@@ -273,24 +272,21 @@ function batalkanPesanan() {
 
 function getStepIndex() {
     const status = props.order.dbStatus;
-    if (status === 'diterima') return steps.value.length;
-    if (status === 'dibatalkan') return steps.value.indexOf('Dibuat');
-
-    let activeLabel = 'Dibuat';
+    if (status === 'dibatalkan') return 0;
     
-    if (status === 'pending' || status === 'dibuat' || status === 'dijemput') {
-        // Jika sedang dibuat atau sedang dijemput, maka step aktif adalah 'Dijemput' (atau 'Diproses' jika tidak ada pickup)
-        activeLabel = props.order.hasPickup ? 'Dijemput' : 'Diproses';
-    } else if (status === 'diproses') {
-        activeLabel = 'Diproses';
-    } else if (status === 'selesai') {
-        activeLabel = 'Selesai';
-    } else if (status === 'diantar') {
-        activeLabel = 'Diantar';
-    }
-
-    const idx = steps.value.indexOf(activeLabel);
-    return idx === -1 ? 0 : idx;
+    const statusToLabel = {
+        'dibuat': 'Dibuat',
+        'antri': 'Antri',
+        'dijemput': 'Dijemput',
+        'diproses': 'Diproses',
+        'selesai': 'Selesai',
+        'diantar': 'Diantar',
+        'diterima': 'Diterima'
+    };
+    
+    const label = statusToLabel[status];
+    const idx = steps.value.indexOf(label);
+    return idx === -1 ? (status === 'diterima' ? steps.value.length - 1 : 0) : idx;
 }
 
 function formatRupiah(val) {
@@ -572,13 +568,17 @@ const estimatedTotalCostText = computed(() => {
 
             <!-- Status Badge Section -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-center gap-4 overflow-hidden relative">
-                <div v-if="order.dbStatus === 'pending'" class="flex flex-col items-center gap-2">
+                <div v-if="order.dbStatus === 'dibuat'" class="flex flex-col items-center gap-2">
                     <div class="flex items-center gap-2 bg-blue-50 text-blue-600 font-bold py-1.5 px-4 rounded-full border border-blue-100 text-[10px] uppercase tracking-widest">
-                        <i class="fas fa-info-circle"></i> Menunggu Penjemputan
+                        <i class="fas fa-info-circle"></i> Pesanan Berhasil Dibuat
                     </div>
-                    <p v-if="countdownText" class="text-[11px] font-black text-gray-500 tracking-wider h-4">
-                        Tersisa: <span class="text-blue-600">{{ countdownText }}</span>
-                    </p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Menunggu Konfirmasi Admin</p>
+                </div>
+                <div v-else-if="order.dbStatus === 'antri'" class="flex flex-col items-center gap-2">
+                    <div class="flex items-center gap-2 bg-amber-50 text-amber-600 font-bold py-1.5 px-4 rounded-full border border-amber-100 text-[10px] uppercase tracking-widest">
+                        <i class="fas fa-hourglass-half"></i> Pesanan Masuk Antrean
+                    </div>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center px-4">Operator telah menerima pesanan Anda</p>
                 </div>
                 <div v-else-if="order.dbStatus === 'dijemput'" class="flex items-center gap-2 bg-emerald-50 text-emerald-600 font-bold py-1.5 px-4 rounded-full border border-emerald-100 text-[10px] uppercase tracking-widest">
                     <i class="fas fa-motorcycle animate-pulse"></i> Kurir Sedang Di Jalan

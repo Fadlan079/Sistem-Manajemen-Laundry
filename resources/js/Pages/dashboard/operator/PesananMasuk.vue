@@ -5,7 +5,7 @@ import DashboardLayout from '@/Layouts/dashboard.vue';
 import QrcodeVue from 'qrcode.vue';
 
 const props = defineProps({
-    orders:    Object,   
+    orders:    Object,
     stats:     Object,
     filters:   Object,
     chartData: Object,
@@ -96,11 +96,20 @@ function openCreateForm() {
 }
 
 function openEditForm(o) {
+    const nextMap = {
+        'pending': 'antri',
+        'dibuat': 'antri',
+        'antri': 'dijemput',
+        'dijemput': 'diproses',
+        'diproses': 'selesai',
+        'selesai': 'diantar',
+        'diantar': 'diterima'
+    };
     editForm.id = o.id;
-    editForm.status = o.status;
+    editForm.status = nextMap[o.status] || o.status;
     editForm.total_price = o.total_price;
     editForm.isKg = o.isKg;
-    editForm.actual_weight = o.isKg ? (o.actual_weight || o.items_qty) : null;
+    editForm.actual_weight = o.isKg ? (o.actual_weight || o.items_qty || 0) : null;
     showEditModal.value = true;
 }
 
@@ -121,6 +130,52 @@ function submitEditForm() {
             showEditModal.value = false;
         }
     });
+}
+
+function handleInstantUpdate(o) {
+    if (o.status === 'diterima' || o.status === 'dibatalkan') return;
+
+    const steps = getSteps(o);
+    const statusToLabel = {
+        'pending': 'Dibuat',
+        'dibuat': 'Dibuat',
+        'antri': 'Antri',
+        'dijemput': 'Dijemput',
+        'diproses': 'Diproses',
+        'selesai': 'Selesai',
+        'diantar': 'Diantar',
+        'diterima': 'Diterima'
+    };
+    const labelToStatus = {
+        'Dibuat': 'dibuat',
+        'Antri': 'antri',
+        'Dijemput': 'dijemput',
+        'Diproses': 'diproses',
+        'Selesai': 'selesai',
+        'Diantar': 'diantar',
+        'Diterima': 'diterima'
+    };
+
+    const currentLabel = statusToLabel[o.status];
+    const currentIndex = steps.indexOf(currentLabel);
+
+    if (currentIndex !== -1 && currentIndex < steps.length - 1) {
+        const nextLabel = steps[currentIndex + 1];
+        const nextStatus = labelToStatus[nextLabel];
+
+        const payload = {
+            status: nextStatus,
+            total_price: o.total_price,
+        };
+        const weightVal = parseFloat(o.actual_weight) || parseFloat(o.items_qty) || 0;
+        if (weightVal > 0) {
+            payload.actual_weight = weightVal;
+        }
+
+        router.put(route('operator.pesanan.masuk.update', o.id), payload, {
+            preserveScroll: true
+        });
+    }
 }
 
 function closeAddModal() {
@@ -223,39 +278,67 @@ function downloadQR() {
     document.body.removeChild(link);
 }
 
-// Detail Modal Stepper
-const detailSteps = computed(() => {
-    if (!viewingOrder.value) return ['Dibuat', 'Diproses', 'Selesai'];
-    const steps = ['Dibuat'];
-    // Assume pickup if status includes dijemput or beyond
-    const hasPickup = ['dijemput', 'diproses', 'selesai', 'diantar', 'diterima'].includes(viewingOrder.value.status);
-    if (hasPickup) steps.push('Dijemput');
-    steps.push('Diproses', 'Selesai');
-    const hasDelivery = ['diantar', 'diterima'].includes(viewingOrder.value.status);
-    if (hasDelivery) steps.push('Diantar');
-    steps.push('Diterima');
-    return steps;
-});
+// Detail Modal Stepper (Linear Workflow)
+
+const getSteps = (o) => {
+    if (!o) return ['Dibuat', 'Antri', 'Diproses', 'Selesai', 'Diterima'];
+    let s = ['Dibuat', 'Antri'];
+    if (o.hasPickup) s.push('Dijemput');
+    s.push('Diproses', 'Selesai');
+    if (o.hasDelivery) s.push('Diantar');
+    s.push('Diterima');
+    return s;
+};
+
+const getOrderStepIndex = (o) => {
+    if (!o) return 0;
+    const steps = getSteps(o);
+    const statusToLabel = {
+        'pending': 'Dibuat',
+        'dibuat': 'Dibuat',
+        'antri': 'Antri',
+        'dijemput': 'Dijemput',
+        'diproses': 'Diproses',
+        'selesai': 'Selesai',
+        'diantar': 'Diantar',
+        'diterima': 'Diterima'
+    };
+    const label = statusToLabel[o.status];
+    const idx = steps.indexOf(label);
+    return idx === -1 ? (o.status === 'diterima' ? steps.length - 1 : 0) : idx;
+};
 
 const detailStepIndex = computed(() => {
     if (!viewingOrder.value) return 0;
-    const statusToStep = {
-        dibuat:   0,
-        dijemput: 1,
-        diproses: detailSteps.value.indexOf('Diproses'),
-        selesai:  detailSteps.value.indexOf('Selesai'),
-        diantar:  detailSteps.value.indexOf('Diantar'),
-        diterima: detailSteps.value.length - 1,
-    };
-    return statusToStep[viewingOrder.value.status] ?? 0;
+    return getOrderStepIndex(viewingOrder.value);
 });
 
+const detailSteps = computed(() => getSteps(viewingOrder.value));
+
 const STATUS_MAP = {
-    pending:  { label: 'Pending',   cls: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
+    pending:  { label: 'Pending',  cls: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-500' },
+    dibuat:   { label: 'Dibuat',   cls: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-500' },
+    antri:    { label: 'Antri',    cls: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
     dijemput: { label: 'Dijemput',  cls: 'bg-teal-100 text-teal-700 border-teal-200',       dot: 'bg-teal-500' },
-    diproses: { label: 'Diproses',  cls: 'bg-amber-100 text-amber-700 border-amber-200',    dot: 'bg-amber-500' },
+    diproses: { label: 'Diproses',  cls: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500' },
     selesai:  { label: 'Selesai',   cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-    diantar:  { label: 'Diantar',   cls: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500' },
+    diantar:  { label: 'Diantar',   cls: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+    diterima: { label: 'Diterima',  cls: 'bg-pink-100 text-pink-700 border-pink-200',       dot: 'bg-pink-500' },
+    dibatalkan: { label: 'Batal',   cls: 'bg-rose-100 text-rose-700 border-rose-200',       dot: 'bg-rose-500' },
+};
+
+const getNextStatusLabel = (status) => {
+    const nextMap = {
+        'pending': 'Terima',
+        'dibuat': 'Terima',
+        'antri': 'Tugaskan Kurir',
+        'dijemput': 'Mulai Proses',
+        'diproses': 'Tandai Selesai',
+        'selesai': 'Tugaskan Kurir',
+        'diantar': 'Konfirmasi Diterima',
+        'diterima': 'Pesanan Selesai'
+    };
+    return nextMap[status] ?? 'Update Status';
 };
 const getStatus = (s) => STATUS_MAP[s] ?? { label: s, cls: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' };
 
@@ -353,17 +436,11 @@ async function cetakNota(o) {
     <DashboardLayout title="Pesanan Masuk">
         <div class="space-y-6 pb-20">
 
-            <!-- Header and Action -->
-            <div class="flex items-center justify-between pb-4 border-b border-border">
-                <div class="flex flex-col">
-                    <h2 class="text-xl font-black text-text tracking-tighter">Manajemen Pesanan</h2>
-                    <p class="text-xs text-muted">Kelola data pesanan masuk pelanggan</p>
-                </div>
-                <button @click="openCreateForm"
-                    class="px-5 py-2.5 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-md hover:bg-primary-hover transition-all shadow-md flex items-center gap-3">
-                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Tambah Pesanan</span>
-                </button>
-            </div>
+            <!-- Minimalist Elegant FAB -->
+            <button @click="openCreateForm"
+                class="fixed bottom-10 right-10 w-12 h-12 bg-primary text-white rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.2)] flex items-center justify-center hover:bg-primary-hover active:scale-95 transition-all z-40 group">
+                <i class="fa-solid fa-plus text-lg transition-transform duration-300 group-hover:rotate-90"></i>
+            </button>
 
             <!-- Flash -->
             <div v-if="flash.success" class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md px-5 py-3 text-sm font-medium">
@@ -439,66 +516,122 @@ async function cetakNota(o) {
                         class="px-4 py-2.5 text-sm font-medium transition-all rounded-md flex items-center gap-2 whitespace-nowrap"
                         :class="tab.active ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-primary hover:bg-primary/5'">
                         {{ tab.name }}
-                    </button>
-                </div>
-
-                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                    <!-- Date Filter -->
-                    <div class="w-full sm:w-auto relative text-sm">
-                        <input type="date" v-model="dateFilter"
-                            class="w-full sm:w-[150px] px-3 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-text" />
-                        <button v-if="dateFilter" @click="dateFilter = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 bg-surface pl-1">
-                            <i class="fa-solid fa-times"></i>
                         </button>
                     </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                        <!-- Date Filter -->
+                        <div class="w-full sm:w-auto relative text-sm">
+                            <input type="date" v-model="dateFilter"
+                                class="w-full sm:w-[150px] px-3 py-2 bg-surface border border-border rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-text" />
+                            <button v-if="dateFilter" @click="dateFilter = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-rose-500 bg-surface pl-1">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- List Data -->
-            <div class="space-y-3 mt-2">
-                <div v-if="orders.data.length === 0" class="text-center py-12 text-muted text-sm border border-border rounded-lg bg-surface">
-                    <i class="fa-solid fa-inbox text-2xl mb-2 block opacity-40"></i>
-                    Tidak ada pesanan ditemukan.
-                </div>
+                <!-- List Data -->
+                <div class="space-y-3 mt-2">
+                    <div v-if="orders.data.length === 0" class="text-center py-12 text-muted text-sm border border-border rounded-lg bg-surface">
+                        <i class="fa-solid fa-inbox text-2xl mb-2 block opacity-40"></i>
+                        Tidak ada pesanan ditemukan.
+                    </div>
 
-                <template v-for="o in orders.data" :key="o.id">
-                    <div class="flex flex-col lg:flex-row lg:items-center justify-between border rounded-lg bg-surface p-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-4"
-                        :class="search && (o.customer.toLowerCase().includes(search.toLowerCase()) || o.invoice?.toLowerCase().includes(search.toLowerCase())) ? 'border-yellow-300 ring-1 ring-yellow-300' : 'border-border'">
+                    <template v-for="o in orders.data" :key="o.id">
+                        <div class="bg-surface border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col lg:flex-row lg:items-center gap-6 group"
+                            :class="search && (o.customer.toLowerCase().includes(search.toLowerCase()) || o.invoice?.toLowerCase().includes(search.toLowerCase())) ? 'border-yellow-300 ring-1 ring-yellow-300' : 'border-border'">
 
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2.5 mb-1 flex-wrap">
-                                <span class="font-medium text-primary text-xs font-mono" v-html="highlight(o.invoice, search)"></span>
-                                <span class="font-semibold text-text text-base truncate max-w-[200px]" :title="o.customer" v-html="highlight(o.customer, search)"></span>
-                                <span :class="getStatus(o.status).cls" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-current whitespace-nowrap">{{ getStatus(o.status).label }}</span>
+                            <!-- Left: Order Identity -->
+                            <div class="flex items-start gap-3 lg:w-[200px] shrink-0">
+                                <div class="w-9 h-9 rounded-lg bg-container flex items-center justify-center text-muted shrink-0 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                                    <i class="fa-solid fa-basket-shopping text-xs"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                        <span class="text-[9px] font-black text-primary font-mono tracking-tight" v-html="highlight(o.invoice, search)"></span>
+                                        <span v-if="o.status === 'dibuat' || o.status === 'pending'" class="px-1.5 py-0.5 bg-red-100 text-[#E30613] text-[7px] font-black uppercase rounded">Baru</span>
+                                        <span :class="getStatus(o.status).cls" class="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest border border-current lg:hidden">
+                                            {{ getStatus(o.status).label }}
+                                        </span>
+                                    </div>
+                                    <h3 class="font-black text-xs lg:text-sm text-text truncate uppercase tracking-tight" v-html="highlight(o.customer, search)"></h3>
+                                    <div class="flex items-center gap-1 text-[9px] text-muted mt-0.5">
+                                        <i class="fa-solid fa-location-dot text-[7px]"></i>
+                                        <p class="truncate">{{ o.pickup_address }}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
-                                <div class="flex items-center gap-1.5"><i class="fa-regular fa-calendar text-xs"></i> {{ o.date }}</div>
-                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-shirt text-xs"></i> {{ o.service }}</div>
-                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> {{ o.customer_email }}</div>
+
+
+                        <!-- Center: Progress Visual -->
+                        <div class="hidden lg:flex flex-col items-center justify-center flex-1 px-4 lg:border-l border-border min-w-0">
+                            <!-- Current Step Badge (Center Top) -->
+                            <div class="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-primary bg-primary/5 px-3 py-0.5 rounded-full border border-primary/20 shadow-sm">
+                                {{ getStatus(o.status).label }}
+                            </div>
+
+                            <div class="relative w-full max-w-[450px]">
+                                <!-- Line background -->
+                                <div class="absolute top-2 left-0 right-0 h-[3px] bg-gray-100 rounded-full"></div>
+                                <!-- Line active -->
+                                <div class="absolute top-2 left-0 h-[3px] bg-primary rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(227,6,19,0.3)]"
+                                    :style="{ width: `${Math.min(100, (getOrderStepIndex(o) / (getSteps(o).length - 1)) * 100)}%` }">
+                                </div>
+
+                                <!-- Steps Dots & Labels -->
+                                <div class="relative flex justify-between">
+                                    <div v-for="(step, i) in getSteps(o)" :key="i" class="flex flex-col items-center group/step">
+                                        <div :class="[
+                                            'w-4 h-4 rounded-full border-2 transition-all duration-500 relative z-10 flex items-center justify-center',
+                                            getOrderStepIndex(o) >= i ? 'bg-primary border-primary scale-110 shadow-[0_0_10px_rgba(227,6,19,0.4)]' : 'bg-white border-gray-200'
+                                        ]">
+                                            <i v-if="getOrderStepIndex(o) > i" class="fa-solid fa-check text-[7px] text-white"></i>
+                                            <div v-if="getOrderStepIndex(o) === i" class="absolute inset-0 rounded-full animate-ping bg-primary opacity-30"></div>
+                                        </div>
+                                        <!-- Step Labels -->
+                                        <div :class="[
+                                            'text-[6px] font-black uppercase mt-2 tracking-widest transition-colors duration-500 text-center',
+                                            getOrderStepIndex(o) >= i ? 'text-primary' : 'text-gray-300'
+                                        ]">
+                                            {{ step }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="w-full lg:w-48 shrink-0 flex items-center lg:border-l border-border lg:pl-4">
-                            <div class="flex flex-col">
-                                <span class="font-medium text-text font-mono text-lg">{{ formatRupiah(o.total_price) }}</span>
-                                <span class="text-[10px] font-bold uppercase tracking-widest mt-0.5" :class="o.payment_status === 'berhasil' ? 'text-emerald-500' : 'text-amber-500'">{{ o.payment_status === 'berhasil' ? 'LUNAS' : o.payment_status }}</span>
+                        <!-- Right: Value & Workflow Action -->
+                        <div class="flex items-center justify-end gap-3 lg:gap-4 lg:border-l border-border lg:pl-4 lg:w-[180px] shrink-0">
+                            <div class="text-right shrink-0">
+                                <p class="text-[8px] font-black text-muted uppercase tracking-[0.2em] leading-none mb-1">Total Biaya</p>
+                                <p class="text-[11px] lg:text-sm font-black text-primary font-mono leading-none tracking-tighter">{{ formatRupiah(o.total_price) }}</p>
                             </div>
-                        </div>
 
-                        <div class="flex items-center gap-2 shrink-0 w-full lg:w-auto justify-end mt-2 lg:mt-0">
-                            <button @click="cetakNota(o)" :disabled="printingId === o.id"
-                                class="w-9 h-9 flex items-center justify-center rounded-md transition-colors border border-border text-muted hover:bg-slate-700 hover:text-white bg-surface disabled:opacity-50" title="Cetak Nota PDF">
-                                <i v-if="printingId === o.id" class="fa-solid fa-spinner fa-spin text-xs"></i>
-                                <i v-else class="fa-solid fa-file-pdf text-xs"></i>
-                            </button>
-                            <button @click="openEditForm(o)"
-                                class="w-9 h-9 flex items-center justify-center rounded-md transition-colors border border-border text-amber-600 hover:bg-amber-600 hover:text-white bg-surface" title="Edit Pesanan">
-                                <i class="fa-solid fa-pencil text-xs"></i>
-                            </button>
-                            <button @click="openDetail(o)"
-                                class="px-3 py-2 rounded-md font-medium text-sm transition-colors border border-border text-text hover:bg-container bg-surface">
-                                Detail
-                            </button>
+                            <div class="flex items-center gap-1.5">
+                                 <button @click="handleInstantUpdate(o)"
+                                    class="h-8 px-3 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg shadow-primary/20 hover:bg-black hover:shadow-xl active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center gap-1.5"
+                                    :disabled="o.status === 'diterima' || o.status === 'dibatalkan'">
+                                    {{ getNextStatusLabel(o.status) }}
+                                    <i class="fa-solid fa-chevron-right text-[7px] opacity-70"></i>
+                                </button>
+                                <div class="relative group/menu">
+                                    <button class="w-9 h-9 flex items-center justify-center text-muted hover:text-primary transition-colors border border-border rounded-lg hover:border-primary/30">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <div class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-border rounded-lg shadow-2xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-20 py-1 translate-y-2 group-hover/menu:translate-y-0">
+                                        <button @click="openDetail(o)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                            <i class="fa-solid fa-eye w-4 text-gray-400"></i> Lihat Detail
+                                        </button>
+                                        <button @click="cetakNota(o)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                            <i class="fa-solid fa-print w-4 text-gray-400"></i> Cetak Nota
+                                        </button>
+                                        <button @click="openEditForm(o)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                            <i class="fa-solid fa-pen-to-square w-4 text-gray-400"></i> Ubah Data (Manual)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -530,7 +663,7 @@ async function cetakNota(o) {
                             </h2>
                             <button @click="closeAddModal" class="text-muted hover:text-text transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
                         </div>
-                        
+
                         <form @submit.prevent="submitAddForm" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
                             <!-- Basic Selects -->
                             <div class="space-y-6">
@@ -542,7 +675,7 @@ async function cetakNota(o) {
                                     </select>
                                     <p v-if="addForm.errors.user_id" class="text-[10px] text-rose-500 font-bold mt-1 shadow-sm">{{ addForm.errors.user_id }}</p>
                                 </div>
-                                
+
                                 <div class="space-y-3">
                                     <label class="text-[10px] font-black uppercase tracking-widest text-muted">Pilih Layanan <span class="text-red-500">*</span></label>
                                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -572,7 +705,7 @@ async function cetakNota(o) {
 
                             <!-- Logic from buat-pesanan.vue -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8" v-if="addForm.service_id">
-                                
+
                                 <!-- Left Column: Delivery details & Notes -->
                                 <div class="space-y-6">
                                     <div class="space-y-3">
@@ -623,7 +756,7 @@ async function cetakNota(o) {
                                 <div class="space-y-6">
                                     <div class="space-y-3">
                                         <h3 class="text-xs font-bold text-gray-800 border-b border-border pb-2 border-dashed">Detail Layanan & Ekstra</h3>
-                                        
+
                                         <!-- Qty / Actual Weight -->
                                         <div v-if="isKgService">
                                             <label class="text-[10px] font-black uppercase tracking-widest text-muted mb-2 block">Berat Aktual (Kg) <span class="text-red-500">*</span></label>
@@ -689,7 +822,7 @@ async function cetakNota(o) {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Footer -->
                             <div class="flex justify-end gap-3 pt-6 border-t border-border mt-6">
                                 <button type="button" @click="closeAddModal" class="px-6 py-2 border border-border rounded-sm text-xs font-black uppercase tracking-widest text-muted hover:text-text hover:bg-container transition-colors">
@@ -723,6 +856,7 @@ async function cetakNota(o) {
                                 <label class="text-[10px] font-black uppercase tracking-widest text-muted">Status</label>
                                 <select v-model="editForm.status" required class="w-full px-4 py-2 bg-surface border border-border rounded-sm text-sm focus:border-primary outline-none transition uppercase tracking-widest font-bold">
                                     <option value="dibuat">Dibuat</option>
+                                    <option value="antri">Antri</option>
                                     <option value="dijemput">Dijemput</option>
                                     <option value="diproses">Diproses</option>
                                     <option value="selesai">Selesai</option>
@@ -895,7 +1029,7 @@ async function cetakNota(o) {
                             <!-- Cost Breakdown -->
                             <div class="bg-white border border-border rounded-sm p-5 space-y-3">
                                 <p class="text-[10px] font-black uppercase tracking-widest text-muted border-b border-dashed border-gray-200 pb-3">Rincian Biaya</p>
-                                
+
                                 <div class="flex justify-between items-center text-xs">
                                     <span class="text-muted font-medium">
                                         Biaya Layanan
