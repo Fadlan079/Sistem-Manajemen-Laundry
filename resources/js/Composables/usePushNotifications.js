@@ -51,12 +51,15 @@ export function usePushNotifications() {
 
     async function subscribe() {
         console.log('[Push] Starting subscription process...');
+        console.log('[Push] VAPID Key:', VAPID_PUBLIC_KEY);
+        console.log('[Push] Permission:', Notification.permission);
+
         if (!isSupported.value) {
             console.warn('[Push] Browser not supported.');
             return;
         }
         if (!VAPID_PUBLIC_KEY) {
-            console.warn('[Push] VAPID public key missing. Check your .env and rebuild (npm run dev).');
+            console.error('[Push] VAPID public key missing. Check your .env and restart npm run dev.');
             return;
         }
 
@@ -149,19 +152,32 @@ export function usePushNotifications() {
      * Call this once from your dashboard layout's onMounted.
      */
     async function init() {
-        if (!isSupported.value) return;
+        console.log('[Push] Initializing...');
+        if (!isSupported.value) {
+            console.warn('[Push] Push not supported in this browser.');
+            return;
+        }
 
         const registration = await registerServiceWorker();
-        if (!registration) return;
+        if (!registration) {
+            console.error('[Push] SW registration failed.');
+            return;
+        }
 
         permissionStatus.value = Notification.permission;
+        console.log('[Push] Current permission:', Notification.permission);
 
         const existing = await getExistingSubscription(registration);
+        console.log('[Push] Existing subscription object:', existing);
+
         if (existing) {
             isSubscribed.value = true;
+            console.log('[Push] Already subscribed.');
         } else if (Notification.permission === 'granted') {
-            // Was previously granted but subscription lost — re-subscribe silently
+            console.log('[Push] Permission is granted but no subscription found. Subscribing now...');
             await subscribe();
+        } else {
+            console.log('[Push] No subscription found and permission is:', Notification.permission);
         }
     }
 

@@ -11,11 +11,25 @@ use Illuminate\Support\Facades\Route;
 Route::get('/test-push', function () {
     if (!app()->isLocal()) abort(403);
 
-    $user = \App\Models\User::find(1);
-    if (!$user) return response()->json(['error' => 'User not found'], 404);
+    // Try to find a user that has a push subscription first
+    $user = \App\Models\User::whereHas('pushSubscriptions')->first();
+    
+    // If no one subscribed yet, just pick the first user
+    if (!$user) {
+        $user = \App\Models\User::first();
+    }
+
+    if (!$user) {
+        return response()->json([
+            'error' => 'User not found',
+            'message' => 'Your users table is empty. Please register a user first.'
+        ], 404);
+    }
+
+    $subscriptionCount = $user->pushSubscriptions()->count();
 
     // Creating a Notification will trigger NotificationObserver → WebPush automatically
-    Notification::create([
+    \App\Models\Notification::create([
         'user_id'     => $user->id,
         'type'        => 'order',
         'title'       => '🔔 Test Push Notifikasi',
@@ -25,6 +39,12 @@ Route::get('/test-push', function () {
 
     return response()->json([
         'success' => true,
-        'message' => "Push sent to user #{$user->id} ({$user->name})",
+        'message' => "Push notification triggered for user #{$user->id} ({$user->name})",
+        'details' => [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'subscriptions_found' => $subscriptionCount,
+            'warning' => $subscriptionCount === 0 ? 'User found but they have NOT subscribed to push notifications in the browser yet.' : null
+        ]
     ]);
 });
