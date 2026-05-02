@@ -213,41 +213,51 @@ const selectService = (id) => {
                 </div>
 
                 <!-- Categories Horizontal Scroll -->
-                <div class="flex overflow-x-auto gap-2.5 pb-4 scrollbar-hide snap-x relative">
-                    <!-- Red shadow for right overflow -->
-                    <div class="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none"></div>
+                <div class="relative mb-4">
+                    <!-- Shadow for right overflow -->
+                    <div class="absolute -right-1 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none z-10"></div>
 
-                    <button
-                        v-for="cat in categoriesWithCounts"
-                        :key="cat.name"
-                        @click="activeCategory = cat.name"
-                        :class="[
-                            'px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap snap-start transition-all shadow-sm flex items-center gap-2 border',
-                            activeCategory === cat.name
-                                ? 'bg-[#E30613] text-white border-[#E30613]'
-                                : 'bg-white text-gray-600 border-gray-200 hover:border-red-200'
-                        ]"
-                    >
-                        <template v-if="cat.name === 'Semua'">
-                            Semua
-                            <span class="flex items-center gap-1">
-                                <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
-                                <span class="opacity-70 text-[9px]">{{ cat.count }}</span>
+                    <div class="flex overflow-x-auto gap-2.5 pb-2 scrollbar-hide snap-x relative">
+                        <button
+                            v-for="cat in categoriesWithCounts"
+                            :key="cat.name"
+                            @click="activeCategory = cat.name"
+                            :class="[
+                                'px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap snap-start transition-all shadow-sm flex items-center gap-2 border',
+                                activeCategory === cat.name
+                                    ? 'bg-[#E30613] text-white border-[#E30613]'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-red-200'
+                            ]"
+                        >
+                            <span v-if="cat.name === 'Semua'" class="flex items-center gap-1.5">
+                                SEMUA
+                                <span :class="[
+                                    'flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black leading-none shadow-sm px-1 transition-colors',
+                                    activeCategory === 'Semua' ? 'bg-secondary text-primary' : 'bg-secondary text-yellow-950'
+                                ]">{{ cat.count }}</span>
                             </span>
-                        </template>
-                        <template v-else-if="cat.name === 'On sale'">
-                            <i class="fas fa-fire text-orange-400"></i>
-                            On Sale
-                            <span class="opacity-70 text-[9px] bg-white text-red-600 px-1.5 py-0.5 rounded-full leading-none">{{ cat.count }}</span>
-                        </template>
-                        <template v-else>
-                            <!-- Dynamic icons based on category -->
-                            <i v-if="cat.name.toLowerCase().includes('kering')" class="fas fa-wind text-gray-400"></i>
-                            <i v-else-if="cat.name.toLowerCase().includes('setrika')" class="fas fa-stroopwafel text-gray-400"></i>
-                            <i v-else-if="cat.name.toLowerCase().includes('saja')" class="fas fa-tshirt text-gray-400"></i>
-                            {{ cat.name }}
-                        </template>
-                    </button>
+                            <span v-else-if="cat.name === 'On sale'" class="flex items-center gap-1.5">
+                                <i class="fas fa-fire" :class="activeCategory === 'On sale' ? 'text-orange-500' : 'text-orange-500'"></i>
+                                ON SALE
+                                <span :class="[
+                                    'flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black leading-none shadow-sm px-1 transition-colors',
+                                    activeCategory === 'On sale' ? 'bg-secondary text-primary' : 'bg-secondary text-yellow-950'
+                                ]">{{ cat.count }}</span>
+                            </span>
+                            <span v-else class="flex items-center gap-1.5 uppercase">
+                                <!-- Dynamic icons based on category -->
+                                <i v-if="cat.name.toLowerCase().includes('kering')" class="fas fa-wind" :class="activeCategory === cat.name ? 'text-white' : 'text-gray-400'"></i>
+                                <i v-else-if="cat.name.toLowerCase().includes('setrika')" class="fas fa-stroopwafel" :class="activeCategory === cat.name ? 'text-white' : 'text-gray-400'"></i>
+                                <i v-else-if="cat.name.toLowerCase().includes('saja')" class="fas fa-tshirt" :class="activeCategory === cat.name ? 'text-white' : 'text-gray-400'"></i>
+
+                                {{ cat.name }}
+                                <span :class="[
+                                    'flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-black leading-none shadow-sm px-1 transition-colors',
+                                    activeCategory === cat.name ? 'bg-secondary text-primary' : 'bg-secondary text-yellow-950'
+                                ]">{{ cat.count }}</span>
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Services List -->

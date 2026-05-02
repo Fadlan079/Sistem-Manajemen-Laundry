@@ -33,7 +33,7 @@ watch([search, categoryFilter], () => {
     searchTimeout = setTimeout(() => {
         router.get(route('admin.services'), {
             search:   search.value,
-            category: categoryFilter.value,
+            category: categoryFilter.value, // This is now category_id
         }, { preserveState: true, replace: true });
     }, 350);
 });
@@ -62,7 +62,7 @@ function openCreate() {
 function openEdit(s) {
     editingService.value = s;
     form.name        = s.name;
-    form.category    = s.category;
+    form.category_id = s.category_id;
     form.price       = s.price;
     form.estimate    = s.estimate;
     form.status      = s.status;
@@ -89,7 +89,7 @@ function closeModals() {
 
 // ── Inertia Form ─────────────────────────────────────────────────
 const form = useForm({
-    name: '', category: 'Kiloan', price: '', estimate: '', status: 'tersedia', description: '',
+    name: '', category_id: '', price: '', estimate: '', status: 'tersedia', description: '',
     image: null, features: [], unit: '/kg', tag: '', _method: 'post'
 });
 
@@ -132,7 +132,7 @@ const getStatus   = (s) => STATUS_MAP[s] ?? { label: s, cls: 'bg-slate-100 text-
 const CAT_COLORS = ['bg-blue-100 text-blue-700 border-blue-200','bg-indigo-100 text-indigo-700 border-indigo-200','bg-violet-100 text-violet-700 border-violet-200','bg-cyan-100 text-cyan-700 border-cyan-200'];
 const catColorMap = computed(() => {
     const map = {};
-    (props.categoryList ?? []).forEach((c, i) => { map[c] = CAT_COLORS[i % CAT_COLORS.length]; });
+    (props.categoryList ?? []).forEach((c, i) => { map[c.name] = CAT_COLORS[i % CAT_COLORS.length]; });
     return map;
 });
 const getCatClass = (cat) => catColorMap.value[cat] ?? 'bg-slate-100 text-slate-700 border-slate-200';
@@ -323,7 +323,7 @@ const chartPriceData = computed(() => ({
                     <select v-model="categoryFilter"
                         class="px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
                         <option value="">Semua Kategori</option>
-                        <option v-for="cat in categoryList" :key="cat" :value="cat">{{ cat }}</option>
+                        <option v-for="cat in categoryList" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                     </select>
                 </div>
 
@@ -464,9 +464,12 @@ const chartPriceData = computed(() => ({
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Kategori <span class="text-rose-500">*</span></label>
-                                    <input v-model="form.category" type="text" placeholder="Kiloan / Satuan / ..."
-                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition" />
-                                    <p v-if="form.errors.category" class="mt-1 text-xs text-rose-600">{{ form.errors.category }}</p>
+                                    <select v-model="form.category_id"
+                                        class="w-full px-4 py-2.5 border border-border rounded-sm bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-bold transition">
+                                        <option value="" disabled>Pilih Kategori</option>
+                                        <option v-for="cat in categoryList" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                    </select>
+                                    <p v-if="form.errors.category_id" class="mt-1 text-xs text-rose-600">{{ form.errors.category_id }}</p>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-black uppercase tracking-widest text-muted mb-1">Status <span class="text-rose-500">*</span></label>

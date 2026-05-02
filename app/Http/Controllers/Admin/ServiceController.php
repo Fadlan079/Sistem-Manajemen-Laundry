@@ -17,19 +17,20 @@ class ServiceController extends Controller
         $search   = $request->input('search', '');
         $category = $request->input('category', '');
 
-        $query = Service::withCount('orders')
+        $query = Service::with(['serviceCategory'])->withCount('orders')
             ->when($search, fn($q) => $q->where(fn($q2) =>
                 $q2->where('name', 'like', "%{$search}%")
-                   ->orWhere('category', 'like', "%{$search}%")
+                   ->orWhereHas('serviceCategory', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
                    ->orWhere('description', 'like', "%{$search}%")
             ))
-            ->when($category, fn($q) => $q->where('category', $category))
+            ->when($category, fn($q) => $q->where('category_id', $category))
             ->latest();
 
         $services = $query->paginate(10)->withQueryString()->through(fn($s) => [
             'id'          => $s->id,
             'name'        => $s->name,
-            'category'    => $s->category,
+            'category'    => $s->serviceCategory->name ?? '-',
+            'category_id' => $s->category_id,
             'price'       => $s->price,
             'estimate'    => $s->estimate,
             'status'      => $s->status,
@@ -45,9 +46,9 @@ class ServiceController extends Controller
         // ── Stats ─────────────────────────────────────────────
         $totalServices  = Service::count();
         $available      = Service::where('status', 'tersedia')->count();
-        $categories     = Service::distinct()->pluck('category');
-        $categoryGroups = Service::selectRaw('category, COUNT(*) as total')
-            ->groupBy('category')->get()->pluck('total', 'category');
+        $categoryList = \App\Models\ServiceCategory::orderBy('name')->get();
+        $categoryGroups = Service::selectRaw('category_id, COUNT(*) as total')
+            ->groupBy('category_id')->get()->pluck('total', 'category_id');
 
         $stats = [
             'total'     => $totalServices,
@@ -57,15 +58,15 @@ class ServiceController extends Controller
         ];
 
         // ── Chart 1: Distribusi Kategori (Doughnut) ────────────
-        $allCategories = Service::selectRaw('category, COUNT(*) as total')
-            ->groupBy('category')->get();
+        $allCategories = \App\Models\ServiceCategory::withCount('services')->get()
+            ->map(fn($c) => ['category' => $c->name, 'total' => $c->services_count]);
 
         // ── Chart 2: Trend Pemesanan per Kategori (Line) 6 bln ─
         $trendMonths = collect(range(5, 0))->map(function ($i) {
             $month = Carbon::now()->subMonths($i);
-            $kiloan = Order::whereHas('service', fn($q) => $q->where('category', 'Kiloan'))
+            $kiloan = Order::whereHas('service.serviceCategory', fn($q) => $q->where('name', 'Kiloan'))
                 ->whereYear('created_at', $month->year)->whereMonth('created_at', $month->month)->count();
-            $satuan = Order::whereHas('service', fn($q) => $q->where('category', 'Satuan'))
+            $satuan = Order::whereHas('service.serviceCategory', fn($q) => $q->where('name', 'Satuan'))
                 ->whereYear('created_at', $month->year)->whereMonth('created_at', $month->month)->count();
             return ['label' => $month->format('M'), 'kiloan' => $kiloan, 'satuan' => $satuan];
         });
@@ -77,8 +78,8 @@ class ServiceController extends Controller
         $priceChart = Service::orderBy('price', 'desc')->limit(6)->get()
             ->map(fn($s) => ['name' => $s->name, 'price' => (float)$s->price]);
 
-        // ── Available categories for filter dropdown ────────────
-        $categoryList = Service::distinct()->orderBy('category')->pluck('category');
+        // Available categories for filter dropdown 
+        // We already have $categoryList
 
         return Inertia::render('dashboard/admin/layanan-laundry', [
             'services'     => $services,
@@ -98,7 +99,7 @@ class ServiceController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
-            'category'    => 'required|string|max:100',
+            'category_id' => 'required|exists:service_categories,id',
             'price'       => 'required|numeric|min:0',
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],
@@ -122,7 +123,7 @@ class ServiceController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
-            'category'    => 'required|string|max:100',
+            'category_id' => 'required|exists:service_categories,id',
             'price'       => 'required|numeric|min:0',
             'estimate'    => 'required|string|max:100',
             'status'      => ['required', Rule::in(['tersedia', 'sibuk', 'tidak_tersedia'])],

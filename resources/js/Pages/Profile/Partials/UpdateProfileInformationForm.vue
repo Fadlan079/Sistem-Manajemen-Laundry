@@ -125,29 +125,47 @@ const sendVerification = () => {
 
                 <!-- Verification Status -->
                 <div v-if="mustVerifyEmail" class="mt-4">
-                    <div v-if="user.email_verified_at === null" class="bg-yellow-50 border border-yellow-100 p-4 rounded-2xl">
-                        <p class="text-[11px] text-yellow-800 font-bold flex items-center gap-2">
-                            <i class="fas fa-info-circle"></i>
-                            Email belum terverifikasi.
-                        </p>
-                        <button
-                            type="button"
-                            @click="sendVerification"
-                            :disabled="resendCooldown > 0 || isResending"
-                            class="mt-2 text-[10px] font-black uppercase tracking-wider text-primary hover:underline disabled:opacity-50 disabled:no-underline transition-all flex items-center gap-2"
-                        >
-                            <i v-if="isResending" class="fas fa-spinner fa-spin"></i>
-                            <span v-if="resendCooldown > 0">Kirim ulang dalam {{ resendCooldown }} detik</span>
-                            <span v-else-if="isResending">Mengirim...</span>
-                            <span v-else>Klik untuk verifikasi</span>
-                        </button>
-                        <div v-show="status === 'verification-link-sent'" class="mt-2 text-[9px] font-bold text-green-600 uppercase">
-                            Link verifikasi telah dikirim ke email Anda.
+                    <div v-if="user.email_verified_at === null" class="bg-amber-50 border border-amber-200 p-5 rounded-3xl shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 shrink-0 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-sm">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-[11px] font-black text-amber-900 uppercase tracking-wider mb-1">Email Belum Terverifikasi</h4>
+                                <p class="text-[11px] text-amber-700 font-medium leading-relaxed mb-4">
+                                    Verifikasi email Anda untuk mendapatkan akses penuh ke semua fitur dan notifikasi transaksi penting.
+                                </p>
+                                <button
+                                    type="button"
+                                    @click="sendVerification"
+                                    :disabled="resendCooldown > 0 || isResending"
+                                    class="w-full sm:w-auto px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
+                                >
+                                    <i v-if="isResending" class="fas fa-spinner fa-spin"></i>
+                                    <i v-else class="fas fa-paper-plane text-[9px]"></i>
+                                    <span v-if="resendCooldown > 0">Tunggu {{ resendCooldown }}s</span>
+                                    <span v-else-if="isResending">Mengirim...</span>
+                                    <span v-else>Verifikasi Sekarang</span>
+                                </button>
+                                
+                                <transition
+                                    enter-active-class="transition ease-out duration-300"
+                                    enter-from-class="opacity-0 -translate-y-2"
+                                    enter-to-class="opacity-100 translate-y-0"
+                                >
+                                    <div v-show="status === 'verification-link-sent'" class="mt-4 py-2.5 px-4 bg-green-100 text-green-700 rounded-xl text-[9px] font-bold flex items-center gap-2 border border-green-200">
+                                        <i class="fas fa-check-circle text-xs"></i>
+                                        LINK VERIFIKASI TELAH DIKIRIM KE EMAIL ANDA.
+                                    </div>
+                                </transition>
+                            </div>
                         </div>
                     </div>
-                    <div v-else class="bg-green-50 border border-green-100 p-4 rounded-2xl flex items-center gap-2">
-                        <i class="fas fa-check-circle text-green-500"></i>
-                        <span class="text-[11px] text-green-700 font-bold">Email telah terverifikasi.</span>
+                    <div v-else class="bg-green-50 border border-green-100 p-4 rounded-3xl flex items-center gap-3">
+                        <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center shadow-sm shrink-0">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <span class="text-[11px] text-green-700 font-black uppercase tracking-wider">Email Telah Terverifikasi</span>
                     </div>
                 </div>
             </div>

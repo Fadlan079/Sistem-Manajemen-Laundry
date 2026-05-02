@@ -279,13 +279,6 @@ onMounted(() => {
     }, { rootMargin: '-50% 0px -50% 0px' });
 
     const handleScroll = () => {
-        const currentScrollY = window.scrollY;
-        if (currentScrollY > lastScrollY && currentScrollY > 100) {
-            isBottomNavVisible.value = false;
-        } else {
-            isBottomNavVisible.value = true;
-        }
-        lastScrollY = currentScrollY;
         if (route().current('home') && window.scrollY < 100) {
             activeSection.value = 'beranda';
         }
@@ -802,10 +795,7 @@ onMounted(() => {
 <!-- ── Bottom Nav (Mobile - Clean Version) ──────────────────────────────── -->
 <nav
     v-show="!hideBottomNav && !route().current('pelanggan.pesan')"
-    :class="[
-        'lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe shadow-sm transition-transform duration-300',
-        isBottomNavVisible ? 'translate-y-0' : 'translate-y-full'
-    ]"
+    class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] transition-all duration-300"
 >
     <div class="flex justify-between items-center h-16 relative text-gray-500">
 

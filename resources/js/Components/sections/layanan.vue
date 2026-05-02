@@ -289,7 +289,7 @@ function formatRupiah(val) {
                 <!-- Filter Tabs -->
                 <div class="max-w-4xl mx-auto mb-10 px-4 relative">
                     <!-- Right shadow indicator for scroll -->
-                    <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg to-transparent pointer-events-none z-10"></div>
+                    <div class="absolute -right-1 top-0 bottom-0 w-12 bg-gradient-to-l from-bg to-transparent pointer-events-none z-10"></div>
                     <div class="flex overflow-x-auto flex-nowrap pb-2 -mx-4 px-4 md:mx-0 md:px-0 gap-2 snap-x scrollbar-hide relative">
                         <button v-for="tab in categoriesList" :key="tab.name"
                             @click="activeTab = tab.name"

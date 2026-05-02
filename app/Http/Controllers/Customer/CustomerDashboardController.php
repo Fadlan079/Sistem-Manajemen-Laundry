@@ -102,7 +102,7 @@ class CustomerDashboardController extends Controller
 
     public function daftarLayanan(Request $request)
     {
-        $services = Service::withAvg('reviews', 'rating')
+        $services = Service::with(['serviceCategory'])->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->get()
             ->map(function ($s) {
@@ -112,7 +112,7 @@ class CustomerDashboardController extends Controller
                     'description'   => $s->description,
                     'price'         => (float) $s->price,
                     'unit'          => $s->unit ?? '/kg',
-                    'category'      => $s->category,
+                    'category'      => $s->serviceCategory->name ?? '-',
                     'is_discount_today' => $s->is_discount_today,
                     'discounted_price' => $s->discounted_price,
                     'discount_percentage' => $s->discount_percentage,

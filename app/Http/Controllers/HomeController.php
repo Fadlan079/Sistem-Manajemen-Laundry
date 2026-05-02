@@ -51,14 +51,14 @@ class HomeController extends Controller
         return Inertia::render('home', [
             'canLogin'      => Route::has('login'),
             'canRegister'   => Route::has('register'),
-            'serviceList'   => Service::withCount(['orders', 'reviews'])
+            'serviceList'   => Service::with(['serviceCategory'])->withCount(['orders', 'reviews'])
                 ->withAvg('reviews', 'rating')
                 ->where('status', 'tersedia')
                 ->get()
                 ->map(fn($s) => [
                     'id'            => $s->id,
                     'name'          => $s->name,
-                    'category'      => $s->category,
+                    'category'      => $s->serviceCategory->name ?? '-',
                     'price'         => $s->price,
                     'estimate'      => $s->estimate,
                     'description'   => $s->description,
@@ -121,19 +121,19 @@ class HomeController extends Controller
         }
 
         // 1. Search Services
-        $services = Service::where('status', 'tersedia')
+        $services = Service::with(['serviceCategory'])->where('status', 'tersedia')
             ->where(function ($query) use ($q) {
                 $query->where('name', 'like', "%{$q}%")
-                      ->orWhere('category', 'like', "%{$q}%");
+                      ->orWhereHas('serviceCategory', fn($sq) => $sq->where('name', 'like', "%{$q}%"));
             })
-            ->select('id', 'name', 'category', 'price', 'unit', 'image')
+            ->select('id', 'name', 'category_id', 'price', 'unit', 'image')
             ->limit(6)
             ->get()
             ->map(fn($s) => [
                 'type'      => 'service',
                 'id'        => $s->id,
                 'name'      => $s->name,
-                'category'  => $s->category,
+                'category'  => $s->serviceCategory->name ?? '-',
                 'price'     => $s->price,
                 'unit'      => $s->unit,
                 'image_url' => $s->image ? asset('storage/' . $s->image) : null,

@@ -26,7 +26,7 @@ class ProfileController extends Controller
             'ordersCount' => $user->orders()->count(),
             'addressesCount' => $user->addresses()->count(),
             'addresses' => $user->addresses()->orderByDesc('is_default')->latest()->get(),
-            'services' => \App\Models\Service::where('status', 'tersedia')->get()->map(fn($s) => [
+            'services' => \App\Models\Service::with(['serviceCategory'])->where('status', 'tersedia')->get()->map(fn($s) => [
                 'id' => $s->id,
                 'name' => $s->name,
                 'price' => $s->price,
@@ -34,7 +34,7 @@ class ProfileController extends Controller
                 'discount_percentage' => $s->discount_percentage,
                 'is_discount_today' => $s->is_discount_today,
                 'unit' => $s->unit,
-                'category' => $s->category,
+                'category' => $s->serviceCategory->name ?? '-',
             ]),
         ]);
     }
