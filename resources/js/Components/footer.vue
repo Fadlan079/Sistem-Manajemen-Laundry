@@ -70,9 +70,9 @@ const currentYear = new Date().getFullYear();
       </div>
 
       <div class="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div class="text-sm text-white/50 text-center md:text-left">
-          &copy; {{ currentYear }} <span class="text-white font-bold">HiWash Laundry</span>.
-          Hak Cipta Dilindungi
+        <div class="text-sm text-white/60 text-center md:text-left flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-secondary"></i>
+          <span>Website ini hanyalah <span class="text-white font-bold uppercase tracking-wider underline decoration-secondary decoration-2 underline-offset-4">Prototype</span>. Seluruh data yang ada adalah simulasi pengerjaan.</span>
         </div>
       </div>
     </div>

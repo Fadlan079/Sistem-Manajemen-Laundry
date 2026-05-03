@@ -43,8 +43,13 @@ class OrdersImport implements ToModel, WithHeadingRow
 
         return DB::transaction(function () use ($row, $user, $service) {
             $isKg = in_array(strtolower($service->unit ?? ''), ['/kg', 'kg']);
-            $qty = $row['jumlah_atau_berat'] ?? 1;
+            $qtyInput = $row['berat_qty'] ?? 1;
+            // Strip non-numeric chars for qty if any (like ' Kg')
+            $qty = (float) filter_var($qtyInput, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+            if (!$qty) $qty = 1;
+
             $tipe = strtolower($row['tipe_pengiriman'] ?? 'outlet');
+            $paymentMethod = strtolower($row['metode_pembayaran'] ?? 'cash');
             
             $deliveryFee = match ($tipe) {
                 'antar_jemput' => 10000,
@@ -52,7 +57,31 @@ class OrdersImport implements ToModel, WithHeadingRow
                 default => 0,
             };
 
-            $totalPrice = $deliveryFee + ($qty * $service->price);
+            // Calculate Extra Services
+            $extraPricing = 0;
+            $extraList = [];
+            $extraInput = $row['layanan_extra'] ?? '';
+            
+            if (!empty($extraInput) && $extraInput !== '-') {
+                $extras = array_map('trim', explode(',', $extraInput));
+                $basePrice = (float) $service->price;
+
+                if (in_array('express', $extras) || stripos($extraInput, 'express') !== false) {
+                    $extraPrice = $basePrice * 0.5;
+                    $extraPricing += $extraPrice;
+                    $extraList[] = ['type' => 'express', 'label' => 'Express (24 Jam)', 'price' => $extraPrice];
+                }
+                if (in_array('treatment', $extras) || stripos($extraInput, 'treatment') !== false) {
+                    $extraPrice = $isKg ? 2000 : 5000;
+                    $extraPricing += $extraPrice;
+                    $extraList[] = ['type' => 'treatment', 'label' => 'Treatment Khusus', 'price' => $extraPrice];
+                }
+                if (in_array('own_perfume', $extras) || stripos($extraInput, 'pewangi') !== false) {
+                    $extraList[] = ['type' => 'own_perfume', 'label' => 'Pewangi Sendiri', 'price' => 0];
+                }
+            }
+
+            $totalPrice = $deliveryFee + ($qty * ($service->price + $extraPricing));
 
             $order = Order::create([
                 'user_id' => $user->id,
@@ -61,11 +90,11 @@ class OrdersImport implements ToModel, WithHeadingRow
                 'total_price' => $totalPrice,
                 'pickup_address' => $row['alamat'] ?? '-',
                 'delivery_address' => $row['alamat'] ?? '-',
-                'notes' => $row['catatan'] ?? null,
+                'notes' => $row['catatan_laundry'] ?? null,
                 'operator_id' => auth()->id(),
             ]);
 
-            OrderItem::create([
+            $orderItem = OrderItem::create([
                 'order_id' => $order->id,
                 'service_id' => $service->id,
                 'item_name' => $service->name,
@@ -74,10 +103,14 @@ class OrdersImport implements ToModel, WithHeadingRow
                 'price' => $service->price,
             ]);
 
+            foreach ($extraList as $ext) {
+                $orderItem->extras()->create($ext);
+            }
+
             Payment::create([
                 'order_id' => $order->id,
                 'amount' => 0,
-                'method' => 'cash',
+                'method' => $paymentMethod,
                 'status' => 'menunggu',
             ]);
 
@@ -87,6 +120,7 @@ class OrdersImport implements ToModel, WithHeadingRow
                     'status' => 'dijemput',
                     'type' => 'pickup',
                     'scheduled_at' => Carbon::now(),
+                    'notes' => $row['catatan_kurir'] ?? null,
                 ]);
             }
 

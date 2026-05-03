@@ -69,7 +69,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="hero-section" class="w-full font-sans text-text bg-bg">
+  <div id="hero-section" class="w-full font-sans text-text bg-bg relative">
+    <!-- Prototype Watermark Overlay -->
+    <div class="absolute inset-0 z-[5] pointer-events-none select-none opacity-[0.3]"
+        style="background-image: url(&quot;data:image/svg+xml,%3Csvg width='150' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='black' font-family='sans-serif' font-weight='900' text-anchor='middle' dominant-baseline='middle' transform='rotate(-20 75 50)'%3EPROTOTYPE%3C/text%3E%3C/svg%3E&quot;); background-repeat: repeat;">
+    </div>
 
     <div class="relative bg-primary text-white overflow-hidden pt-28 pb-36 lg:pt-32 lg:pb-48 flex flex-col justify-center">
 
@@ -157,7 +161,7 @@ onUnmounted(() => {
     <div class="relative z-20 w-full bg-bg py-10 lg:py-16">
       <div class="max-w-7xl mx-auto px-6">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 items-center">
-            
+
             <!-- Rating -->
             <div class="flex flex-col items-center md:items-start text-center md:text-left group transition-all duration-300">
                 <div class="flex items-center gap-1 mb-2">

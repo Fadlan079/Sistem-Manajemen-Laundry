@@ -110,7 +110,7 @@ const submitCompleteForm = () => {
             completeForm.reset();
         }
     });
-};  
+};
 
 const refreshData = () => {
     router.reload({ only: ['deliveries', 'stats'] });

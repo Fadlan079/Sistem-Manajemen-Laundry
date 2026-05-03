@@ -187,7 +187,7 @@ class PesananMasukController extends Controller
         $month = $request->input('month');
         $year = $request->input('year');
 
-        $query = Order::with(['user', 'service', 'payments', 'operator'])
+        $query = Order::with(['user', 'service', 'payments', 'operator', 'orderItems.extras', 'deliveries'])
             ->when($search, function ($q) use ($search) {
                 $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
             })

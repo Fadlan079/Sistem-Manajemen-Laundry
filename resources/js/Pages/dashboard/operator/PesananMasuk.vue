@@ -405,11 +405,14 @@ function handleInstantUpdate(o) {
 
         // 4. Dijemput -> Diproses (Mulai Cuci)
         if (o.status === 'dijemput' && nextStatus === 'diproses') {
-            // Jika kurir internal (ada courier_id), tidak perlu modal berat (input di kurir)
-            // Jika kurir eksternal (tidak ada courier_id tapi ada external_name), butuh modal berat
+            // Jika kurir internal (ada courier_id), operator tidak boleh update manual
+            // Harus menunggu kurir konfirmasi lewat aplikasi kurir (yang otomatis input berat)
             if (o.courier_id) {
-                return performUpdate(o, { status: 'diproses' });
-            } else if (o.external_courier_name || o.isKg) {
+                return; // Do nothing, button should be disabled in template
+            }
+            
+            // Jika kurir eksternal atau input manual (isKg), butuh modal berat
+            if (o.external_courier_name || o.isKg) {
                 return openWeightInput(o, 'diproses');
             }
             return performUpdate(o, { status: 'diproses' });
@@ -627,13 +630,32 @@ const getNextStatusLabel = (o) => {
         'pending': 'Terima',
         'dibuat': 'Terima',
         'antri': hasPickup ? 'Tugaskan Kurir' : 'Mulai Proses',
-        'dijemput': 'Mulai Proses',
+        'dijemput': o.courier_id ? 'Menunggu Kurir' : 'Mulai Proses',
         'diproses': 'Tandai Selesai',
         'selesai': hasDelivery ? 'Tugaskan Kurir' : 'Selesai Diambil',
         'diantar': 'Telah Diterima',
         'diterima': 'Pesanan Selesai'
     };
     return nextMap[status] ?? 'Update Status';
+};
+
+const getNextActionDescription = (o) => {
+    if (!o) return '';
+    const status = o.status;
+    const hasPickup = o.hasPickup;
+    const hasDelivery = o.hasDelivery;
+
+    const descMap = {
+        'pending': 'Klik untuk terima pesanan',
+        'dibuat': 'Klik untuk terima pesanan',
+        'antri': hasPickup ? 'Pesanan siap dijemput' : 'Siap mulai proses cuci',
+        'dijemput': o.courier_id ? 'Menunggu konfirmasi timbangan dari kurir' : 'Pakaian siap diproses',
+        'diproses': 'Pencucian sedang berlangsung',
+        'selesai': hasDelivery ? 'Siap diantar kurir' : 'Siap diambil pelanggan',
+        'diantar': 'Sedang dalam pengiriman',
+        'diterima': 'Pesanan telah selesai'
+    };
+    return descMap[status] ?? '';
 };
 const getStatus = (s) => STATUS_MAP[s] ?? { label: s, cls: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' };
 
@@ -1021,39 +1043,44 @@ async function unduhPDF(o) {
                                 <p class="text-[11px] xl:text-sm font-black text-primary font-mono leading-none tracking-tighter">{{ formatRupiah(o.total_price) }}</p>
                             </div>
 
-                            <div class="flex items-center gap-1.5">
-                                 <button @click="handleInstantUpdate(o)"
-                                    class="h-8 px-3 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg shadow-primary/20 hover:bg-black hover:shadow-xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 min-w-[100px]"
-                                    :disabled="o.status === 'diterima' || o.status === 'dibatalkan' || updatingOrderId === o.id">
-                                    <template v-if="updatingOrderId === o.id">
-                                        <i class="fa-solid fa-spinner fa-spin text-[8px]"></i>
-                                        <span>Proses...</span>
-                                    </template>
-                                    <template v-else>
-                                        {{ getNextStatusLabel(o) }}
-                                        <i class="fa-solid fa-chevron-right text-[7px] opacity-70"></i>
-                                    </template>
-                                </button>
-                                <div class="relative action-menu-container z-20">
-                                    <button @click="toggleMenu(o.id)" :class="activeMenu === o.id ? 'text-primary border-primary/50 bg-primary/5' : 'text-muted border-border hover:text-primary hover:border-primary/30'" class="w-9 h-9 flex items-center justify-center transition-colors border rounded-lg">
-                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                            <div class="flex flex-col items-end gap-1.5">
+                                <p v-if="o.status !== 'diterima' && o.status !== 'dibatalkan'" class="text-[7px] font-black uppercase tracking-[0.1em] text-primary/70 mb-0.5 whitespace-nowrap">
+                                    {{ getNextActionDescription(o) }}
+                                </p>
+                                <div class="flex items-center gap-1.5">
+                                     <button @click="handleInstantUpdate(o)"
+                                        class="h-8 px-3 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg shadow-primary/20 hover:bg-black hover:shadow-xl active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 min-w-[100px]"
+                                        :disabled="o.status === 'diterima' || o.status === 'dibatalkan' || updatingOrderId === o.id || (o.status === 'dijemput' && o.courier_id)">
+                                        <template v-if="updatingOrderId === o.id">
+                                            <i class="fa-solid fa-spinner fa-spin text-[8px]"></i>
+                                            <span>Proses...</span>
+                                        </template>
+                                        <template v-else>
+                                            {{ getNextStatusLabel(o) }}
+                                            <i class="fa-solid fa-chevron-right text-[7px] opacity-70"></i>
+                                        </template>
                                     </button>
-                                    <transition enter-active-class="transition duration-150 ease-out" enter-from-class="opacity-0 scale-95 translate-y-2" enter-to-class="opacity-100 scale-100 translate-y-0" leave-active-class="transition duration-100 ease-in" leave-from-class="opacity-100 scale-100 translate-y-0" leave-to-class="opacity-0 scale-95 translate-y-2">
-                                        <div v-show="activeMenu === o.id" class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-border rounded-lg shadow-2xl py-1 origin-bottom-right">
-                                            <button @click="openDetail(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                                <i class="fa-solid fa-eye w-4 text-gray-400"></i> Lihat Detail
-                                            </button>
-                                            <button @click="printNota(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                                <i class="fa-solid fa-print w-4 text-gray-400"></i> Cetak Nota
-                                            </button>
-                                            <button @click="unduhPDF(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                                <i class="fa-solid fa-file-pdf w-4 text-gray-400"></i> Unduh PDF
-                                            </button>
-                                            <button @click="openEditForm(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                                <i class="fa-solid fa-pen-to-square w-4 text-gray-400"></i> Ubah Data (Manual)
-                                            </button>
-                                        </div>
-                                    </transition>
+                                    <div class="relative action-menu-container z-20">
+                                        <button @click="toggleMenu(o.id)" :class="activeMenu === o.id ? 'text-primary border-primary/50 bg-primary/5' : 'text-muted border-border hover:text-primary hover:border-primary/30'" class="w-9 h-9 flex items-center justify-center transition-colors border rounded-lg">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </button>
+                                        <transition enter-active-class="transition duration-150 ease-out" enter-from-class="opacity-0 scale-95 translate-y-2" enter-to-class="opacity-100 scale-100 translate-y-0" leave-active-class="transition duration-100 ease-in" leave-from-class="opacity-100 scale-100 translate-y-0" leave-to-class="opacity-0 scale-95 translate-y-2">
+                                            <div v-show="activeMenu === o.id" class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-border rounded-lg shadow-2xl py-1 origin-bottom-right">
+                                                <button @click="openDetail(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                    <i class="fa-solid fa-eye w-4 text-gray-400"></i> Lihat Detail
+                                                </button>
+                                                <button @click="printNota(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                    <i class="fa-solid fa-print w-4 text-gray-400"></i> Cetak Nota
+                                                </button>
+                                                <button @click="unduhPDF(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                    <i class="fa-solid fa-file-pdf w-4 text-gray-400"></i> Unduh PDF
+                                                </button>
+                                                <button @click="openEditForm(o); toggleMenu(o.id)" class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                    <i class="fa-solid fa-pen-to-square w-4 text-gray-400"></i> Ubah Data (Manual)
+                                                </button>
+                                            </div>
+                                        </transition>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1782,7 +1809,7 @@ async function unduhPDF(o) {
                         <div class="space-y-3">
                             <div class="flex items-start gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100/50">
                                 <i class="fa-solid fa-circle-info text-blue-500 text-xs mt-0.5"></i>
-                                <p class="text-[10px] text-blue-700 leading-relaxed font-medium">Pastikan kolom Email Pelanggan dan Nama Layanan sudah sesuai dengan yang ada di sistem agar tidak dilewati.</p>
+                                <p class="text-[10px] text-blue-700 leading-relaxed font-medium">Pastikan kolom Email, Layanan, dan Struktur Excel sudah sesuai template (Metode Bayar, Catatan, & Ekstra) agar data terinput dengan sempurna.</p>
                             </div>
                         </div>
                     </div>
