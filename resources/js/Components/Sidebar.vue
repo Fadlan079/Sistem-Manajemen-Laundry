@@ -117,7 +117,7 @@ onMounted(() => {
         </button>
 
         <!-- Sidebar Header / Logo (Now Toggle Button) -->
-        <button 
+        <button
             @click="emit('toggle-collapse')"
             class="relative px-4 py-8 border-b border-white/10 flex items-center transition-all duration-300 overflow-hidden group/header outline-none"
             :class="isCollapsed ? 'justify-center px-0' : 'px-8 gap-3'"
@@ -142,9 +142,9 @@ onMounted(() => {
             </div>
 
             <!-- Brand Info (Hidden on Collapsed) -->
-            <div 
+            <div
+                v-if="!isCollapsed"
                 class="flex flex-col text-left transition-all duration-300 whitespace-nowrap"
-                :class="isCollapsed ? 'opacity-0 w-0 scale-0' : 'opacity-100 w-auto scale-100'"
             >
                 <span class="font-bold text-xl tracking-tight leading-none text-white">HiWash</span>
                 <span class="text-[10px] text-white/70 font-semibold tracking-widest uppercase mt-1">{{ role }} Dashboard</span>
@@ -155,7 +155,7 @@ onMounted(() => {
         <nav scroll-region class="flex-1 px-3 py-6 space-y-6 overflow-y-auto custom-scrollbar">
             <div v-for="(groupLinks, category) in linksGroup" :key="category">
                 <!-- Category Header (Hidden on Collapsed) -->
-                <h3 
+                <h3
                     class="px-4 text-[11px] font-bold text-white/40 uppercase tracking-[2px] mb-3 transition-all duration-300 overflow-hidden"
                     :class="isCollapsed ? 'opacity-0 h-0 mb-0' : 'opacity-100 h-auto'"
                 >
@@ -164,77 +164,83 @@ onMounted(() => {
 
                 <div class="space-y-1">
                     <Link v-for="(link, index) in groupLinks" :key="index" :href="link.href"
-                        class="relative flex items-center rounded-xl transition-all duration-300 overflow-hidden group/item h-12"
+                        class="relative flex items-center rounded-xl transition-all duration-300 group/item h-12"
                         :class="[
                             link.active ? 'active-nav-item bg-black/30 text-white font-semibold shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]' : 'text-white/70 hover:bg-black/10 hover:text-white',
                             isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'
                         ]"
                     >
+                        <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md z-20"></div>
 
-                        <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md"></div>
+                        <div class="relative w-5 h-5 flex items-center justify-center shrink-0">
+                            <svg 
+                                class="w-5 h-5 opacity-90 group-hover/item:scale-110 group-hover/item:-rotate-12 transition-transform" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon"/>
+                            </svg>
 
-                        <svg 
-                            class="w-5 h-5 opacity-90 group-hover/item:scale-110 group-hover/item:-rotate-12 transition-transform shrink-0" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon"/>
-                        </svg>
-
-                        <span 
-                            class="text-[14px] transition-all duration-300 whitespace-nowrap overflow-hidden flex-1"
-                            :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
-                        >
-                            {{ link.name }}
-                        </span>
-
-                        <!-- Count Badge -->
-                        <div v-if="link.count > 0 && !isCollapsed" class="mr-2 px-2 py-0.5 bg-secondary text-gray-900 text-[10px] font-black rounded-full shadow-lg shadow-black/20 animate-in zoom-in duration-300">
-                            {{ link.count }}
+                            <!-- Floating Count Badge (Collapsed Mode) -->
+                            <div v-if="link.count > 0 && isCollapsed" 
+                                class="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 px-1 bg-secondary text-gray-900 text-[8px] font-black rounded-full shadow-lg shadow-black/40 flex items-center justify-center animate-in zoom-in z-30"
+                            >
+                                {{ link.count }}
+                            </div>
                         </div>
-                        <div v-else-if="link.count > 0 && isCollapsed" class="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full shadow-[0_0_8px_rgba(255,214,0,0.6)] animate-pulse"></div>
+
+                        <!-- Text & Inline Badge (Expanded Only) -->
+                        <template v-if="!isCollapsed">
+                            <span class="text-[14px] transition-all duration-300 whitespace-nowrap overflow-hidden">
+                                {{ link.name }}
+                            </span>
+
+                            <div v-if="link.count > 0" 
+                                class="ml-auto mr-2 px-2 py-0.5 bg-secondary text-gray-900 text-[10px] font-black rounded-full shadow-lg shadow-black/20 animate-in zoom-in"
+                            >
+                                {{ link.count }}
+                            </div>
+                        </template>
                     </Link>
                 </div>
             </div>
         </nav>
 
         <!-- Bottom Actions -->
-        <div 
+        <div
             class="p-4 space-y-3 border-t border-white/10 bg-black/5 transition-all duration-300"
             :class="isCollapsed ? 'px-2' : 'p-6'"
         >
             <Link
                 :href="route('home')"
-                class="flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all duration-300 border border-white/10 group/bottom overflow-hidden h-12"
-                :class="isCollapsed ? 'w-12 mx-auto' : 'w-full gap-2 px-4 text-sm font-semibold'"
+                class="flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all duration-300 border border-white/10 group/bottom h-12"
+                :class="isCollapsed ? 'w-12 mx-auto px-0' : 'w-full gap-2 px-4 text-sm font-semibold'"
                 title="Lihat Landing Page"
             >
-                <svg class="w-5 h-5 shrink-0 group-hover/bottom:scale-110 group-hover/bottom:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-                <span 
-                    class="transition-all duration-300 whitespace-nowrap overflow-hidden"
-                    :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
-                >
+                <div class="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 group-hover/bottom:scale-110 group-hover/bottom:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                </div>
+                <span v-if="!isCollapsed" class="transition-all duration-300 whitespace-nowrap overflow-hidden">
                     Landing Page
                 </span>
             </Link>
 
-            <Link 
-                v-if="role === 'operator'" 
-                :href="route('operator.pesanan.masuk', { action: 'add' })" 
-                class="flex items-center justify-center bg-secondary hover:bg-yellow-400 text-gray-900 rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 group/btn overflow-hidden h-12"
-                :class="isCollapsed ? 'w-12 mx-auto' : 'w-full gap-2 px-4 text-sm font-bold'"
+            <Link
+                v-if="role === 'operator'"
+                :href="route('operator.pesanan.masuk', { action: 'add' })"
+                class="flex items-center justify-center bg-secondary hover:bg-yellow-400 text-gray-900 rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 group/btn h-12"
+                :class="isCollapsed ? 'w-12 mx-auto px-0' : 'w-full gap-2 px-4 text-sm font-bold'"
                 title="Buat Pesanan"
             >
-                <svg class="w-5 h-5 shrink-0 group-hover/btn:scale-110 group-hover/btn:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                <span 
-                    class="transition-all duration-300 whitespace-nowrap overflow-hidden"
-                    :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
-                >
+                <div class="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 group-hover/btn:scale-110 group-hover/btn:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+                <span v-if="!isCollapsed" class="transition-all duration-300 whitespace-nowrap overflow-hidden">
                     Buat Pesanan
                 </span>
             </Link>

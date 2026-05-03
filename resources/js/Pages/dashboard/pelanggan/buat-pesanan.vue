@@ -880,10 +880,10 @@ const goBack = () => {
             >
                 <div v-if="isCancelModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
                     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isCancelModalOpen = false"></div>
-                    
+
                     <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                         <div class="h-2 bg-[#E30613]"></div>
-                        
+
                         <div class="p-8 space-y-6">
                             <div class="text-center space-y-2">
                                 <div class="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
@@ -905,9 +905,9 @@ const goBack = () => {
                                         <i v-if="cancelForm.reason === reason" class="fas fa-check text-[8px]"></i>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Custom Reason Textarea -->
-                                <textarea 
+                                <textarea
                                     v-if="cancelForm.reason === 'Alasan lainnya'"
                                     v-model="cancelForm.customReason"
                                     rows="2"
@@ -917,13 +917,13 @@ const goBack = () => {
                             </div>
 
                             <div class="flex gap-3">
-                                <button 
+                                <button
                                     @click="isCancelModalOpen = false"
                                     class="flex-1 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all active:scale-95"
                                 >
                                     Kembali
                                 </button>
-                                <button 
+                                <button
                                     @click="submitCancel"
                                     :disabled="!cancelForm.reason || (cancelForm.reason === 'Alasan lainnya' && !cancelForm.customReason)"
                                     class="flex-[2] py-3.5 bg-[#E30613] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
