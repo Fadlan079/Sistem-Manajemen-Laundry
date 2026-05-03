@@ -111,8 +111,7 @@ function confirmImport() {
 
 const tabs = computed(() => [
     { id: '', name: 'Semua Status', active: statusFilter.value === '' },
-    { id: 'menunggu', name: 'Menunggu', active: statusFilter.value === 'menunggu' },
-    { id: 'antri', name: 'Antri', active: statusFilter.value === 'antri' },
+    { id: 'menunggu', name: 'Belum Diproses', active: statusFilter.value === 'menunggu' },
     { id: 'dijemput', name: 'Dijemput', active: statusFilter.value === 'dijemput' },
     { id: 'diproses', name: 'Diproses', active: statusFilter.value === 'diproses' },
     { id: 'selesai', name: 'Selesai', active: statusFilter.value === 'selesai' },
@@ -138,7 +137,7 @@ const availableStats = {
     total: { label: 'Total Pesanan', icon: 'fa-shopping-bag', bg: 'bg-blue-50', text: 'text-blue-600', desc: 'Keseluruhan data' },
     selesai: { label: 'Pesanan Selesai', icon: 'fa-circle-check', bg: 'bg-emerald-50', text: 'text-emerald-600', desc: 'Berhasil diselesaikan' },
     diproses: { label: 'Sedang Diproses', icon: 'fa-spinner fa-spin-pulse', bg: 'bg-amber-50', text: 'text-amber-600', desc: 'Sedang dikerjakan' },
-    menunggu: { label: 'Menunggu', icon: 'fa-clock', bg: 'bg-rose-50', text: 'text-rose-600', desc: 'Belum diproses' },
+    menunggu: { label: 'Belum Diproses', icon: 'fa-clock', bg: 'bg-rose-50', text: 'text-rose-600', desc: 'Dibuat & Antri' },
     diterima: { label: 'Pesanan Diterima', icon: 'fa-handshake', bg: 'bg-teal-50', text: 'text-teal-600', desc: 'Telah diterima' },
     antri: { label: 'Pesanan Antri', icon: 'fa-users', bg: 'bg-orange-50', text: 'text-orange-600', desc: 'Menunggu giliran' },
     dibatalkan: { label: 'Pesanan Dibatalkan', icon: 'fa-ban', bg: 'bg-red-50', text: 'text-red-600', desc: 'Dibatalkan pelanggan' },
@@ -245,6 +244,9 @@ onMounted(() => {
 
 const addForm = useForm({
     user_id: '',
+    is_guest: false,
+    customer_name: '',
+    customer_phone: '',
     service_id: '',
     delivery_type: 'jemput',
     pickup_address: '',
@@ -258,6 +260,50 @@ const addForm = useForm({
     extra_services: [],
 });
 
+const currentStep = ref(1);
+const selectedCategory = ref('Semua');
+const steps = [
+    { id: 1, name: 'Layanan', icon: 'fa-shirt' },
+    { id: 2, name: 'Detail', icon: 'fa-clipboard-list' },
+    { id: 3, name: 'Konfirmasi', icon: 'fa-check-double' }
+];
+
+const categories = computed(() => {
+    const cats = ['Semua'];
+    props.services.forEach(s => {
+        if (s.category && !cats.includes(s.category)) {
+            cats.push(s.category);
+        }
+    });
+    return cats;
+});
+
+const groupedServices = computed(() => {
+    const groups = {};
+    const servicesToGroup = selectedCategory.value === 'Semua' 
+        ? props.services 
+        : props.services.filter(s => s.category === selectedCategory.value);
+    
+    servicesToGroup.forEach(s => {
+        if (!groups[s.category]) groups[s.category] = [];
+        groups[s.category].push(s);
+    });
+    return groups;
+});
+
+const nextStep = () => {
+    if (currentStep.value === 1) {
+        if (!addForm.service_id) return;
+        if (!addForm.is_guest && !addForm.user_id) return;
+        if (addForm.is_guest && (!addForm.customer_name || !addForm.customer_phone || !addForm.pickup_address)) return;
+    }
+    if (currentStep.value < steps.length) currentStep.value++;
+};
+
+const prevStep = () => {
+    if (currentStep.value > 1) currentStep.value--;
+};
+
 const editForm = useForm({
     id: null,
     status: 'pending',
@@ -268,6 +314,7 @@ const editForm = useForm({
 
 function openCreateForm() {
     addForm.reset();
+    currentStep.value = 1;
     showAddModal.value = true;
 }
 
@@ -311,7 +358,7 @@ function openCourierAssignment(o, nextStatus) {
 function submitCourierAssignment() {
     // Ensure total_price is sent as it's required by the backend validation
     courierForm.total_price = courierTargetOrder.value.total_price;
-    
+
     courierForm.put(route('operator.pesanan.masuk.update', courierTargetOrder.value.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -410,7 +457,7 @@ function handleInstantUpdate(o) {
             if (o.courier_id) {
                 return; // Do nothing, button should be disabled in template
             }
-            
+
             // Jika kurir eksternal atau input manual (isKg), butuh modal berat
             if (o.external_courier_name || o.isKg) {
                 return openWeightInput(o, 'diproses');
@@ -445,13 +492,13 @@ function handleInstantUpdate(o) {
 
 function performUpdate(o, payload) {
     updatingOrderId.value = o.id;
-    
+
     // Auto-fill actual weight if not provided and it exists
     if (!payload.actual_weight) {
         const weightVal = parseFloat(o.actual_weight) || parseFloat(o.items_qty) || 0;
         if (weightVal > 0) payload.actual_weight = weightVal;
     }
-    
+
     // Ensure total_price is included
     if (!payload.total_price) payload.total_price = o.total_price;
 
@@ -483,7 +530,12 @@ const deliveryOptions = [
 const currentService = computed(() => props.services.find(s => s.id === addForm.service_id) || props.services[0]);
 const isKgService = computed(() => ['/kg', 'kg'].includes(currentService.value?.unit?.toLowerCase() || ''));
 
-const formatRupiah = (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+const formatRupiah = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || !num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
+};
 
 const extraOptions = computed(() => {
     const expressPrice = (currentService.value?.price || 0) * 0.5;
@@ -518,7 +570,10 @@ const totalEstimatedCostText = computed(() => {
 
 const isAddSubmitDisabled = computed(() => {
     if (addForm.processing) return true;
-    if (!addForm.user_id || !addForm.service_id) return true;
+    if (!addForm.service_id) return true;
+    if (!addForm.is_guest && !addForm.user_id) return true;
+    if (addForm.is_guest && (!addForm.customer_name || !addForm.customer_phone || !addForm.pickup_address)) return true;
+    
     if (['jemput', 'antar_jemput'].includes(addForm.delivery_type) && (!addForm.pickup_date || !addForm.pickup_time)) return true;
     if (isKgService.value && (!addForm.weight || addForm.weight <= 0)) return true;
     if (!isKgService.value && (!addForm.item_qty || addForm.item_qty < 1)) return true;
@@ -539,6 +594,47 @@ function closeDetailModal() {
     viewingOrder.value    = null;
     isCopied.value = false;
 }
+
+const viewingEstimatedKG = computed(() => {
+    if (!viewingOrder.value || !viewingOrder.value.isKg || viewingOrder.value.isCalculated || !viewingOrder.value.estimated_weight_option) return { min: 0, max: 0 };
+    const key = viewingOrder.value.estimated_weight_option;
+    const minMap = { 'kurang_dari_3': 1, '3_sampai_5': 3, '5_sampai_10': 5, 'lebih_dari_10': 10 };
+    const maxMap = { 'kurang_dari_3': 3, '3_sampai_5': 5, '5_sampai_10': 10, 'lebih_dari_10': 15 };
+    return {
+        min: minMap[key] || 0,
+        max: maxMap[key] || 0
+    };
+});
+
+const viewingEstimatedServiceCostText = computed(() => {
+    if (!viewingOrder.value) return 'Rp0';
+    if (!viewingOrder.value.isKg || viewingOrder.value.isCalculated) return formatRupiah((viewingOrder.value.service_price || 0) * (viewingOrder.value.items_qty || 0));
+    const minCost = (viewingOrder.value.service_price || 0) * (viewingEstimatedKG.value.min || 0);
+    const maxCost = (viewingOrder.value.service_price || 0) * (viewingEstimatedKG.value.max || 0);
+    return `${formatRupiah(minCost)} - ${formatRupiah(maxCost)}`;
+});
+
+const viewingEstimatedTotalCostText = computed(() => {
+    if (!viewingOrder.value) return 'Rp0';
+    if (!viewingOrder.value.isKg || viewingOrder.value.isCalculated) return formatRupiah(viewingOrder.value.total_price || 0);
+
+    let extraSum = 0;
+    if (viewingOrder.value.extras) {
+        viewingOrder.value.extras.forEach(e => {
+            extraSum += parseFloat(e.price) || 0;
+        });
+    }
+    const servicePrice = parseFloat(viewingOrder.value.service_price) || 0;
+    const discount = parseFloat(viewingOrder.value.discount_amount) || 0;
+    const fee = parseFloat(viewingOrder.value.fee) || 0;
+
+    const finalUnitPrice = servicePrice + extraSum - discount;
+
+    const minTot = (finalUnitPrice * (viewingEstimatedKG.value.min || 0)) + fee;
+    const maxTot = (finalUnitPrice * (viewingEstimatedKG.value.max || 0)) + fee;
+
+    return `${formatRupiah(minTot)} - ${formatRupiah(maxTot)}`;
+});
 
 // QR & Invoice copy helpers
 const isCopied = ref(false);
@@ -591,7 +687,7 @@ const getOrderStepIndex = (o) => {
     const steps = getSteps(o);
     const label = statusToLabelMap[o.status] || 'Dibuat';
     const idx = steps.indexOf(label);
-    
+
     // Fallback logic for statuses that might be skipped in the UI but exist in DB
     if (idx === -1) {
         if (o.status === 'diterima') return steps.length - 1;
@@ -684,6 +780,10 @@ function getReceiptHtml(o) {
         <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-bottom: 4px;">
           <span style="font-weight: bold; text-transform: uppercase;">Pelanggan</span>
           <span style="font-weight: bold; color: #111;">${o.customer}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-bottom: 4px;">
+          <span style="font-weight: bold; text-transform: uppercase;">No. Telepon</span>
+          <span style="font-weight: bold; color: #111;">${o.customer_phone}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 9px; color: #555;">
           <span style="font-weight: bold; text-transform: uppercase;">Dicetak</span>
@@ -1104,195 +1204,291 @@ async function unduhPDF(o) {
             </div>
         </div>
 
-        <!-- ====== Modal: Add Form (Complex) ====== -->
+        <!-- ====== Modal: Add Form (Step-by-Step) ====== -->
         <teleport to="body">
-            <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to-class="opacity-100 translate-y-0 sm:scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0 sm:scale-100" leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
-                <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto pt-10 sm:pt-4">
-                    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeAddModal"></div>
-                    <div class="relative w-full max-w-4xl bg-surface rounded-sm shadow-2xl overflow-hidden border border-border my-8 sm:my-0">
-                        <div class="flex justify-between items-center px-6 py-4 border-b border-border bg-container/50 sticky top-0 z-10 hidden sm:flex">
-                            <h2 class="text-xs font-black uppercase tracking-[0.2em] text-text flex items-center gap-3">
-                                <i class="fa-solid fa-plus text-primary"></i> Tambah Pesanan Baru
-                            </h2>
-                            <button @click="closeAddModal" class="text-muted hover:text-text transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to-class="opacity-100 translate-y-0 sm:scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 sm:scale-100" leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeAddModal"></div>
+                    <div class="relative w-full max-w-2xl bg-surface rounded-3xl shadow-2xl overflow-hidden border border-border flex flex-col max-h-[90vh]">
+                        
+                        <!-- Modal Header with Stepper -->
+                        <div class="px-8 pt-8 pb-6 bg-white border-b border-gray-100 shrink-0">
+                            <div class="flex items-center justify-between mb-8">
+                                <div>
+                                    <h2 class="text-xl font-black text-text uppercase tracking-tight">Tambah Pesanan</h2>
+                                    <p class="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mt-1">Langkah {{ currentStep }} dari 3</p>
+                                </div>
+                                <button @click="closeAddModal" class="w-10 h-10 rounded-full bg-container flex items-center justify-center text-muted hover:text-primary transition-all">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <!-- Stepper UI -->
+                            <div class="relative flex justify-between px-4">
+                                <div class="absolute top-4 left-0 right-0 h-0.5 bg-gray-100 -z-0 mx-10">
+                                    <div class="h-full bg-primary transition-all duration-500" :style="{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }"></div>
+                                </div>
+                                <div v-for="step in steps" :key="step.id" class="relative z-10 flex flex-col items-center gap-2">
+                                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-500 border-2"
+                                        :class="[
+                                            currentStep === step.id ? 'bg-white border-primary text-primary shadow-lg shadow-primary/20 scale-110' :
+                                            currentStep > step.id ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200 text-gray-300'
+                                        ]">
+                                        <i v-if="currentStep > step.id" class="fa-solid fa-check"></i>
+                                        <i v-else :class="['fa-solid', step.icon]"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black uppercase tracking-widest" :class="currentStep >= step.id ? 'text-text' : 'text-muted'">{{ step.name }}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <form @submit.prevent="submitAddForm" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                            <!-- Basic Selects -->
-                            <div class="space-y-6">
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black uppercase tracking-widest text-muted">Pilih Pelanggan <span class="text-red-500">*</span></label>
-                                    <select v-model="addForm.user_id" required class="w-full px-4 py-3 border border-border rounded-sm text-sm focus:border-primary outline-none transition bg-surface text-text font-bold">
-                                        <option value="" disabled>-- Pilih Pelanggan --</option>
-                                        <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }} ({{ c.email }})</option>
-                                    </select>
-                                    <p v-if="addForm.errors.user_id" class="text-[10px] text-rose-500 font-bold mt-1 shadow-sm">{{ addForm.errors.user_id }}</p>
-                                </div>
-
-                                <div class="space-y-3">
-                                    <label class="text-[10px] font-black uppercase tracking-widest text-muted">Pilih Layanan <span class="text-red-500">*</span></label>
-                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                        <button v-for="s in services" :key="s.id" type="button" @click="addForm.service_id = s.id"
-                                            class="relative flex flex-col items-center justify-center p-4 rounded-sm border-2 transition-all overflow-hidden"
-                                            :class="addForm.service_id === s.id ? 'border-primary bg-primary/5' : 'border-border hover:border-gray-300 bg-surface'">
-
-                                            <div class="w-10 h-10 rounded-full mb-3 flex items-center justify-center"
-                                                :class="addForm.service_id === s.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-container text-muted'">
-                                                <i class="fa-solid fa-shirt text-lg"></i>
-                                            </div>
-
-                                            <span class="text-xs font-bold text-center leading-tight mb-1" :class="addForm.service_id === s.id ? 'text-primary' : 'text-text'">{{ s.name }}</span>
-                                            <span class="text-[10px] font-bold" :class="addForm.service_id === s.id ? 'text-primary/80' : 'text-muted'">{{ formatRupiah(s.price) }}{{ s.unit }}</span>
-
-                                            <!-- Checkmark Indicator -->
-                                            <div v-if="addForm.service_id === s.id" class="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-bl-xl rounded-tr text-white flex items-center justify-center shadow-sm">
-                                                <i class="fa-solid fa-check text-[10px]"></i>
-                                            </div>
-                                        </button>
-                                    </div>
-                                    <p v-if="addForm.errors.service_id" class="text-[10px] text-rose-500 font-bold mt-1 shadow-sm">{{ addForm.errors.service_id }}</p>
-                                </div>
-                            </div>
-
-                            <hr class="border-border border-dashed" />
-
-                            <!-- Logic from buat-pesanan.vue -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" v-if="addForm.service_id">
-
-                                <!-- Left Column: Delivery details & Notes -->
-                                <div class="space-y-6">
-                                    <div class="space-y-3">
-                                        <h3 class="text-xs font-bold text-gray-800 border-b border-border pb-2 border-dashed">Tipe Pengiriman & Alamat</h3>
-                                        <div class="grid grid-cols-2 gap-3">
-                                            <label v-for="opt in deliveryOptions" :key="opt.value"
-                                                class="flex flex-col items-center gap-1 p-3 rounded-sm border cursor-pointer transition-all text-center"
-                                                :class="addForm.delivery_type === opt.value ? 'border-primary bg-primary/10' : 'border-border bg-surface hover:bg-container/50'">
-                                                <input type="radio" v-model="addForm.delivery_type" :value="opt.value" class="sr-only">
-                                                <i :class="['fa-solid', opt.icon, addForm.delivery_type === opt.value ? 'text-primary' : 'text-gray-400']"></i>
-                                                <span class="text-[10px] font-bold mt-1" :class="addForm.delivery_type === opt.value ? 'text-primary' : 'text-gray-600'">{{ opt.label }}</span>
-                                                <span class="text-[9px] text-gray-500">Ongkir: {{ opt.fee === 0 ? 'Gratis' : formatRupiah(opt.fee) }}</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div v-show="['jemput', 'antar_jemput'].includes(addForm.delivery_type)" class="grid grid-cols-2 gap-4">
-                                        <div class="space-y-1">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted">Tanggal Jemput</label>
-                                            <input v-model="addForm.pickup_date" type="date" class="w-full px-4 py-2 bg-surface border border-border rounded-sm text-sm focus:border-primary outline-none transition" />
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted">Jam PickUp</label>
-                                            <input v-model="addForm.pickup_time" type="time" class="w-full px-4 py-2 bg-surface border border-border rounded-sm text-sm focus:border-primary outline-none transition" />
-                                        </div>
-                                    </div>
-
+                        <!-- Modal Body -->
+                        <div class="flex-1 overflow-y-auto p-8 detail-scroll bg-[#F9FAFB]">
+                            <form @submit.prevent="submitAddForm">
+                                
+                                <!-- STEP 1: Pelanggan & Layanan -->
+                                <div v-if="currentStep === 1" class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div class="space-y-4">
-                                        <div class="space-y-1">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted">Alamat Pelanggan</label>
-                                            <textarea v-model="addForm.pickup_address" rows="2" placeholder="Masukan alamat jemput/antar detail..."
-                                                class="w-full px-4 py-2 bg-surface border border-border rounded-sm text-sm focus:border-primary outline-none transition font-medium"></textarea>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-4">
-                                            <div class="space-y-1">
-                                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Catatan Layanan <span class="lowercase tracking-normal font-normal opacity-70">(Ops)</span></label>
-                                                <input v-model="addForm.laundry_notes" type="text" placeholder="Baju putih bedakan" class="w-full px-3 py-2 bg-surface border border-border rounded-sm text-xs focus:border-primary outline-none transition" />
-                                            </div>
-                                            <div class="space-y-1">
-                                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Catatan Kurir <span class="lowercase tracking-normal font-normal opacity-70">(Ops)</span></label>
-                                                <input v-model="addForm.courier_notes" type="text" placeholder="Pagar hijau" class="w-full px-3 py-2 bg-surface border border-border rounded-sm text-xs focus:border-primary outline-none transition" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Right Column: Qty, Extras & Total -->
-                                <div class="space-y-6">
-                                    <div class="space-y-3">
-                                        <h3 class="text-xs font-bold text-gray-800 border-b border-border pb-2 border-dashed">Detail Layanan & Ekstra</h3>
-
-                                        <!-- Qty / Actual Weight -->
-                                        <div v-if="isKgService">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted mb-2 block">Berat Aktual (Kg) <span class="text-red-500">*</span></label>
-                                            <div class="relative">
-                                                <input type="number" step="0.1" min="0.1" v-model="addForm.weight" class="w-full px-4 py-2 bg-surface text-center border border-border rounded-sm text-sm font-bold text-gray-800 focus:border-primary outline-none transition" placeholder="0.0" />
-                                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold text-xs pointer-events-none">Kg</span>
-                                            </div>
-                                        </div>
-                                        <div v-else>
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted mb-2 block">Jumlah Item (Pcs) <span class="text-red-500">*</span></label>
-                                            <div class="flex items-center gap-4">
-                                                <button type="button" @click="addForm.item_qty = Math.max(1, addForm.item_qty - 1)" class="w-10 h-10 rounded-sm bg-container flex items-center justify-center font-bold text-gray-700 hover:bg-gray-300">-</button>
-                                                <input type="number" v-model="addForm.item_qty" min="1" class="w-20 py-2 text-center border-border rounded-sm font-bold text-gray-800" />
-                                                <button type="button" @click="addForm.item_qty++" class="w-10 h-10 rounded-sm bg-container flex items-center justify-center font-bold text-gray-700 hover:bg-gray-300">+</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Extras -->
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-black uppercase tracking-widest text-muted block">Layanan Tambahan (Opsional)</label>
-                                        <div class="grid gap-2">
-                                            <label v-for="opt in extraOptions" :key="opt.value"
-                                                class="flex justify-between items-center p-3 rounded-sm border cursor-pointer transition-all"
-                                                :class="addForm.extra_services.includes(opt.value) ? 'border-primary bg-primary/5' : 'border-border'">
-                                                <div class="flex items-center gap-2">
-                                                    <input type="checkbox" v-model="addForm.extra_services" :value="opt.value" class="text-primary focus:ring-primary rounded-sm">
-                                                    <span class="text-xs font-bold text-gray-800">{{ opt.label }}</span>
-                                                </div>
-                                                <span class="text-[11px] font-bold" :class="opt.priceValue > 0 ? 'text-primary' : 'text-green-600'">{{ opt.priceText }}</span>
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted flex items-center gap-2">
+                                                <i class="fa-solid fa-user text-primary/60"></i> Pilih Pelanggan
                                             </label>
+                                            <button type="button" @click="addForm.is_guest = !addForm.is_guest" 
+                                                class="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all border shadow-sm"
+                                                :class="addForm.is_guest ? 'bg-primary text-white border-primary' : 'bg-white text-muted border-border hover:border-primary/30'">
+                                                {{ addForm.is_guest ? 'Batal Guest' : '+ Pelanggan Baru' }}
+                                            </button>
+                                        </div>
+
+                                        <div v-if="!addForm.is_guest" class="animate-in fade-in zoom-in-95 duration-300">
+                                            <select v-model="addForm.user_id" :required="!addForm.is_guest" class="w-full px-5 py-4 bg-white border border-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm">
+                                                <option value="" disabled>Cari nama pelanggan...</option>
+                                                <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }} ({{ c.email }})</option>
+                                            </select>
+                                        </div>
+
+                                        <div v-else class="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div class="space-y-2">
+                                                    <input v-model="addForm.customer_name" type="text" placeholder="Nama Lengkap" required
+                                                        class="w-full px-5 py-4 bg-white border border-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm" />
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <input v-model="addForm.customer_phone" type="tel" placeholder="No. Telepon (WA)" required
+                                                        class="w-full px-5 py-4 bg-white border border-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm" />
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <textarea v-model="addForm.pickup_address" placeholder="Alamat Pelanggan" required
+                                                    class="w-full px-5 py-4 bg-white border border-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm resize-none" rows="2"></textarea>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Payment & Summary -->
-                                    <div class="space-y-3 bg-container/30 p-4 rounded-sm border border-border">
-                                        <div class="flex justify-between items-center text-xs">
-                                            <span class="text-gray-600 font-bold uppercase tracking-widest">Biaya Layanan</span>
-                                            <span class="font-mono font-bold">{{ calculatedServiceCostText }}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center text-xs">
-                                            <span class="text-gray-600 font-bold uppercase tracking-widest">Biaya Ongkir</span>
-                                            <span class="font-mono font-bold">{{ formatRupiah(estimatedDeliveryFee) }}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center pt-2 border-t border-dashed border-gray-300">
-                                            <div>
-                                                <span class="block text-xs font-black uppercase tracking-widest text-gray-900">Total Harga</span>
-                                                <span v-if="isKgService" class="text-[9px] text-gray-500 font-mono">(Sesuai Berat)</span>
+                                    <div class="space-y-6">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted flex items-center gap-2">
+                                                <i class="fa-solid fa-shirt text-primary/60"></i> Pilih Layanan Utama
+                                            </label>
+                                            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                                <button v-for="cat in categories" :key="cat" type="button" @click="selectedCategory = cat"
+                                                    class="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border"
+                                                    :class="selectedCategory === cat ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white text-muted border-border hover:border-primary/30'">
+                                                    {{ cat }}
+                                                </button>
                                             </div>
-                                            <span class="font-mono text-lg font-black text-primary">{{ totalEstimatedCostText }}</span>
                                         </div>
-                                        <div class="pt-3 border-t border-border mt-3 space-y-2">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-muted block">Pembayaran</label>
-                                            <div class="flex gap-4">
-                                                <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
-                                                    <input type="radio" v-model="addForm.payment_preference" value="cash" class="text-primary focus:ring-primary" /> Tunai
-                                                </label>
-                                                <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
-                                                    <input type="radio" v-model="addForm.payment_preference" value="transfer" class="text-primary focus:ring-primary" /> Transfer / QRIS
-                                                </label>
+
+                                        <div class="space-y-8">
+                                            <div v-for="(services, catName) in groupedServices" :key="catName" class="space-y-4">
+                                                <div class="flex items-center gap-4">
+                                                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-muted shrink-0">{{ catName }}</h3>
+                                                    <div class="h-px bg-border flex-1"></div>
+                                                </div>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <button v-for="s in services" :key="s.id" type="button" @click="addForm.service_id = s.id"
+                                                        class="flex items-center gap-4 p-4 rounded-2xl border-2 transition-all relative overflow-hidden group text-left h-24"
+                                                        :class="addForm.service_id === s.id ? 'border-primary bg-primary/5 ring-4 ring-primary/5' : 'border-white bg-white hover:border-primary/20'">
+                                                        
+                                                        <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-border bg-gray-50 flex items-center justify-center">
+                                                            <img v-if="s.image_url" :src="s.image_url" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                            <div v-else class="text-muted text-xl group-hover:text-primary transition-colors">
+                                                                <i class="fa-solid fa-shirt"></i>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="min-w-0 flex-1">
+                                                            <p class="text-xs font-black text-text uppercase tracking-tight truncate leading-tight">{{ s.name }}</p>
+                                                            <p class="text-[10px] font-bold text-primary mt-1 font-mono tracking-tighter">{{ formatRupiah(s.price) }}<span class="text-muted/60">/{{ s.unit }}</span></p>
+                                                            <p v-if="s.description" class="text-[8px] text-muted mt-1 line-clamp-1 italic font-medium">{{ s.description }}</p>
+                                                        </div>
+
+                                                        <div v-if="addForm.service_id === s.id" class="absolute top-3 right-3">
+                                                            <div class="w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-[10px] shadow-lg shadow-primary/30 animate-in zoom-in duration-300">
+                                                                <i class="fa-solid fa-check"></i>
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Footer -->
-                            <div class="flex justify-end gap-3 pt-6 border-t border-border mt-6">
-                                <button type="button" @click="closeAddModal" class="px-6 py-2 border border-border rounded-sm text-xs font-black uppercase tracking-widest text-muted hover:text-text hover:bg-container transition-colors">
-                                    Batal
+                                <!-- STEP 2: Detail Pesanan -->
+                                <div v-if="currentStep === 2" class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <!-- Left Side: Logistics -->
+                                        <div class="space-y-6">
+                                            <div class="space-y-3">
+                                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Metode Pengiriman</label>
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <button v-for="opt in deliveryOptions" :key="opt.value" type="button" @click="addForm.delivery_type = opt.value"
+                                                        class="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all"
+                                                        :class="addForm.delivery_type === opt.value ? 'border-primary bg-primary/5 ring-4 ring-primary/5' : 'border-white bg-white hover:border-primary/20'">
+                                                        <i :class="['fa-solid', opt.icon, addForm.delivery_type === opt.value ? 'text-primary' : 'text-muted']"></i>
+                                                        <span class="text-[10px] font-black uppercase tracking-widest">{{ opt.label }}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-4" v-if="['jemput', 'antar_jemput'].includes(addForm.delivery_type)">
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div class="space-y-1.5">
+                                                        <label class="text-[9px] font-black uppercase text-muted">Tgl Jemput</label>
+                                                        <input v-model="addForm.pickup_date" type="date" class="w-full px-4 py-3 bg-white border border-border rounded-xl text-xs font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all" />
+                                                    </div>
+                                                    <div class="space-y-1.5">
+                                                        <label class="text-[9px] font-black uppercase text-muted">Jam Jemput</label>
+                                                        <input v-model="addForm.pickup_time" type="time" class="w-full px-4 py-3 bg-white border border-border rounded-xl text-xs font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all" />
+                                                    </div>
+                                                </div>
+                                                <div class="space-y-1.5">
+                                                    <label class="text-[9px] font-black uppercase text-muted">Alamat Detail</label>
+                                                    <textarea v-model="addForm.pickup_address" rows="3" class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-xs font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all" placeholder="Nama jalan, blok, nomor rumah..."></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right Side: Specs -->
+                                        <div class="space-y-6">
+                                            <div class="space-y-3">
+                                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Kuantitas / Berat</label>
+                                                <div v-if="isKgService" class="relative group">
+                                                    <input v-model="addForm.weight" type="number" step="0.1" class="w-full px-6 py-5 bg-white border-2 border-border rounded-2xl text-2xl font-black text-center focus:border-primary outline-none transition-all shadow-inner" placeholder="0.0" />
+                                                    <span class="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-muted uppercase tracking-widest">Kg</span>
+                                                </div>
+                                                <div v-else class="flex items-center justify-center gap-6 p-4 bg-white border border-border rounded-2xl shadow-sm">
+                                                    <button type="button" @click="addForm.item_qty = Math.max(1, addForm.item_qty - 1)" class="w-10 h-10 rounded-xl bg-container flex items-center justify-center text-text hover:bg-primary hover:text-white transition-all"><i class="fa-solid fa-minus"></i></button>
+                                                    <input v-model="addForm.item_qty" type="number" class="w-16 text-2xl font-black text-center bg-transparent outline-none" />
+                                                    <button type="button" @click="addForm.item_qty++" class="w-10 h-10 rounded-xl bg-container flex items-center justify-center text-text hover:bg-primary hover:text-white transition-all"><i class="fa-solid fa-plus"></i></button>
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-3">
+                                                <label class="text-[10px] font-black uppercase tracking-widest text-muted">Layanan Ekstra</label>
+                                                <div class="grid grid-cols-1 gap-2">
+                                                    <label v-for="opt in extraOptions" :key="opt.value" 
+                                                        class="flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer group"
+                                                        :class="addForm.extra_services.includes(opt.value) ? 'border-primary bg-primary/5' : 'border-white bg-white hover:border-primary/20'">
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                                                                :class="addForm.extra_services.includes(opt.value) ? 'bg-primary border-primary' : 'border-gray-200'">
+                                                                <i v-if="addForm.extra_services.includes(opt.value)" class="fa-solid fa-check text-[10px] text-white"></i>
+                                                            </div>
+                                                            <input type="checkbox" v-model="addForm.extra_services" :value="opt.value" class="sr-only">
+                                                            <span class="text-[11px] font-black text-text uppercase tracking-tight">{{ opt.label }}</span>
+                                                        </div>
+                                                        <span class="text-[9px] font-black text-primary opacity-60">{{ opt.priceText }}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STEP 3: Ringkasan & Konfirmasi -->
+                                <div v-if="currentStep === 3" class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div class="bg-white border border-border rounded-3xl overflow-hidden shadow-sm">
+                                        <div class="p-6 bg-primary text-white">
+                                            <div class="flex justify-between items-end">
+                                                <div>
+                                                    <p class="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Total Estimasi</p>
+                                                    <h3 class="text-3xl font-black font-mono tracking-tighter">{{ totalEstimatedCostText }}</h3>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-[10px] font-black uppercase tracking-widest opacity-80">{{ currentService?.name }}</p>
+                                                    <p class="text-xs font-bold">{{ isKgService ? addForm.weight + ' Kg' : addForm.item_qty + ' Item' }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-6 space-y-4">
+                                            <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                                                <span class="text-[10px] font-black uppercase text-muted tracking-widest">Pelanggan</span>
+                                                <span class="text-xs font-black text-text uppercase tracking-tight">
+                                                    {{ addForm.is_guest ? addForm.customer_name : (customers.find(c => c.id === addForm.user_id)?.name || '-') }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                                                <span class="text-[10px] font-black uppercase text-muted tracking-widest">Pengiriman</span>
+                                                <span class="text-xs font-black text-text uppercase tracking-tight">{{ deliveryOptions.find(d => d.value === addForm.delivery_type)?.label }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between py-2">
+                                                <span class="text-[10px] font-black uppercase text-muted tracking-widest">Metode Bayar</span>
+                                                <div class="flex gap-4">
+                                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                                        <input type="radio" v-model="addForm.payment_preference" value="cash" class="w-4 h-4 text-primary focus:ring-primary">
+                                                        <span class="text-[10px] font-black uppercase text-text group-hover:text-primary transition-colors">Tunai</span>
+                                                    </label>
+                                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                                        <input type="radio" v-model="addForm.payment_preference" value="transfer" class="w-4 h-4 text-primary focus:ring-primary">
+                                                        <span class="text-[10px] font-black uppercase text-text group-hover:text-primary transition-colors">Transfer</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-4 items-start shadow-sm">
+                                        <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-amber-600 shrink-0 shadow-sm">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </div>
+                                        <p class="text-[10px] text-amber-700 font-bold leading-relaxed uppercase tracking-tight">Pastikan semua data sudah benar. Setelah pesanan dibuat, invoice akan diterbitkan dan masuk ke dalam antrean operator.</p>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="px-8 py-6 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
+                            <button v-if="currentStep > 1" @click="prevStep" type="button" class="px-6 py-3 bg-container text-text text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all">
+                                Kembali
+                            </button>
+                            <div v-else></div>
+
+                            <div class="flex gap-3">
+                                <button v-if="currentStep < 3" @click="nextStep" 
+                                    :disabled="currentStep === 1 && (!addForm.service_id || (!addForm.is_guest && !addForm.user_id) || (addForm.is_guest && (!addForm.customer_name || !addForm.customer_phone || !addForm.pickup_address)))"
+                                    class="px-8 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50">
+                                    Lanjutkan <i class="fa-solid fa-chevron-right ml-2 text-[8px]"></i>
                                 </button>
-                                <button type="submit" :disabled="isAddSubmitDisabled" class="px-6 py-2 bg-primary text-white rounded-sm text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50 min-w-[120px]">
-                                    <span v-if="addForm.processing" class="flex items-center justify-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Processing...</span>
-                                    <span v-else>Tambah Pesanan</span>
+                                <button v-if="currentStep === 3" @click="submitAddForm" :disabled="addForm.processing"
+                                    class="px-8 py-3 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-3">
+                                    <template v-if="addForm.processing">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Memproses...
+                                    </template>
+                                    <template v-else>
+                                        Buat Pesanan Sekarang <i class="fa-solid fa-check-double ml-1"></i>
+                                    </template>
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </transition>
         </teleport>
 
-        <!-- ====== Modal: Edit Form (Simple) ====== -->
+        <!-- ====== Modal: Edit Form (Multi-Step Logic Applied) ====== -->
         <teleport to="body">
             <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to-class="opacity-100 translate-y-0 sm:scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0 sm:scale-100" leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
                 <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1622,7 +1818,8 @@ async function unduhPDF(o) {
                                         <div class="flex-1">
                                             <span class="font-black text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Pelanggan</span>
                                             <span class="font-bold text-gray-700 block text-xs">{{ viewingOrder.customer }}</span>
-                                            <span class="text-gray-500 block text-[10px] mt-0.5">{{ viewingOrder.customer_email }}</span>
+                                            <span class="text-primary font-bold block text-[10px] mt-0.5">{{ viewingOrder.customer_phone }}</span>
+                                            <span v-if="viewingOrder.customer_email && viewingOrder.customer_email !== '-'" class="text-gray-500 block text-[10px] mt-0.5">{{ viewingOrder.customer_email }}</span>
                                         </div>
                                     </div>
 
@@ -1706,33 +1903,66 @@ async function unduhPDF(o) {
                                         </div>
                                     </div>
 
-                                    <div class="mt-4 pt-3 border-t-2 border-dashed border-gray-200 space-y-3">
+                                    <div class="mt-4 pt-3 border-t-2 border-dashed border-gray-200 space-y-4">
                                         <h3 class="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] mb-3">Rincian Biaya</h3>
 
-                                        <div class="flex justify-between text-xs font-bold">
-                                            <span class="text-gray-500 uppercase tracking-tighter">
-                                                Biaya Layanan
-                                                <span v-if="viewingOrder.isKg && viewingOrder.actual_weight > 0" class="text-xs text-primary font-black ml-1">({{ viewingOrder.actual_weight }} kg)</span>
-                                                <span v-else-if="!viewingOrder.isKg && viewingOrder.items_qty > 0" class="text-gray-300">({{ viewingOrder.items_qty }} {{ (viewingOrder.unit || '').replace('/', '') }})</span>
-                                            </span>
-                                            <span class="text-gray-900">{{ formatRupiah((viewingOrder.actual_weight || viewingOrder.items_qty || 1) * viewingOrder.service_price) }}</span>
+                                        <!-- Service Price -->
+                                        <div class="space-y-1">
+                                            <div class="flex justify-between text-xs font-bold">
+                                                <span class="text-gray-500 uppercase tracking-tighter">
+                                                    Biaya Layanan
+                                                    <span v-if="viewingOrder.isKg && viewingOrder.isCalculated" class="text-xs text-primary font-black ml-1">({{ viewingOrder.actual_weight }} kg)</span>
+                                                    <span v-else-if="!viewingOrder.isKg && viewingOrder.items_qty > 0" class="text-gray-300">({{ viewingOrder.items_qty }} {{ (viewingOrder.unit || '').replace('/', '') }})</span>
+                                                    <span v-else-if="viewingOrder.isKg && !viewingOrder.isCalculated" class="text-[9px] text-blue-500 font-black ml-1">(Estimasi {{ viewingOrder.estimated_weight }})</span>
+                                                </span>
+                                                <span class="text-gray-900">{{ viewingEstimatedServiceCostText }}</span>
+                                            </div>
+                                            <div v-if="viewingOrder.isCalculated" class="text-[9px] text-gray-400 font-black uppercase tracking-widest">
+                                                ({{ (viewingOrder.actual_weight || viewingOrder.items_qty) }} {{ viewingOrder.unit.replace('/', '') }} x {{ formatRupiah(viewingOrder.service_price) }})
+                                            </div>
                                         </div>
 
-                                        <div class="text-[9px] text-gray-400 -mt-2 font-black uppercase tracking-widest">
-                                            {{ formatRupiah(viewingOrder.service_price) }}{{ viewingOrder.unit }}
+                                        <!-- Extra Services -->
+                                        <div v-if="viewingOrder.extras && viewingOrder.extras.length > 0" class="space-y-2 pt-1">
+                                            <div v-for="extra in viewingOrder.extras" :key="extra.label" class="flex justify-between text-xs font-bold">
+                                                <span class="text-gray-500 uppercase tracking-tighter">
+                                                    <div class="flex items-center gap-2">
+                                                        <i class="fas fa-plus text-[8px] text-primary"></i> {{ extra.label }}
+                                                    </div>
+                                                    <span v-if="viewingOrder.isCalculated" class="text-[9px] text-gray-300 normal-case font-normal">
+                                                        ({{ (viewingOrder.actual_weight || viewingOrder.items_qty) }} {{ viewingOrder.unit.replace('/', '') }} x {{ formatRupiah(extra.price) }})
+                                                    </span>
+                                                </span>
+                                                <span class="text-gray-900">+{{ formatRupiah(extra.price * (viewingOrder.actual_weight || viewingOrder.items_qty || 1)) }}</span>
+                                            </div>
                                         </div>
 
-                                        <div v-if="viewingOrder.fee > 0" class="flex justify-between text-xs font-bold pt-1">
+                                        <!-- Shipping Fee -->
+                                        <div v-if="viewingOrder.fee > 0" class="flex justify-between text-xs font-bold pt-1 border-t border-gray-50 mt-2 pt-2">
                                             <span class="text-gray-500 uppercase tracking-tighter">Ongkos Kirim</span>
                                             <span class="text-gray-900">{{ formatRupiah(viewingOrder.fee) }}</span>
                                         </div>
 
+                                        <!-- Discount -->
+                                        <div v-if="viewingOrder.discount_amount > 0" class="flex justify-between text-xs font-bold pt-1">
+                                            <span class="text-emerald-600 uppercase tracking-tighter">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-percent text-emerald-400"></i> Diskon
+                                                </div>
+                                                <span v-if="viewingOrder.isCalculated" class="text-[9px] text-emerald-400 normal-case font-normal">
+                                                    ({{ (viewingOrder.actual_weight || viewingOrder.items_qty) }} {{ viewingOrder.unit.replace('/', '') }} x {{ formatRupiah(viewingOrder.discount_amount) }})
+                                                </span>
+                                            </span>
+                                            <span class="text-emerald-600">-{{ formatRupiah(viewingOrder.discount_amount * (viewingOrder.actual_weight || viewingOrder.items_qty || 1)) }}</span>
+                                        </div>
+
+                                        <!-- Total -->
                                         <div class="flex justify-between items-end pt-4 mt-2 border-t border-gray-100">
                                             <div>
                                                 <span class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Biaya</span>
-                                                <span v-if="viewingOrder.isKg && (!viewingOrder.actual_weight || viewingOrder.actual_weight <= 0)" class="text-[8px] text-blue-500 font-black uppercase tracking-tighter leading-none italic">*Belum ditimbang</span>
+                                                <span v-if="viewingOrder.isKg && !viewingOrder.isCalculated" class="text-[8px] text-blue-500 font-black uppercase tracking-tighter leading-none italic">*Total Berdasarkan Estimasi</span>
                                             </div>
-                                            <span class="text-2xl font-black text-[#E30613] tracking-tighter leading-none">{{ formatRupiah(viewingOrder.total_price) }}</span>
+                                            <span class="text-2xl font-black text-[#E30613] tracking-tighter leading-none">{{ viewingEstimatedTotalCostText }}</span>
                                         </div>
                                     </div>
                                 </div>

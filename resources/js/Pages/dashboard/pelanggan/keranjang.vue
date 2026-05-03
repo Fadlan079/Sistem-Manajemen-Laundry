@@ -26,12 +26,11 @@ const selectAll = () => {
     }
 };
 
-const formatRupiah = (value) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0
-    }).format(value);
+const formatRupiah = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || !num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
 };
 
 const checkoutForm = useForm({

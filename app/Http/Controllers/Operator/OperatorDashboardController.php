@@ -21,7 +21,7 @@ class OperatorDashboardController extends Controller
 
         // ── Pesanan Stats ──────────────────────────────────────────
         $pesanan = [
-            'antrian'        => Order::where('status', 'dibuat')->count(),
+            'antrian'        => Order::whereIn('status', ['dibuat', 'antri'])->count(),
             'diproses'       => Order::where('status', 'diproses')->count(),
             'selesai_hari_ini' => Order::where('status', 'selesai')->whereDate('updated_at', $today)->count(),
             'total_bulan_ini'  => Order::whereDate('created_at', '>=', $thisMonth)->count(),
@@ -32,26 +32,26 @@ class OperatorDashboardController extends Controller
         // ── Penjemputan Stats ──────────────────────────────────────
         $lateThreshold = Carbon::now()->subHours(12);
         $pickup = [
-            'belum_assign'  => Delivery::where('type', 'pickup')->where('status', '!=', 'selesai')
+            'belum_assign'  => Delivery::where('type', 'pickup')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereNull('courier_id')->whereNull('external_courier_name')->count(),
-            'terlambat'     => Delivery::where('type', 'pickup')->where('status', '!=', 'selesai')
+            'terlambat'     => Delivery::where('type', 'pickup')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereHas('order', fn($q) => $q->where('created_at', '<', $lateThreshold))->count(),
             'hari_ini'      => Delivery::where('type', 'pickup')->whereDate('created_at', $today)->count(),
         ];
 
         // ── Pengantaran Stats ──────────────────────────────────────
         $delivery = [
-            'belum_assign'  => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')
+            'belum_assign'  => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereNull('courier_id')->whereNull('external_courier_name')->count(),
-            'terlambat'     => Delivery::where('type', 'delivery')->where('status', '!=', 'selesai')
+            'terlambat'     => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
                                 ->whereHas('order', fn($q) => $q->where('created_at', '<', $lateThreshold))->count(),
             'hari_ini'      => Delivery::where('type', 'delivery')->whereDate('created_at', $today)->count(),
         ];
 
         // ── Pembayaran Stats ──────────────────────────────────────
         $pembayaran = [
-            'belum_lunas'   => Order::whereHas('payments', fn($q) => $q->where('status', 'menunggu'))->count(),
-            'tunai_cod'     => Order::whereHas('payments', fn($q) => $q->where('status', 'menunggu')->whereIn('method', ['cash', 'cod']))->count(),
+            'belum_lunas'   => Order::whereHas('payments', fn($q) => $q->where('status', 'pending'))->count(),
+            'tunai_cod'     => Order::whereHas('payments', fn($q) => $q->where('status', 'pending')->whereIn('method', ['cash', 'cod']))->count(),
             'lunas_hari_ini' => Order::whereHas('payments', fn($q) => $q->where('status', 'paid')->whereDate('paid_at', $today))->count(),
             'pendapatan_hari_ini' => Payment::where('status', 'paid')->whereDate('paid_at', $today)->sum('amount'),
             'pendapatan_bulan_ini' => Payment::where('status', 'paid')->whereDate('paid_at', '>=', $thisMonth)->sum('amount'),
@@ -68,15 +68,15 @@ class OperatorDashboardController extends Controller
                 'customer' => $o->user?->name ?? '-',
                 'service'  => $o->service?->name ?? '-',
                 'status'   => $o->status,
-                'total'    => (float) $o->total_price,
+                'total_price'    => (float) $o->total_price,
                 'date'     => $o->created_at->format('d M, H:i'),
-                'payment_status' => $o->payments->first()?->status ?? 'menunggu',
+                'payment_status' => $o->payments->first()?->status ?? 'pending',
             ]);
 
         // ── Antrian Penjemputan Mendesak (unassigned pickups) ─────
         $urgentPickups = Delivery::with(['order.user'])
             ->where('type', 'pickup')
-            ->where('status', '!=', 'selesai')
+            ->whereNotIn('status', ['selesai', 'pending'])
             ->whereNull('courier_id')
             ->whereNull('external_courier_name')
             ->orderBy('created_at', 'asc')
@@ -91,9 +91,9 @@ class OperatorDashboardController extends Controller
                 'age_hours' => $d->order->created_at->diffInHours(Carbon::now()),
             ]);
 
-        // ── Pembayaran Mendesak (menunggu belum lunas) ─────────────
+        // ── Pembayaran Mendesak (pending belum lunas) ─────────────
         $urgentPayments = Order::with(['user', 'payments'])
-            ->whereHas('payments', fn($q) => $q->where('status', 'menunggu'))
+            ->whereHas('payments', fn($q) => $q->where('status', 'pending'))
             ->where('total_price', '>', 0)
             ->latest()
             ->limit(3)
@@ -102,7 +102,7 @@ class OperatorDashboardController extends Controller
                 'id'      => $o->id,
                 'invoice' => 'INV-' . $o->created_at->format('Ymd') . '-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
                 'name'    => $o->user?->name ?? '-',
-                'total'   => (float) $o->total_price,
+                'total_price'   => (float) $o->total_price,
                 'method'  => $o->payments->first()?->method ?? '-',
                 'date'    => $o->created_at->format('d M'),
             ]);

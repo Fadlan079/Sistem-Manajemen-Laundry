@@ -28,13 +28,11 @@ const priceRanges = [
 ];
 
 // Format Price
-const formatPrice = (price) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(price);
+const formatPrice = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || !num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
 };
 
 // Toggle Filter Modal

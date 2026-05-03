@@ -12,6 +12,7 @@ const emit = defineEmits(['update:isOpen', 'toggle-collapse']);
 const page = usePage();
 const user = computed(() => page.props.auth?.user || { role: 'admin' });
 const role = computed(() => (user.value.role || 'admin').toLowerCase());
+const sidebarCounts = computed(() => page.props.sidebarCounts || {});
 
 const allLinks = computed(() => ({
     admin: {
@@ -41,25 +42,29 @@ const allLinks = computed(() => ({
                 name: 'Pesanan',
                 href: route('operator.pesanan.masuk'),
                 active: route().current('operator.pesanan.masuk'),
-                icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
+                icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
+                count: sidebarCounts.value.pesanan
             },
             {
                 name: 'Penjemputan',
                 href: route('operator.penjemputan'),
                 active: route().current('operator.penjemputan'),
-                icon: 'M3 7h13v10H3V7zm13 3h3l2 3v4h-5v-7zM5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z'
+                icon: 'M3 7h13v10H3V7zm13 3h3l2 3v4h-5v-7zM5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z',
+                count: sidebarCounts.value.penjemputan
             },
             {
                 name: 'Pengantaran',
                 href: route('operator.pengantaran'),
                 active: route().current('operator.pengantaran'),
-                icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'
+                icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
+                count: sidebarCounts.value.pengantaran
             },
             {
                 name: 'Pembayaran',
                 href: route('operator.pembayaran'),
                 active: route().current('operator.pembayaran'),
-                icon: 'M2 5a2 2 0 012-2h16a2 2 0 012 2v3H2V5zm0 5h20v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7zm4 3h4v2H6v-2z'
+                icon: 'M2 5a2 2 0 012-2h16a2 2 0 012 2v3H2V5zm0 5h20v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7zm4 3h4v2H6v-2z',
+                count: sidebarCounts.value.pembayaran
             },
         ]
     },
@@ -177,13 +182,18 @@ onMounted(() => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon"/>
                         </svg>
 
-                        <!-- Label (Hidden on Collapsed) -->
                         <span 
-                            class="text-[14px] transition-all duration-300 whitespace-nowrap overflow-hidden"
+                            class="text-[14px] transition-all duration-300 whitespace-nowrap overflow-hidden flex-1"
                             :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
                         >
                             {{ link.name }}
                         </span>
+
+                        <!-- Count Badge -->
+                        <div v-if="link.count > 0 && !isCollapsed" class="mr-2 px-2 py-0.5 bg-secondary text-gray-900 text-[10px] font-black rounded-full shadow-lg shadow-black/20 animate-in zoom-in duration-300">
+                            {{ link.count }}
+                        </div>
+                        <div v-else-if="link.count > 0 && isCollapsed" class="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full shadow-[0_0_8px_rgba(255,214,0,0.6)] animate-pulse"></div>
                     </Link>
                 </div>
             </div>

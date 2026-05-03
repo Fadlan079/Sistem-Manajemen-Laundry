@@ -356,7 +356,7 @@ class CustomerDashboardController extends Controller
     public function batalkanPesanan(Request $request, $id)
     {
         $order = \App\Models\Order::where('user_id', $request->user()->id)
-            ->where('status', 'menunggu')
+            ->where('status', 'dibuat')
             ->findOrFail($id);
 
         $qty = $order->orderItems()->sum('qty');
@@ -589,12 +589,12 @@ class CustomerDashboardController extends Controller
             $orderItem->extras()->create($ext);
         }
 
-        // 3. Create Payment (menunggu, method and amount placeholder)
+        // 3. Create Payment (pending, method and amount placeholder)
         Payment::create([
             'order_id' => $order->id,
             'amount'   => 0,
             'method'   => $validated['payment_preference'],
-            'status'   => 'menunggu',
+            'status'   => 'pending',
         ]);
 
         $scheduledAt = \Carbon\Carbon::parse($validated['pickup_date'] . ' ' . $validated['pickup_time']);
@@ -638,7 +638,7 @@ class CustomerDashboardController extends Controller
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
-        $payment = $order->payments()->where('status', 'menunggu')->first();
+        $payment = $order->payments()->where('status', 'pending')->first();
 
         if (! $payment) {
             return response()->json(['error' => 'Tidak ada tagihan yang menunggu.'], 404);
@@ -711,7 +711,7 @@ class CustomerDashboardController extends Controller
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
-        $payment = $order->payments()->where('status', 'menunggu')->first();
+        $payment = $order->payments()->where('status', 'pending')->first();
 
         if (! $payment) {
             return response()->json(['message' => 'Payment already processed.']);
@@ -740,7 +740,7 @@ class CustomerDashboardController extends Controller
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
-        $payment = $order->payments()->where('status', 'menunggu')->first();
+        $payment = $order->payments()->where('status', 'pending')->first();
 
         if (! $payment || ! $payment->midtrans_order_id) {
             return response()->json(['message' => 'No menunggu midtrans payment found.'], 404);
@@ -809,7 +809,7 @@ class CustomerDashboardController extends Controller
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 
-        $payment = $order->payments()->where('status', 'menunggu')->first();
+        $payment = $order->payments()->where('status', 'pending')->first();
 
         if (! $payment) {
             return back()->with('error', 'Tidak ada tagihan yang menunggu untuk pesanan ini.');

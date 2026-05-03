@@ -15,6 +15,9 @@ class Order extends Model
         'delivery_address',
         'notes',
         'operator_id',
+        'customer_name',
+        'customer_phone',
+        'cancel_reason',
     ];
 
     public function user()

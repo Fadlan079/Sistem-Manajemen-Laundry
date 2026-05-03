@@ -1,6 +1,6 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import DashboardLayout from '@/Layouts/dashboard.vue';
 import { Line, Doughnut } from 'vue-chartjs';
 import {
@@ -24,391 +24,358 @@ const props = defineProps({
     statusDist:     Array,
 });
 
-const formatRupiah = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v ?? 0);
+const formatRupiah = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || !num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
+};
 
-const now = new Date();
-const greeting = now.getHours() < 12 ? 'Selamat Pagi' : now.getHours() < 17 ? 'Selamat Siang' : 'Selamat Sore';
+// Clock & Greeting logic
+const currentTime = ref(new Date());
+const updateTime = () => { currentTime.value = new Date(); };
+let timer;
+onMounted(() => { timer = setInterval(updateTime, 1000); });
+onUnmounted(() => clearInterval(timer));
+
+const greeting = computed(() => {
+    const hrs = currentTime.value.getHours();
+    if (hrs < 11) return { text: 'Selamat Pagi', icon: 'fa-sun', sub: 'Mari mulai hari dengan produktif!' };
+    if (hrs < 15) return { text: 'Selamat Siang', icon: 'fa-cloud-sun', sub: 'Tetap semangat melayani pelanggan!' };
+    if (hrs < 19) return { text: 'Selamat Sore', icon: 'fa-cloud-moon', sub: 'Pastikan semua antrean terkendali.' };
+    return { text: 'Selamat Malam', icon: 'fa-moon', sub: 'Waktunya rekapitulasi harian.' };
+});
 
 const STATUS_MAP = {
-    menunggu:  { label: 'Menunggu',   cls: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-400' },
-    dijemput: { label: 'Dijemput',  cls: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-400' },
-    diproses: { label: 'Diproses',  cls: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-400' },
-    selesai:  { label: 'Selesai',   cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400' },
-    diantar:  { label: 'Diantar',   cls: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-400' },
+    dibuat:    { label: 'Dibuat',   cls: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
+    antri:     { label: 'Antri',    cls: 'bg-amber-100 text-amber-700', dot: 'bg-amber-400' },
+    dijemput:  { label: 'Dijemput',  cls: 'bg-teal-100 text-teal-700',   dot: 'bg-teal-400' },
+    diproses:  { label: 'Diproses',  cls: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-400' },
+    selesai:   { label: 'Selesai',   cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400' },
+    diantar:   { label: 'Diantar',   cls: 'bg-purple-100 text-purple-700', dot: 'bg-purple-400' },
+    diterima:  { label: 'Diterima',  cls: 'bg-rose-100 text-rose-700',     dot: 'bg-rose-400' },
 };
+
 const getStatus = (s) => STATUS_MAP[s] ?? { label: s, cls: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' };
 
+// Stepper Logic for Live Monitor
+const getSteps = (o) => {
+    let s = ['Dibuat', 'Antri'];
+    // Assuming we have basic flags or we can infer from status history, 
+    // for now we use a generic set if we don't have detailed order flags in recentOrders
+    if (o.delivery_type === 'jemput' || o.delivery_type === 'antar_jemput' || o.hasPickup) s.push('Dijemput');
+    s.push('Diproses', 'Selesai');
+    if (o.delivery_type === 'antar' || o.delivery_type === 'antar_jemput' || o.hasDelivery) s.push('Diantar');
+    s.push('Diterima');
+    return s;
+};
+
+const statusToLabelMap = {
+    'pending': 'Dibuat', 'dibuat': 'Dibuat', 'antri': 'Antri', 'dijemput': 'Dijemput',
+    'diproses': 'Diproses', 'selesai': 'Selesai', 'diantar': 'Diantar', 'diterima': 'Diterima'
+};
+
+const getOrderStepIndex = (o) => {
+    const steps = getSteps(o);
+    const label = statusToLabelMap[o.status] || 'Dibuat';
+    const idx = steps.indexOf(label);
+    return idx === -1 ? 0 : idx;
+};
+
+// Charts
 const chartData = computed(() => ({
     labels: (props.weeklyTrend ?? []).map(d => d.label),
-    datasets: [
-        {
-            label: 'Pesanan Masuk',
-            data: (props.weeklyTrend ?? []).map(d => d.pesanan),
-            borderColor: '#5B4CF3',
-            backgroundColor: 'rgba(91,76,243,0.08)',
-            fill: true, tension: 0.4,
-            pointBackgroundColor: '#fff', pointBorderColor: '#5B4CF3', pointBorderWidth: 2, pointHoverRadius: 5,
-        },
-        {
-            label: 'Selesai',
-            data: (props.weeklyTrend ?? []).map(d => d.selesai),
-            borderColor: '#059669',
-            backgroundColor: 'rgba(5,150,105,0.05)',
-            fill: true, tension: 0.4,
-            pointBackgroundColor: '#fff', pointBorderColor: '#059669', pointBorderWidth: 2, pointHoverRadius: 5,
-        },
-    ],
+    datasets: [{
+        label: 'Pesanan',
+        data: (props.weeklyTrend ?? []).map(d => d.pesanan),
+        borderColor: '#E30613',
+        backgroundColor: 'rgba(227, 6, 19, 0.05)',
+        fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6,
+    }]
 }));
 
 const chartOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: {
-        legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888', boxWidth: 10 } },
-        tooltip: { backgroundColor: '#111', titleFont: { size: 10 }, bodyFont: { size: 12, weight: 'bold' }, padding: 10, cornerRadius: 4 },
-    },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111', padding: 12, cornerRadius: 8 } },
     scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false }, ticks: { font: { size: 9 }, color: '#aaa', precision: 0 } },
-        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 }, color: '#aaa' } },
-    },
+        y: { grid: { color: 'rgba(0,0,0,0.03)', drawBorder: false }, ticks: { font: { size: 10 }, color: '#999' } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#999' } }
+    }
 };
 
-const chartStatusData = computed(() => ({
-    labels: ['Selesai', 'Diproses', 'Menunggu', 'Diantar', 'Dijemput'],
-    datasets: [{
-        data: props.statusDist ?? [0,0,0,0,0],
-        backgroundColor: ['#059669','#d97706','#6366f1','#3b82f6','#14b8a6'],
-        borderWidth: 0, hoverOffset: 4
-    }]
-}));
-
-const doughnutOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-        legend: { position: 'right', labels: { font: { family: 'Inter', size: 10, weight: 'bold' }, color: '#888' } },
-        tooltip: { backgroundColor: '#111', titleFont: { size: 10 }, bodyFont: { size: 12, weight: 'bold' }, padding: 12, cornerRadius: 4, displayColors: true }
-    },
-    cutout: '70%'
+const searchQuery = ref('');
+const handleSearch = () => {
+    if (searchQuery.value) {
+        router.get(route('operator.pesanan.masuk'), { search: searchQuery.value });
+    }
 };
-
-const totalAlert = computed(() =>
-    (props.pickup?.belum_assign ?? 0) +
-    (props.delivery?.belum_assign ?? 0) +
-    (props.pembayaran?.belum_lunas ?? 0)
-);
 </script>
 
 <template>
-    <Head title="Dashboard Operator - Hi Wash Laundry" />
+    <Head title="Operator Overview - Hi Wash" />
     <DashboardLayout title="Overview">
-
-        <div class="space-y-8 pb-20">
-
-            <!-- ══ ROW 1: 4 Stat Cards ══ -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Antrian -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition group">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-muted uppercase tracking-widest">Antrian</span>
-                        <div class="w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-hourglass-half text-sm"></i>
-                        </div>
+        <div class="space-y-8 pb-24">
+            
+            <!-- ══ HEADER & SEARCH ══ -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="flex items-center gap-5">
+                    <div class="w-16 h-16 rounded-2xl bg-primary shadow-2xl shadow-primary/30 flex items-center justify-center text-white text-3xl">
+                        <i :class="['fa-solid', greeting.icon]"></i>
                     </div>
-                    <div class="text-3xl font-black text-text mb-1">{{ pesanan?.antrian ?? 0 }}</div>
-                    <p class="text-xs text-muted">Pesanan menunggu</p>
-                </div>
-
-                <!-- Diproses -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition group">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-muted uppercase tracking-widest">Diproses</span>
-                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-spinner text-sm fa-spin-pulse"></i>
-                        </div>
-                    </div>
-                    <div class="text-3xl font-black text-text mb-1">{{ pesanan?.diproses ?? 0 }}</div>
-                    <p class="text-xs text-muted">Sedang dicuci</p>
-                </div>
-
-                <!-- Selesai Hari Ini -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition group">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-muted uppercase tracking-widest">Selesai</span>
-                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-circle-check text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="text-3xl font-black text-text mb-1">{{ pesanan?.selesai_hari_ini ?? 0 }}</div>
-                    <p class="text-xs text-muted">Hari ini</p>
-                </div>
-
-                <!-- Pendapatan -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition group">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-muted uppercase tracking-widest">Pendapatan</span>
-                        <div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-coins text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="text-xl font-black text-text mb-1 truncate">{{ formatRupiah(pembayaran?.pendapatan_hari_ini) }}</div>
-                    <p class="text-xs text-muted">Lunas hari ini</p>
-                </div>
-            </div>
-
-            <!-- ══ ROW 2: Alert Modules (3 col) ══ -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <!-- Penjemputan -->
-                <Link :href="route('operator.penjemputan')"
-                    class="group bg-surface border rounded-xl p-5 shadow-sm hover:shadow-md transition block"
-                    :class="pickup?.belum_assign > 0 ? 'border-amber-300 hover:border-amber-400' : 'border-border'">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
-                                <i class="fa-solid fa-motorcycle text-sm"></i>
-                            </div>
-                            <span class="text-sm font-bold text-text">Penjemputan</span>
-                        </div>
-                        <i class="fa-solid fa-arrow-right text-muted text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-center">
-                        <div class="bg-amber-50 rounded-lg p-2">
-                            <div class="text-xl font-black text-amber-600">{{ pickup?.belum_assign ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Belum Assign</div>
-                        </div>
-                        <div class="rounded-lg p-2" :class="pickup?.terlambat > 0 ? 'bg-rose-50' : 'bg-container'">
-                            <div class="text-xl font-black" :class="pickup?.terlambat > 0 ? 'text-rose-600' : 'text-text'">{{ pickup?.terlambat ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Terlambat</div>
-                        </div>
-                    </div>
-                </Link>
-
-                <!-- Pengantaran -->
-                <Link :href="route('operator.pengantaran')"
-                    class="group bg-surface border rounded-xl p-5 shadow-sm hover:shadow-md transition block"
-                    :class="delivery?.belum_assign > 0 ? 'border-blue-300 hover:border-blue-400' : 'border-border'">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
-                                <i class="fa-solid fa-truck text-sm"></i>
-                            </div>
-                            <span class="text-sm font-bold text-text">Pengantaran</span>
-                        </div>
-                        <i class="fa-solid fa-arrow-right text-muted text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-center">
-                        <div class="bg-blue-50 rounded-lg p-2">
-                            <div class="text-xl font-black text-blue-600">{{ delivery?.belum_assign ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Belum Assign</div>
-                        </div>
-                        <div class="rounded-lg p-2" :class="delivery?.terlambat > 0 ? 'bg-rose-50' : 'bg-container'">
-                            <div class="text-xl font-black" :class="delivery?.terlambat > 0 ? 'text-rose-600' : 'text-text'">{{ delivery?.terlambat ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Terlambat</div>
-                        </div>
-                    </div>
-                </Link>
-
-                <!-- Pembayaran -->
-                <Link :href="route('operator.pembayaran')"
-                    class="group bg-surface border rounded-xl p-5 shadow-sm hover:shadow-md transition block"
-                    :class="pembayaran?.belum_lunas > 0 ? 'border-rose-300 hover:border-rose-400' : 'border-border'">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
-                                <i class="fa-solid fa-money-bill-wave text-sm"></i>
-                            </div>
-                            <span class="text-sm font-bold text-text">Pembayaran</span>
-                        </div>
-                        <i class="fa-solid fa-arrow-right text-muted text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-center">
-                        <div class="rounded-lg p-2" :class="pembayaran?.belum_lunas > 0 ? 'bg-rose-50' : 'bg-container'">
-                            <div class="text-xl font-black" :class="pembayaran?.belum_lunas > 0 ? 'text-rose-600' : 'text-text'">{{ pembayaran?.belum_lunas ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Belum Lunas</div>
-                        </div>
-                        <div class="bg-emerald-50 rounded-lg p-2">
-                            <div class="text-xl font-black text-emerald-600">{{ pembayaran?.lunas_hari_ini ?? 0 }}</div>
-                            <div class="text-[10px] text-muted mt-0.5">Lunas Hari Ini</div>
-                        </div>
-                    </div>
-                </Link>
-            </div>
-
-            <!-- ══ ROW 3: Quick Actions ══ -->
-            <div>
-                <h2 class="text-xs font-black text-muted uppercase tracking-widest mb-3">Quick Actions</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <Link :href="route('operator.pesanan.masuk') + '?action=add'"
-                        class="flex flex-col items-center gap-2 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl p-4 transition text-center group">
-                        <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shadow-primary/30">
-                            <i class="fa-solid fa-plus text-sm"></i>
-                        </div>
-                        <span class="text-xs font-bold text-primary">Tambah Pesanan</span>
-                    </Link>
-
-                    <Link :href="route('operator.penjemputan', { tab: 'belum-diassign' })"
-                        class="flex flex-col items-center gap-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl p-4 transition text-center group">
-                        <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shadow-amber-300">
-                            <i class="fa-solid fa-motorcycle text-sm"></i>
-                        </div>
-                        <span class="text-xs font-bold text-amber-700">Assign Jemput</span>
-                    </Link>
-
-                    <Link :href="route('operator.pengantaran', { tab: 'belum-diassign' })"
-                        class="flex flex-col items-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl p-4 transition text-center group">
-                        <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shadow-blue-300">
-                            <i class="fa-solid fa-truck text-sm"></i>
-                        </div>
-                        <span class="text-xs font-bold text-blue-700">Assign Antar</span>
-                    </Link>
-
-                    <Link :href="route('operator.pembayaran', { tab: 'belum-lunas' })"
-                        class="flex flex-col items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-4 transition text-center group">
-                        <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm shadow-emerald-300">
-                            <i class="fa-solid fa-check-double text-sm"></i>
-                        </div>
-                        <span class="text-xs font-bold text-emerald-700">Konfirmasi Bayar</span>
-                    </Link>
-                </div>
-            </div>
-
-            <!-- ══ ROW 4: Charts ══ -->
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <!-- Chart -->
-                <div class="lg:col-span-3 bg-surface border border-border rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-sm font-black text-text">Tren 7 Hari Terakhir</h3>
-                            <p class="text-xs text-muted mt-0.5">Pesanan masuk vs diselesaikan</p>
-                        </div>
-                        <div class="flex items-center gap-3 text-[10px] text-muted font-bold">
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-primary inline-block rounded"></span> Masuk</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-500 inline-block rounded"></span> Selesai</span>
-                        </div>
-                    </div>
-                    <div class="h-48">
-                        <Line :data="chartData" :options="chartOptions" />
+                    <div>
+                        <h1 class="text-2xl font-black text-text tracking-tight">{{ greeting.text }}, {{ user.name.split(' ')[0] }}!</h1>
+                        <p class="text-sm text-muted font-medium">{{ greeting.sub }}</p>
                     </div>
                 </div>
 
-                <!-- Doughnut -->
-                <div class="lg:col-span-2 bg-surface border border-border rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-black text-text">Status Pesanan</h3>
-                    </div>
-                    <div class="h-48">
-                        <Doughnut :data="chartStatusData" :options="doughnutOptions" />
+                <div class="relative w-full lg:w-[400px] group">
+                    <input v-model="searchQuery" @keyup.enter="handleSearch" type="text" placeholder="Cari No. Invoice atau Nama Pelanggan..." 
+                        class="w-full bg-surface border border-border rounded-2xl px-12 py-4 text-sm font-bold shadow-sm focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all" />
+                    <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors"></i>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <span class="px-2 py-1 bg-container border border-border rounded text-[10px] font-black text-muted">ENTER</span>
                     </div>
                 </div>
             </div>
 
-            <!-- ══ ROW 5: Urgents ══ -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Urgent Pickups -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
+            <!-- ══ PRIMARY STATS ROW ══ -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div v-for="(s, i) in [
+                    { label: 'Belum Diproses', val: pesanan?.antrian, sub: 'Dibuat & Antri', icon: 'fa-hourglass-half', color: 'amber' },
+                    { label: 'Sedang Proses', val: pesanan?.diproses, sub: 'Dalam pencucian', icon: 'fa-spinner', color: 'blue', spin: true },
+                    { label: 'Selesai Hari Ini', val: pesanan?.selesai_hari_ini, sub: 'Siap diantar/ambil', icon: 'fa-check-double', color: 'emerald' },
+                    { label: 'Omzet Harian', val: formatRupiah(pembayaran?.pendapatan_hari_ini), sub: 'Pembayaran lunas', icon: 'fa-coins', color: 'primary' },
+                ]" :key="i" class="bg-surface border border-border rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
+                    <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-700 rounded-full" :class="`text-${s.color === 'primary' ? 'primary' : s.color + '-600'}`"></div>
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-black text-text">Jemput Menunggu</h3>
-                        <Link :href="route('operator.penjemputan', { tab: 'belum-diassign' })"
-                            class="text-[10px] font-bold text-primary hover:underline">Lihat Semua →</Link>
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-muted">{{ s.label }}</span>
+                        <div :class="[s.color === 'primary' ? 'bg-primary/10 text-primary' : `bg-${s.color}-50 text-${s.color}-600`]" class="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <i :class="['fa-solid', s.icon, s.spin ? 'fa-spin-pulse' : '']"></i>
+                        </div>
                     </div>
-                    <div v-if="urgentPickups?.length === 0" class="flex-1 flex items-center justify-center text-sm text-muted italic text-center py-6">
-                        <span>Tidak ada antrian penjemputan 🎉</span>
-                    </div>
-                    <div v-else class="space-y-3 flex-1">
-                        <div v-for="p in urgentPickups" :key="p.id"
-                            class="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-container/40 transition">
-                            <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-black"
-                                :class="p.age_hours >= 20 ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'">
-                                <i class="fa-solid fa-motorcycle"></i>
+                    <div class="text-3xl font-black text-text mb-1 font-mono tracking-tighter">{{ s.val ?? 0 }}</div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest">{{ s.sub }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                
+                <!-- ══ LEFT COLUMN: Operational Center (8 Units) ══ -->
+                <div class="xl:col-span-8 space-y-8">
+                    
+                    <!-- Monitoring Pesanan Aktif -->
+                    <div class="bg-surface border border-border rounded-3xl overflow-hidden shadow-sm">
+                        <div class="px-8 py-6 border-b border-border flex items-center justify-between bg-container/30">
+                            <div>
+                                <h3 class="text-sm font-black text-text uppercase tracking-widest">Live Monitor</h3>
+                                <p class="text-[10px] text-muted font-bold mt-0.5 uppercase tracking-widest">Pesanan yang sedang berjalan</p>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1 flex-wrap">
-                                    <span class="text-[10px] font-mono font-bold text-primary">{{ p.invoice }}</span>
-                                    <span v-if="p.age_hours >= 20" class="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full font-bold">TERLAMBAT</span>
+                            <Link :href="route('operator.pesanan.masuk')" class="text-[10px] font-black text-primary hover:underline uppercase tracking-widest">Lihat Semua →</Link>
+                        </div>
+                        <div class="p-6">
+                            <div v-if="!recentOrders?.length" class="py-20 text-center space-y-4">
+                                <div class="w-20 h-20 bg-container rounded-full mx-auto flex items-center justify-center text-muted text-2xl">
+                                    <i class="fa-solid fa-inbox"></i>
                                 </div>
-                                <p class="text-xs font-bold text-text truncate">{{ p.name }}</p>
-                                <p class="text-[10px] text-muted truncate">{{ p.address }}</p>
+                                <p class="text-sm font-bold text-muted">Belum ada pesanan aktif saat ini.</p>
                             </div>
-                            <Link :href="route('operator.penjemputan')"
-                                class="shrink-0 text-[10px] font-bold bg-primary text-white px-2 py-1 rounded hover:bg-primary/90 transition">
-                                Assign
+                            <div v-else class="space-y-4">
+                                <div v-for="o in recentOrders.slice(0, 5)" :key="o.id" class="p-4 bg-container/40 border border-border rounded-2xl hover:border-primary/30 transition-all group flex flex-col sm:flex-row items-center gap-6">
+                                    <!-- Identity -->
+                                    <div class="flex items-center gap-4 w-full sm:w-[220px] shrink-0">
+                                        <div class="w-12 h-12 bg-white border border-border rounded-xl flex items-center justify-center text-primary shadow-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                                            <i class="fa-solid fa-shirt"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] font-mono font-black text-primary">{{ o.invoice }}</span>
+                                                <span v-if="o.status === 'dibuat'" class="px-1.5 py-0.5 bg-rose-500 text-white text-[7px] font-black uppercase rounded shadow-sm">NEW</span>
+                                            </div>
+                                            <h4 class="text-xs font-black text-text truncate uppercase mt-0.5">{{ o.customer }}</h4>
+                                            <p class="text-[9px] text-muted font-bold uppercase truncate">{{ o.service }}</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Stepper (Minimalist) -->
+                                    <div class="flex-1 w-full flex flex-col items-center px-4">
+                                        <div class="relative w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                                            <div class="absolute top-0 left-0 h-full bg-primary transition-all duration-1000 shadow-[0_0_8px_rgba(227,6,19,0.5)]"
+                                                :style="{ width: `${Math.min(100, (getOrderStepIndex(o) / (getSteps(o).length - 1)) * 100)}%` }"></div>
+                                        </div>
+                                        <div class="flex justify-between w-full px-1">
+                                            <span v-for="(step, i) in getSteps(o)" :key="i" 
+                                                class="text-[7px] font-black uppercase tracking-tighter"
+                                                :class="getOrderStepIndex(o) >= i ? 'text-primary' : 'text-muted/40'">
+                                                {{ step }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action -->
+                                    <div class="shrink-0">
+                                        <Link :href="route('operator.pesanan.masuk')" class="w-9 h-9 bg-white border border-border rounded-xl flex items-center justify-center text-muted hover:text-primary hover:border-primary transition-all shadow-sm">
+                                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row: Urgent Lists -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Jemput Menunggu -->
+                        <div class="bg-surface border border-border rounded-3xl p-6 shadow-sm flex flex-col">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm shadow-inner">
+                                        <i class="fa-solid fa-motorcycle"></i>
+                                    </div>
+                                    <h3 class="text-xs font-black text-text uppercase tracking-widest">Penjemputan Urgent</h3>
+                                </div>
+                                <span class="bg-rose-100 text-rose-600 text-[9px] font-black px-2 py-0.5 rounded-full">{{ urgentPickups?.length ?? 0 }}</span>
+                            </div>
+                            <div v-if="!urgentPickups?.length" class="flex-1 flex flex-col items-center justify-center py-10 text-muted">
+                                <i class="fa-solid fa-circle-check text-2xl mb-2 text-emerald-500"></i>
+                                <p class="text-[10px] font-bold uppercase tracking-widest">Semua Aman!</p>
+                            </div>
+                            <div v-else class="space-y-3">
+                                <div v-for="p in urgentPickups.slice(0, 3)" :key="p.id" class="flex items-center gap-3 p-3 bg-container/30 border border-border rounded-2xl hover:bg-white hover:shadow-md transition-all">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-[9px] font-mono font-black text-primary leading-none mb-1">{{ p.invoice }}</p>
+                                        <p class="text-xs font-black text-text truncate uppercase">{{ p.name }}</p>
+                                        <p class="text-[8px] text-muted truncate mt-0.5">{{ p.address }}</p>
+                                    </div>
+                                    <Link :href="route('operator.penjemputan')" class="px-3 py-1.5 bg-primary text-white text-[8px] font-black uppercase rounded-lg shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                                        Assign
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tagihan Menunggu -->
+                        <div class="bg-surface border border-border rounded-3xl p-6 shadow-sm flex flex-col">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shadow-inner">
+                                        <i class="fa-solid fa-money-bill-wave"></i>
+                                    </div>
+                                    <h3 class="text-xs font-black text-text uppercase tracking-widest">Tagihan Tertunggak</h3>
+                                </div>
+                                <span class="bg-rose-100 text-rose-600 text-[9px] font-black px-2 py-0.5 rounded-full">{{ urgentPayments?.length ?? 0 }}</span>
+                            </div>
+                            <div v-if="!urgentPayments?.length" class="flex-1 flex flex-col items-center justify-center py-10 text-muted">
+                                <i class="fa-solid fa-circle-check text-2xl mb-2 text-emerald-500"></i>
+                                <p class="text-[10px] font-bold uppercase tracking-widest">Tidak ada tunggakan!</p>
+                            </div>
+                            <div v-else class="space-y-3">
+                                <div v-for="p in urgentPayments.slice(0, 3)" :key="p.id" class="flex items-center gap-3 p-3 bg-rose-50/30 border border-rose-100 rounded-2xl hover:bg-white hover:shadow-md transition-all">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-[9px] font-mono font-black text-primary leading-none mb-1">{{ p.invoice }}</p>
+                                        <p class="text-xs font-black text-text truncate uppercase">{{ p.name }}</p>
+                                        <p class="text-[10px] font-mono font-black text-rose-600 mt-1">{{ formatRupiah(p.total_price) }}</p>
+                                    </div>
+                                    <Link :href="route('operator.pembayaran')" class="w-8 h-8 bg-rose-600 text-white rounded-lg flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-rose-200">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ RIGHT COLUMN: Hub & Performance (4 Units) ══ -->
+                <div class="xl:col-span-4 space-y-8">
+                    
+                    <!-- Quick Action Hub -->
+                    <div class="bg-white border border-border rounded-3xl p-6 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none">
+                            <i class="fa-solid fa-bolt text-7xl text-primary"></i>
+                        </div>
+                        <h3 class="text-sm font-black text-text uppercase tracking-widest mb-6">Action Hub</h3>
+                        <div class="grid grid-cols-1 gap-3">
+                            <Link :href="route('operator.pesanan.masuk') + '?action=add'" class="flex items-center gap-4 p-4 bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all group">
+                                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-xs font-black uppercase tracking-widest">Tambah Pesanan</p>
+                                    <p class="text-[9px] opacity-70 uppercase tracking-tighter">Buat order baru manual</p>
+                                </div>
                             </Link>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Urgent Payments -->
-                <div class="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-black text-text">Tagihan Menunggu</h3>
-                        <Link :href="route('operator.pembayaran', { tab: 'belum-lunas' })"
-                            class="text-[10px] font-bold text-primary hover:underline">Lihat Semua →</Link>
-                    </div>
-
-                    <!-- Summary card -->
-                    <div class="bg-gradient-to-br from-violet-50 to-primary/5 border border-primary/10 rounded-lg p-3 mb-4">
-                        <p class="text-[10px] text-muted font-bold uppercase tracking-widest mb-1">Pendapatan Bulan Ini</p>
-                        <p class="text-xl font-black text-primary">{{ formatRupiah(pembayaran?.pendapatan_bulan_ini) }}</p>
-                        <p class="text-[10px] text-muted mt-1">{{ pembayaran?.lunas_hari_ini ?? 0 }} transaksi lunas hari ini</p>
-                    </div>
-
-                    <div v-if="!urgentPayments?.length" class="flex-1 flex items-center justify-center text-sm text-muted italic text-center py-4">
-                        Tidak ada tagihan tertunggak 🎉
-                    </div>
-                    <div v-else class="space-y-2.5 flex-1">
-                        <div v-for="p in urgentPayments" :key="p.id"
-                            class="flex items-center gap-3 p-3 rounded-lg border border-rose-100 bg-rose-50/40 hover:bg-rose-50 transition">
-                            <div class="w-7 h-7 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-exclamation text-xs"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-[10px] font-mono font-bold text-primary">{{ p.invoice }}</p>
-                                <p class="text-xs font-bold text-text truncate">{{ p.name }}</p>
-                                <p class="text-[10px] text-muted uppercase">{{ p.method === 'unspecified' ? 'Belum dipilih' : p.method }}</p>
-                            </div>
-                            <div class="shrink-0 text-right">
-                                <p class="text-xs font-black text-rose-600">{{ formatRupiah(p.total) }}</p>
-                                <p class="text-[9px] text-muted">{{ p.date }}</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <Link :href="route('operator.penjemputan', { tab: 'belum-diassign' })" class="flex flex-col items-center text-center gap-3 p-4 bg-container/50 border border-border rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                                    <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-lg group-hover:rotate-12 transition-transform">
+                                        <i class="fa-solid fa-motorcycle"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-text uppercase tracking-widest">Assign Jemput</span>
+                                </Link>
+                                <Link :href="route('operator.pengantaran', { tab: 'belum-diassign' })" class="flex flex-col items-center text-center gap-3 p-4 bg-container/50 border border-border rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-lg group-hover:rotate-12 transition-transform">
+                                        <i class="fa-solid fa-truck text-lg"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-text uppercase tracking-widest">Assign Antar</span>
+                                </Link>
                             </div>
                         </div>
                     </div>
 
-                    <Link v-if="urgentPayments?.length" :href="route('operator.pembayaran', { tab: 'belum-lunas' })"
-                        class="mt-3 w-full text-center text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-lg transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-money-bill-wave"></i> Proses Pembayaran
-                    </Link>
+                    <!-- Performance Stats -->
+                    <div class="bg-surface border border-border rounded-3xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-sm font-black text-text uppercase tracking-widest">Performance</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                <span class="text-[9px] font-black text-muted uppercase tracking-widest">Weekly</span>
+                            </div>
+                        </div>
+                        <div class="h-40 mb-6">
+                            <Line :data="chartData" :options="chartOptions" />
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-container/30 rounded-xl border border-border">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                    <span class="text-[10px] font-bold text-muted uppercase tracking-widest">Lunas Hari Ini</span>
+                                </div>
+                                <span class="text-xs font-black text-text font-mono">{{ pembayaran?.lunas_hari_ini ?? 0 }}</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-container/30 rounded-xl border border-border">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-primary"></div>
+                                    <span class="text-[10px] font-bold text-muted uppercase tracking-widest">Bulan Ini</span>
+                                </div>
+                                <span class="text-xs font-black text-primary font-mono">{{ formatRupiah(pembayaran?.pendapatan_bulan_ini) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Distribution -->
+                    <div class="bg-surface border border-border rounded-3xl p-6 shadow-sm">
+                        <h3 class="text-sm font-black text-text uppercase tracking-widest mb-6">Status Mix</h3>
+                        <div class="h-48 relative">
+                            <Doughnut :data="{
+                                labels: ['Selesai', 'Proses', 'Antri', 'Antar', 'Jemput'],
+                                datasets: [{
+                                    data: statusDist ?? [0,0,0,0,0],
+                                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'],
+                                    borderWidth: 0, cutout: '75%', borderRadius: 5
+                                }]
+                            }" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }" />
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span class="text-2xl font-black text-text leading-none">{{ (pesanan?.antrian ?? 0) + (pesanan?.diproses ?? 0) + (pesanan?.selesai_hari_ini ?? 0) }}</span>
+                                <span class="text-[8px] font-black text-muted uppercase tracking-widest">Total Active</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
-
-            <!-- ══ ROW 6: Recent Orders ══ -->
-            <div class="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-border">
-                    <h3 class="text-sm font-black text-text">Pesanan Terbaru</h3>
-                    <Link :href="route('operator.pesanan.masuk')" class="text-[10px] font-bold text-primary hover:underline">Lihat Semua →</Link>
-                </div>
-                <div v-if="!recentOrders?.length" class="text-sm text-muted italic text-center py-10">Belum ada pesanan.</div>
-                <div v-else>
-                    <div v-for="o in recentOrders" :key="o.id"
-                        class="flex items-center gap-3 px-5 py-3 border-b border-border/60 hover:bg-container/40 transition last:border-b-0">
-                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0 uppercase">
-                            {{ o.customer?.charAt(0) }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-[10px] font-mono font-bold text-primary">{{ o.invoice }}</span>
-                                <span class="text-xs font-bold text-text truncate">{{ o.customer }}</span>
-                            </div>
-                            <p class="text-[10px] text-muted">{{ o.service }} · {{ o.date }}</p>
-                        </div>
-                        <div class="flex flex-col items-end gap-1 shrink-0">
-                            <span :class="getStatus(o.status).cls" class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <span :class="getStatus(o.status).dot" class="w-1.5 h-1.5 rounded-full"></span>
-                                {{ getStatus(o.status).label }}
-                            </span>
-                            <span class="text-[10px] font-mono font-bold text-text">{{ formatRupiah(o.total) }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </DashboardLayout>
 </template>
+
+<style scoped>
+.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+</style>

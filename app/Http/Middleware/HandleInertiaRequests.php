@@ -29,13 +29,34 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $sidebarCounts = [];
+
+        if ($user && $user->role === 'operator') {
+            $sidebarCounts = [
+                'pesanan' => \App\Models\Order::whereIn('status', ['dibuat', 'antri'])->count(),
+                'penjemputan' => \App\Models\Delivery::where('type', 'pickup')
+                    ->whereNotIn('status', ['selesai', 'pending'])
+                    ->whereNull('courier_id')
+                    ->whereNull('external_courier_name')
+                    ->count(),
+                'pengantaran' => \App\Models\Delivery::where('type', 'delivery')
+                    ->whereNotIn('status', ['selesai', 'pending'])
+                    ->whereNull('courier_id')
+                    ->whereNull('external_courier_name')
+                    ->count(),
+                'pembayaran' => \App\Models\Payment::where('status', 'pending')->count(),
+            ];
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
-            'cartCount' => fn() => $request->user()
-                ? $request->user()->orders()->where('status', 'cart')->count()
+            'sidebarCounts' => $sidebarCounts,
+            'cartCount' => fn() => $user
+                ? $user->orders()->where('status', 'cart')->count()
                 : 0,
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),

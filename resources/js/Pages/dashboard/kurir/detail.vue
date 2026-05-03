@@ -32,8 +32,10 @@ function getStepIndex() {
 }
 
 function formatRupiah(val) {
-    if (!val) return 'Rp0';
-    return 'Rp' + new Intl.NumberFormat('id-ID').format(val);
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || !num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
 }
 
 const estimatedKG = computed(() => {

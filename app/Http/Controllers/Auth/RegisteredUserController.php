@@ -47,6 +47,11 @@ class RegisteredUserController extends Controller
             'role'     => 'pelanggan', // role dikunci di server-side
         ]);
 
+        // Link existing guest orders with the same phone number to this new user
+        \App\Models\Order::whereNull('user_id')
+            ->where('customer_phone', $user->phone)
+            ->update(['user_id' => $user->id]);
+
         if (!empty($request->address)) {
             $user->addresses()->create([
                 'label'      => 'Alamat Utama',

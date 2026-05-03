@@ -205,7 +205,7 @@ async function bayarMidtrans() {
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                 });
-                
+
                 if (cbRes.ok) {
                     await triggerSuccess();
                     setTimeout(() => {
@@ -273,7 +273,7 @@ function batalkanPesanan() {
 function getStepIndex() {
     const status = props.order.dbStatus;
     if (status === 'dibatalkan') return 0;
-    
+
     const statusToLabel = {
         'dibuat': 'Dibuat',
         'antri': 'Antri',
@@ -283,15 +283,18 @@ function getStepIndex() {
         'diantar': 'Diantar',
         'diterima': 'Diterima'
     };
-    
+
     const label = statusToLabel[status];
     const idx = steps.value.indexOf(label);
     return idx === -1 ? (status === 'diterima' ? steps.value.length - 1 : 0) : idx;
 }
 
 function formatRupiah(val) {
-    if (!val) return 'Rp0';
-    return 'Rp' + new Intl.NumberFormat('id-ID').format(val);
+    if (val === null || val === undefined || isNaN(val)) return 'Rp0';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return 'Rp0';
+    if (!num) return 'Rp0';
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(num);
 }
 
 function downloadQR() {
@@ -474,23 +477,33 @@ const estimatedKG = computed(() => {
 });
 
 const estimatedServiceCostText = computed(() => {
-    if (!props.order.isKg || props.order.isCalculated) return formatRupiah(props.order.price);
-    const minCost = props.order.service_price * estimatedKG.value.min;
-    const maxCost = props.order.service_price * estimatedKG.value.max;
+    if (!props.order.isKg || props.order.isCalculated) return formatRupiah(props.order.price || 0);
+    const minCost = (props.order.service_price || 0) * (estimatedKG.value.min || 0);
+    const maxCost = (props.order.service_price || 0) * (estimatedKG.value.max || 0);
     return `${formatRupiah(minCost)} - ${formatRupiah(maxCost)}`;
 });
 
 const estimatedTotalCostText = computed(() => {
-    if (!props.order.isKg || props.order.isCalculated) return formatRupiah(props.order.total);
-    
+    if (!props.order.isKg || props.order.isCalculated) return formatRupiah(props.order.total || 0);
+
     let extraSum = 0;
     if (props.order.extras) {
-        props.order.extras.forEach(e => extraSum += e.price);
+        props.order.extras.forEach(e => {
+            const p = parseFloat(e.price) || 0;
+            extraSum += p;
+        });
     }
-    const finalUnitPrice = props.order.service_price + extraSum - (props.order.discount_amount || 0);
+    const servicePrice = parseFloat(props.order.service_price) || 0;
+    const discount = parseFloat(props.order.discount_amount) || 0;
+    const fee = parseFloat(props.order.fee) || 0;
 
-    const minTot = (finalUnitPrice * estimatedKG.value.min) + props.order.fee;
-    const maxTot = (finalUnitPrice * estimatedKG.value.max) + props.order.fee;
+    const finalUnitPrice = servicePrice + extraSum - discount;
+
+    const minTot = (finalUnitPrice * (estimatedKG.value.min || 0)) + fee;
+    const maxTot = (finalUnitPrice * (estimatedKG.value.max || 0)) + fee;
+
+    if (isNaN(minTot) || isNaN(maxTot)) return formatRupiah(props.order.total || 0);
+
     return `${formatRupiah(minTot)} - ${formatRupiah(maxTot)}`;
 });
 </script>
@@ -501,8 +514,8 @@ const estimatedTotalCostText = computed(() => {
     <AppLayout :hideBottomNav="order.paymentStatus === 'UNPAID'">
         <div class="bg-[#E30613] pt-24 lg:pt-32 pb-24 lg:pb-32 relative overflow-hidden">
             <!-- Back Button -->
-            <button 
-                @click="goBack" 
+            <button
+                @click="goBack"
                 class="absolute top-[110px] lg:top-[140px] left-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-30 backdrop-blur-sm border border-white/20 shadow-lg active:scale-95"
             >
                 <i class="fas fa-arrow-left"></i>
@@ -710,7 +723,7 @@ const estimatedTotalCostText = computed(() => {
                         <div class="flex-1">
                             <span class="font-black text-gray-400 text-[10px] uppercase tracking-widest block mb-1">Alamat Penjemputan</span>
                             <span class="font-bold text-gray-700 block leading-relaxed text-xs">{{ order.pickup_address }}</span>
-                            
+
                             <!-- Catatan Kurir -->
                             <div v-if="order.courier_notes" class="mt-2.5 bg-gray-50 border border-gray-100 rounded-xl p-3 text-[10px] text-gray-600 flex gap-2 shadow-sm w-full">
                                 <i class="fas fa-comment-dots text-gray-400 mt-0.5 shrink-0"></i>
@@ -766,7 +779,7 @@ const estimatedTotalCostText = computed(() => {
                                 <QrcodeVue :value="order.invoice" :size="140" level="H" />
                             </div>
                             <!-- Small Floating Download Button -->
-                            <button @click="downloadQR" 
+                            <button @click="downloadQR"
                                 class="absolute -top-2 -right-2 w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-[#E30613] hover:border-[#E30613] shadow-sm transition-all active:scale-90"
                                 title="Download QR">
                                 <i class="fas fa-download text-xs"></i>
@@ -777,7 +790,7 @@ const estimatedTotalCostText = computed(() => {
                             <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Nomor Invoice</p>
                             <div class="flex items-center justify-center gap-2">
                                 <code class="text-sm font-black text-gray-900 tracking-tight">{{ order.invoice }}</code>
-                                <button @click="copyInvoice" 
+                                <button @click="copyInvoice"
                                     :class="[isCopied ? 'text-green-500' : 'text-gray-400 hover:text-[#E30613]', 'transition-colors p-1']"
                                     :title="isCopied ? 'Tersalin!' : 'Salin Invoice'">
                                     <i :class="isCopied ? 'fas fa-check' : 'far fa-copy text-[10px]'"></i>
@@ -800,37 +813,46 @@ const estimatedTotalCostText = computed(() => {
                                 Biaya Layanan
                                 <!-- KG belum ditimbang: tampilkan range estimasi -->
                                 <span v-if="order.isKg && !order.isCalculated && order.estimated_weight" class="text-gray-300 normal-case font-normal"><br>~{{ estimatedKG.min }}&ndash;{{ estimatedKG.max }} kg</span>
-                                <!-- KG sudah ditimbang: tampilkan berat aktual -->
-                                <span v-else-if="order.isKg && order.isCalculated && order.actual_weight" class="text-xs text-primary font-black ml-1">({{ order.actual_weight }} kg)</span>
+                                <!-- KG sudah ditimbang -->
+                                <span v-else-if="order.isKg && order.isCalculated && order.actual_weight" class="text-gray-300 normal-case font-normal">
+                                    <br>({{ order.actual_weight }} kg x {{ formatRupiah(order.service_price) }})
+                                </span>
                                 <!-- PCS -->
-                                <span v-else-if="!order.isKg && order.items_qty > 0" class="text-gray-300">({{ order.items_qty }} {{ order.unit.replace('/', '') }})</span>
+                                <span v-else-if="!order.isKg && order.items_qty > 0" class="text-gray-300 normal-case font-normal">
+                                    <br>({{ order.items_qty }} {{ order.unit.replace('/', '') }} x {{ formatRupiah(order.service_price) }})
+                                </span>
                             </span>
                             <span class="text-gray-900">{{ estimatedServiceCostText }}</span>
-                        </div>
-
-                        <!-- Harga per satuan -->
-                        <div v-if="order.isCalculated" class="text-[9px] text-gray-400 -mt-2 font-black uppercase tracking-widest">
-                            {{ formatRupiah(order.service_price) }}{{ order.unit }}
                         </div>
 
                         <!-- Biaya Ekstra (per baris) -->
                         <template v-if="order.extras && order.extras.filter(e => e.price > 0).length > 0">
                             <div v-for="extra in order.extras.filter(e => e.price > 0)" :key="extra.type"
                                 class="flex justify-between text-xs font-bold">
-                                <span class="text-gray-500 uppercase tracking-tighter flex items-center gap-1">
-                                    <i :class="extra.type === 'express' ? 'fas fa-bolt' : 'fas fa-magic'" class="text-gray-300"></i>
-                                    {{ extra.label }}
+                                <span class="text-gray-500 uppercase tracking-tighter">
+                                    <div class="flex items-center gap-1">
+                                        <i :class="extra.type === 'express' ? 'fas fa-bolt' : 'fas fa-magic'" class="text-gray-300"></i>
+                                        {{ extra.label }}
+                                    </div>
+                                    <span v-if="order.items_qty > 0" class="text-[10px] text-gray-300 normal-case font-normal">
+                                        ({{ order.items_qty }} {{ order.unit.replace('/', '') }} x {{ formatRupiah(extra.price) }})
+                                    </span>
                                 </span>
-                                <span class="text-gray-700">+ {{ formatRupiah(extra.price) }}{{ order.isKg ? order.unit : '/item' }}</span>
+                                <span class="text-gray-700">+ {{ formatRupiah(extra.price * (order.items_qty || 1)) }}</span>
                             </div>
                         </template>
 
                         <!-- Diskon -->
                         <div v-if="order.use_discount && order.discount_amount > 0" class="flex justify-between text-xs font-bold">
-                            <span class="text-emerald-600 uppercase tracking-tighter flex items-center gap-1">
-                                <i class="fas fa-percent text-emerald-400"></i> Diskon
+                            <span class="text-emerald-600 uppercase tracking-tighter">
+                                <div class="flex items-center gap-1">
+                                    <i class="fas fa-percent text-emerald-400"></i> Diskon
+                                </div>
+                                <span v-if="order.items_qty > 0" class="text-[10px] text-emerald-400 normal-case font-normal">
+                                    ({{ order.items_qty }} {{ order.unit.replace('/', '') }} x {{ formatRupiah(order.discount_amount) }})
+                                </span>
                             </span>
-                            <span v-if="!order.isCalculated" class="text-emerald-600">- {{ formatRupiah(order.discount_amount) }}{{ order.unit }}</span>
+                            <span v-if="!order.isCalculated" class="text-emerald-600">- {{ formatRupiah(order.discount_amount) }}</span>
                             <span v-else class="text-emerald-600">- {{ formatRupiah(order.discount_amount * order.items_qty) }}</span>
                         </div>
 
@@ -858,14 +880,14 @@ const estimatedTotalCostText = computed(() => {
                         </div>
 
                         <button
-                            v-if="order.dbStatus === 'pending' && order.paymentStatus === 'UNPAID'"
+                            v-if="order.dbStatus === 'dibuat' && order.paymentStatus === 'UNPAID'"
                             @click="batalkanPesanan"
                             class="w-full mt-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-[#E30613] text-[10px] bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-all shadow-sm active:scale-95">
                             Batalkan Pesanan
                         </button>
                     </template>
-                    <template v-else-if="order.dbStatus === 'pending' && order.paymentStatus === 'UNPAID'">
-                        <!-- Even if calculated (PCS), if still pending allow cancellation -->
+                    <template v-else-if="order.dbStatus === 'dibuat' && order.paymentStatus === 'UNPAID'">
+                        <!-- Even if calculated (PCS), if still baru allow cancellation -->
                          <button
                             @click="batalkanPesanan"
                             class="w-full mt-4 py-3.5 rounded-xl font-black uppercase tracking-widest text-[#E30613] text-[10px] bg-red-50 hover:bg-[#E30613] hover:text-white border border-red-100 transition-all shadow-sm active:scale-95">
@@ -937,7 +959,7 @@ const estimatedTotalCostText = computed(() => {
                                 <span class="text-[9px] text-emerald-600 font-bold">Verifikasi Otomatis</span>
                             </div>
                         </label>
-                        
+
                         <div class="pt-2 text-right">
                            <button @click="isChangingPaymentMethod = false" class="text-[10px] bg-gray-900 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm hover:bg-black transition-colors">Terapkan</button>
                         </div>
@@ -1091,7 +1113,7 @@ const estimatedTotalCostText = computed(() => {
                         Cek Status
                     </button>
                 </div>
-                
+
                 <!-- COD Mobile State -->
                 <div v-else class="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
                     <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm shrink-0">
@@ -1103,7 +1125,7 @@ const estimatedTotalCostText = computed(() => {
                     </div>
                 </div>
             </div>
-            
+
             <!-- Not Calculated: Wait for courier -->
             <template v-else>
                 <button v-if="order.dbStatus === 'dibatalkan'" type="button" disabled
@@ -1130,11 +1152,11 @@ const estimatedTotalCostText = computed(() => {
         >
             <div v-if="isSuccessModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
                 <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isSuccessModalOpen = false"></div>
-                
+
                 <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                     <!-- Top accent -->
                     <div class="h-2 bg-gradient-to-r from-[#E30613] via-[#FFE800] to-[#E30613]"></div>
-                    
+
                     <div class="p-8 text-center space-y-6">
                         <!-- Success Icon Wrapper -->
                         <div class="relative mx-auto w-24 h-24">
@@ -1149,9 +1171,9 @@ const estimatedTotalCostText = computed(() => {
                                 {{ successType === 'payment' ? 'Pembayaran Berhasil!' : 'Pesanan Berhasil!' }}
                             </h2>
                             <p class="text-xs text-gray-500 font-bold mt-2 leading-relaxed px-4">
-                                {{ successType === 'payment' 
-                                    ? 'Terima kasih! Pembayaran Anda telah kami terima. Pesanan akan segera diproses.' 
-                                    : 'Pesanan Anda telah berhasil dibuat! Kurir kami akan segera menjemput laundry Anda sesuai jadwal.' 
+                                {{ successType === 'payment'
+                                    ? 'Terima kasih! Pembayaran Anda telah kami terima. Pesanan akan segera diproses.'
+                                    : 'Pesanan Anda telah berhasil dibuat! Kurir kami akan segera menjemput laundry Anda sesuai jadwal.'
                                 }}
                             </p>
                         </div>
@@ -1167,7 +1189,7 @@ const estimatedTotalCostText = computed(() => {
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             @click="isSuccessModalOpen = false"
                             class="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-lg hover:bg-black transition-all active:scale-95"
                         >
@@ -1191,10 +1213,10 @@ const estimatedTotalCostText = computed(() => {
         >
             <div v-if="isCancelModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4">
                 <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="isCancelModalOpen = false"></div>
-                
+
                 <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                     <div class="h-2 bg-[#E30613]"></div>
-                    
+
                     <div class="p-8 space-y-6">
                         <div class="text-center space-y-2">
                             <div class="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
@@ -1216,9 +1238,9 @@ const estimatedTotalCostText = computed(() => {
                                     <i v-if="cancelForm.reason === reason" class="fas fa-check text-[8px]"></i>
                                 </div>
                             </div>
-                            
+
                             <!-- Custom Reason Textarea -->
-                            <textarea 
+                            <textarea
                                 v-if="cancelForm.reason === 'Alasan lainnya'"
                                 v-model="cancelForm.customReason"
                                 rows="2"
@@ -1228,13 +1250,13 @@ const estimatedTotalCostText = computed(() => {
                         </div>
 
                         <div class="flex gap-3">
-                            <button 
+                            <button
                                 @click="isCancelModalOpen = false"
                                 class="flex-1 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all active:scale-95"
                             >
                                 Kembali
                             </button>
-                            <button 
+                            <button
                                 @click="submitPembatalan"
                                 :disabled="!cancelForm.reason || (cancelForm.reason === 'Alasan lainnya' && !cancelForm.customReason) || cancelForm.processing"
                                 class="flex-[2] py-3.5 bg-[#E30613] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"

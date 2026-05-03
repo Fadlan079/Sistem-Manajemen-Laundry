@@ -30,7 +30,7 @@ class PesananMasukController extends Controller
         $month = $request->input('month', Carbon::now()->month);
         $year = $request->input('year', Carbon::now()->year);
 
-        $query = Order::with(['user', 'service', 'payments', 'orderItems', 'deliveries', 'operator'])
+        $query = Order::with(['user', 'service', 'payments', 'orderItems.extras', 'deliveries', 'operator'])
             ->when($search, function ($q) use ($search) {
                 $numericId = null;
                 if (preg_match('/-(\d{4})$/', $search, $m)) {
@@ -50,7 +50,7 @@ class PesananMasukController extends Controller
             ->when($reportMode === 'harian' && $date, fn($q) => $q->whereDate('created_at', $date))
             ->when($reportMode === 'bulanan', fn($q) => $q->whereYear('created_at', $year)->whereMonth('created_at', $month))
             ->when($reportMode === 'tahunan', fn($q) => $q->whereYear('created_at', $year))
-            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($status, function($q) use($status) { return $status === 'menunggu' ? $q->whereIn('status', ['dibuat', 'antri']) : $q->where('status', $status); })
             ->latest();
 
         $orders = $query->paginate(10)->withQueryString()->through(function ($o) {
@@ -59,32 +59,47 @@ class PesananMasukController extends Controller
             // Assume 2 deliveries = 10k, 1 = 5k
             $fee = $dists * 5000;
 
+            $unit = $o->service?->unit ?? '';
+            $isKg = in_array(strtolower($unit), ['/kg', 'kg']);
+            
+            // Estimated Weight Labels
+            $estLabels = [
+                'kurang_dari_3' => 'Kurang dari 3 Kg',
+                '3_sampai_5'    => '3 - 5 Kg',
+                '5_sampai_10'   => '5 - 10 Kg',
+                'lebih_dari_10' => 'Lebih dari 10 Kg',
+            ];
+
             return [
                 'id' => $o->id,
                 'invoice' => 'INV-' . $o->created_at->format('Ymd') . '-' . str_pad($o->id, 4, '0', STR_PAD_LEFT),
-                'customer' => $o->user?->name ?? '-',
+                'customer' => $o->user?->name ?? $o->customer_name ?? '-',
+                'customer_phone' => $o->user?->phone ?? $o->customer_phone ?? '-',
                 'customer_email' => $o->user?->email ?? '-',
-                'user_id' => $o->user_id,
                 'service' => $o->service?->name ?? '-',
-                'service_id' => $o->service_id,
                 'status' => $o->status,
                 'total_price' => (float) $o->total_price,
+                'date' => $o->created_at->format('d M Y, H:i'),
+                'payment_status' => $o->payments->first()?->status ?? 'pending',
+                'payment_method' => $o->payments->first()?->method ?? '-',
+                'delivery_type' => $o->delivery_type,
                 'pickup_address' => $o->pickup_address,
                 'delivery_address' => $o->delivery_address,
-                'payment_status' => $o->payments->first()?->status ?? 'belum',
-                'payment_method' => $o->payments->first()?->method ?? '-',
-                'date' => $o->created_at->format('d M Y'),
-                'time' => $o->created_at->format('H:i'),
-                // Breakdown fields
-                'items_qty' => (float) ($item?->qty ?? 0),
-                'service_price' => (float) ($item?->price ?? ($o->service?->price ?? 0)),
-                'unit' => $o->service?->unit ?? '/kg',
-                'fee' => (float) $fee,
-                'isKg' => in_array(strtolower($o->service?->unit ?? ''), ['/kg', 'kg']),
-                'actual_weight' => (float) ($item?->actual_weight ?? 0),
                 'laundry_notes' => $o->notes,
-                'hasPickup' => $o->deliveries->where('type', 'pickup')->isNotEmpty(),
-                'hasDelivery' => $o->deliveries->where('type', 'delivery')->isNotEmpty(),
+                'isKg' => $isKg,
+                'unit' => $unit,
+                'items_qty' => $item ? (float)$item->qty : 0,
+                'actual_weight' => $item ? (float)$item->actual_weight : 0,
+                'estimated_weight_option' => $item?->estimated_weight_option,
+                'estimated_weight' => $item ? ($estLabels[$item->estimated_weight_option] ?? null) : null,
+                'isCalculated' => $item ? ($item->actual_weight > 0) : false,
+                'service_price' => (float)($o->service?->price ?? 0),
+                'fee' => (float)$fee,
+                'discount_amount' => $item ? (float)$item->discount_amount : 0,
+                'extras' => $o->orderItems->flatMap(fn($oi) => $oi->extras ?? [])->map(fn($e) => [
+                    'label' => $e->label ?? $e->name ?? 'Extra',
+                    'price' => (float)($e->price ?? 0)
+                ]),
                 'courier_id' => $o->deliveries->where('type', 'pickup')->first()?->courier_id ?? $o->deliveries->where('type', 'delivery')->first()?->courier_id,
                 'external_courier_name' => $o->deliveries->where('type', 'pickup')->first()?->external_courier_name ?? $o->deliveries->where('type', 'delivery')->first()?->external_courier_name,
                 'created_at' => $o->created_at->toIso8601String(),
@@ -96,7 +111,7 @@ class PesananMasukController extends Controller
             'total' => Order::count(),
             'selesai' => Order::where('status', 'selesai')->count(),
             'diproses' => Order::where('status', 'diproses')->count(),
-            'menunggu' => Order::whereIn('status', ['dibuat', 'antri', 'dijemput'])->count(),
+            'menunggu' => Order::whereIn('status', ['dibuat', 'antri'])->count(),
             'diterima' => Order::where('status', 'diterima')->count(),
             'antri' => Order::where('status', 'antri')->count(),
             'dibatalkan' => Order::where('status', 'dibatalkan')->count(),
@@ -143,12 +158,16 @@ class PesananMasukController extends Controller
             return $row;
         });
 
-        $serviceList = Service::all()->map(fn($s) => [
+        $serviceList = Service::with('serviceCategory')->get()->map(fn($s) => [
             'id' => $s->id,
             'name' => $s->name,
             'price' => (float) $s->price,
             'unit' => $s->unit ?? '/kg',
             'description' => $s->description,
+            'image' => $s->image,
+            'image_url' => $s->image ? asset('storage/' . $s->image) : null,
+            'category' => $s->serviceCategory->name ?? 'Lainnya',
+            'service_category' => $s->serviceCategory,
         ]);
 
         $customerList = User::where('role', 'pelanggan')->select('id', 'name', 'email')->get();
@@ -231,7 +250,10 @@ class PesananMasukController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable|exists:users,id',
+            'is_guest' => 'boolean',
+            'customer_name' => 'required_if:is_guest,true|nullable|string|max:255',
+            'customer_phone' => 'required_if:is_guest,true|nullable|string|max:20',
             'service_id' => 'required|exists:services,id',
             'delivery_type' => 'required|in:antar_jemput,jemput,antar,outlet',
             'pickup_address' => 'nullable|string',
@@ -247,7 +269,11 @@ class PesananMasukController extends Controller
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
-        $user = tap(User::find($validated['user_id']), fn($u) => $u ?: abort(404));
+        
+        $user = null;
+        if (!$request->is_guest && $validated['user_id']) {
+            $user = User::find($validated['user_id']);
+        }
 
         $deliveryFee = match ($validated['delivery_type']) {
             'antar_jemput' => 10000,
@@ -293,7 +319,9 @@ class PesananMasukController extends Controller
 
         // 1. Create Order
         $order = Order::create([
-            'user_id' => $user->id,
+            'user_id' => $user?->id,
+            'customer_name' => $request->is_guest ? $validated['customer_name'] : ($user?->name),
+            'customer_phone' => $request->is_guest ? $validated['customer_phone'] : ($user?->phone),
             'service_id' => $service->id,
             'status' => 'dibuat',
             'total_price' => $totalPrice,
@@ -323,7 +351,7 @@ class PesananMasukController extends Controller
             'order_id' => $order->id,
             'amount' => 0, // Computed later for KG
             'method' => $validated['payment_preference'],
-            'status' => 'menunggu',
+            'status' => 'pending',
         ]);
 
         // 4. Create Delivery depending on type
