@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Notifications\VerifyEmailCustom;
 
 #[Fillable(['name', 'email', 'password', 'phone', 'role', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
@@ -55,5 +56,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pushSubscriptions()
     {
         return $this->hasMany(PushSubscription::class);
+    }
+
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new VerifyEmailCustom);
     }
 }
