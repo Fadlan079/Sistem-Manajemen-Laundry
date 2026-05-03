@@ -134,7 +134,7 @@
             </tr>
             <tr>
                 <td class="wave-area" bgcolor="#ffffff" style="background-color: #ffffff;">
-                    <img class="wave-img" src="{{ asset('wave.png') }}" width="600" height="auto" alt="" style="display: block; width: 100%; height: auto; border: none;">
+                    <img class="wave-img" src="{{ asset('wave.svg') }}" width="600" height="auto" alt="" style="display: block; width: 100%; height: auto; border: none;">
                 </td>
             </tr>
             <tr>
