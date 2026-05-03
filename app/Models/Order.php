@@ -14,6 +14,7 @@ class Order extends Model
         'pickup_address',
         'delivery_address',
         'notes',
+        'operator_id',
     ];
 
     public function user()
@@ -44,5 +45,10 @@ class Order extends Model
     public function review()
     {
         return $this->hasOne(Review::class);
+    }
+
+    public function operator()
+    {
+        return $this->belongsTo(User::class, 'operator_id');
     }
 }

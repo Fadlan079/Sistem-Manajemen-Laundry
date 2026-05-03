@@ -3,10 +3,11 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, nextTick } from 'vue';
 
 const props = defineProps({
-    isOpen: Boolean
+    isOpen: Boolean,
+    isCollapsed: Boolean
 });
 
-const emit = defineEmits(['update:isOpen']);
+const emit = defineEmits(['update:isOpen', 'toggle-collapse']);
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user || { role: 'admin' });
@@ -68,7 +69,7 @@ const allLinks = computed(() => ({
                 name: 'Tugas Saya',
                 href: route('kurir.dashboard'),
                 active: route().current('kurir.dashboard') && !page.url.includes('tab=riwayat'),
-                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
+                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
             },
             {
                 name: 'Riwayat',
@@ -79,16 +80,13 @@ const allLinks = computed(() => ({
         ]
     },
 }));
-``
-const linksGroup = computed(() => allLinks.value[role.value] || allLinks.value.admin);
 
-const links = computed(() => allLinks.value[role.value] || allLinks.value.admin);
+const linksGroup = computed(() => allLinks.value[role.value] || allLinks.value.admin);
 
 onMounted(() => {
     nextTick(() => {
         const activeEles = document.getElementsByClassName('active-nav-item');
         if (activeEles.length > 0) {
-            // Scroll element ke tengah layarnya nav
             activeEles[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     });
@@ -97,8 +95,11 @@ onMounted(() => {
 
 <template>
     <aside
-        class="fixed top-0 left-0 h-full w-64 bg-primary text-white flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl"
-        :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
+        class="fixed top-0 left-0 h-full bg-primary text-white flex flex-col z-50 transition-all duration-300 ease-in-out lg:translate-x-0 shadow-2xl"
+        :class="[
+            isOpen ? 'translate-x-0' : '-translate-x-full',
+            isCollapsed ? 'w-20' : 'w-64'
+        ]"
     >
         <!-- Close Button (Mobile Only) -->
         <button
@@ -110,81 +111,136 @@ onMounted(() => {
             </svg>
         </button>
 
-        <!-- Sidebar Header / Logo -->
-        <div class="px-8 py-8 border-b border-white/10 flex items-center gap-3">
-            <img
-                src="/logo.png"
-                alt="Logo"
-                class="w-12 h-12 object-cover rounded-full shadow-md shadow-black/20"
-            />
-            <div class="flex flex-col">
+        <!-- Sidebar Header / Logo (Now Toggle Button) -->
+        <button 
+            @click="emit('toggle-collapse')"
+            class="relative px-4 py-8 border-b border-white/10 flex items-center transition-all duration-300 overflow-hidden group/header outline-none"
+            :class="isCollapsed ? 'justify-center px-0' : 'px-8 gap-3'"
+        >
+            <!-- Logo with Hover Overlay -->
+            <div class="relative shrink-0 transition-all duration-300">
+                <img
+                    src="/logo.png"
+                    alt="Logo"
+                    class="w-12 h-12 object-cover rounded-full shadow-md shadow-black/20 group-hover/header:opacity-30 transition-opacity"
+                    :class="isCollapsed ? 'scale-90' : ''"
+                />
+                <!-- Hover Icon Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header:opacity-100 transition-opacity">
+                    <svg v-if="isCollapsed" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                    <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Brand Info (Hidden on Collapsed) -->
+            <div 
+                class="flex flex-col text-left transition-all duration-300 whitespace-nowrap"
+                :class="isCollapsed ? 'opacity-0 w-0 scale-0' : 'opacity-100 w-auto scale-100'"
+            >
                 <span class="font-bold text-xl tracking-tight leading-none text-white">HiWash</span>
                 <span class="text-[10px] text-white/70 font-semibold tracking-widest uppercase mt-1">{{ role }} Dashboard</span>
             </div>
-        </div>
+        </button>
 
         <!-- Navigation Links -->
-        <nav scroll-region class="flex-1 px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+        <nav scroll-region class="flex-1 px-3 py-6 space-y-6 overflow-y-auto custom-scrollbar">
             <div v-for="(groupLinks, category) in linksGroup" :key="category">
-                <h3 class="px-4 text-[11px] font-bold text-white/40 uppercase tracking-[2px] mb-3">
+                <!-- Category Header (Hidden on Collapsed) -->
+                <h3 
+                    class="px-4 text-[11px] font-bold text-white/40 uppercase tracking-[2px] mb-3 transition-all duration-300 overflow-hidden"
+                    :class="isCollapsed ? 'opacity-0 h-0 mb-0' : 'opacity-100 h-auto'"
+                >
                     {{ category }}
                 </h3>
 
                 <div class="space-y-1">
                     <Link v-for="(link, index) in groupLinks" :key="index" :href="link.href"
-                        class="relative flex items-center gap-4 px-4 py-3 rounded-xl transition overflow-hidden group"
+                        class="relative flex items-center rounded-xl transition-all duration-300 overflow-hidden group/item h-12"
                         :class="[
-                            link.active ? 'active-nav-item bg-black/30 text-white font-semibold shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]' : 'text-white/70 hover:bg-black/10 hover:text-white'
-                        ]">
+                            link.active ? 'active-nav-item bg-black/30 text-white font-semibold shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]' : 'text-white/70 hover:bg-black/10 hover:text-white',
+                            isCollapsed ? 'justify-center px-0' : 'px-4 gap-4'
+                        ]"
+                    >
 
                         <div v-if="link.active" class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-r-md"></div>
 
-                        <svg class="w-5 h-5 opacity-90 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg 
+                            class="w-5 h-5 opacity-90 group-hover/item:scale-110 group-hover/item:-rotate-12 transition-transform shrink-0" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                        >
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon"/>
                         </svg>
-                        <span class="text-[14px]">{{ link.name }}</span>
+
+                        <!-- Label (Hidden on Collapsed) -->
+                        <span 
+                            class="text-[14px] transition-all duration-300 whitespace-nowrap overflow-hidden"
+                            :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
+                        >
+                            {{ link.name }}
+                        </span>
                     </Link>
                 </div>
             </div>
         </nav>
 
-        <div class="p-6 space-y-3 border-t border-white/10 bg-black/5">
+        <!-- Bottom Actions -->
+        <div 
+            class="p-4 space-y-3 border-t border-white/10 bg-black/5 transition-all duration-300"
+            :class="isCollapsed ? 'px-2' : 'p-6'"
+        >
             <Link
                 :href="route('home')"
-                class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-3 px-4 rounded-xl transition border border-white/10 shadow-sm hover:shadow-md"
+                class="flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all duration-300 border border-white/10 group/bottom overflow-hidden h-12"
+                :class="isCollapsed ? 'w-12 mx-auto' : 'w-full gap-2 px-4 text-sm font-semibold'"
+                title="Lihat Landing Page"
             >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 shrink-0 group-hover/bottom:scale-110 group-hover/bottom:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
-                Lihat Landing Page
+                <span 
+                    class="transition-all duration-300 whitespace-nowrap overflow-hidden"
+                    :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
+                >
+                    Landing Page
+                </span>
             </Link>
 
-            <Link v-if="role === 'operator'" :href="route('operator.pesanan.masuk', { action: 'add' })" class="w-full flex items-center justify-center gap-2 bg-secondary hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <Link 
+                v-if="role === 'operator'" 
+                :href="route('operator.pesanan.masuk', { action: 'add' })" 
+                class="flex items-center justify-center bg-secondary hover:bg-yellow-400 text-gray-900 rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 group/btn overflow-hidden h-12"
+                :class="isCollapsed ? 'w-12 mx-auto' : 'w-full gap-2 px-4 text-sm font-bold'"
+                title="Buat Pesanan"
+            >
+                <svg class="w-5 h-5 shrink-0 group-hover/btn:scale-110 group-hover/btn:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Buat Pesanan</span>
+                <span 
+                    class="transition-all duration-300 whitespace-nowrap overflow-hidden"
+                    :class="isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
+                >
+                    Buat Pesanan
+                </span>
             </Link>
-
-            <!-- <div class="pt-2">
-                <Link :href="route('logout')" method="post" as="button" class="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg text-red-300 hover:text-red-100 text-[13px] transition group">
-                    <svg class="w-4 h-4 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                    <span class="font-medium uppercase tracking-widest">Logout</span>
-                </Link>
-            </div> -->
         </div>
     </aside>
 </template>
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(72, 71, 71, 0.1);
-        border-radius: 10px;
+    width: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
 }
 </style>

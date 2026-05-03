@@ -43,3 +43,11 @@
     border: 2px solid rgba(0, 0, 0, 0);
     background-clip: padding-box;
 }
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}

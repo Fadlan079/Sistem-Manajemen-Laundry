@@ -68,7 +68,7 @@ function formatRupiah(val) {
 }
 
 const STATUS_MAP = {
-    pending:  { label: 'Pending',   cls: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
+    menunggu:  { label: 'Menunggu',   cls: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
     diproses: { label: 'Diproses',  cls: 'bg-amber-100 text-amber-700 border-amber-200',    dot: 'bg-amber-500' },
     selesai:  { label: 'Selesai',   cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
     diantar:  { label: 'Diantar',   cls: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-500' },
@@ -80,7 +80,7 @@ const statCards = computed(() => [
     { label: 'Total Pesanan',   value: props.stats?.total    ?? 0, icon: 'fa-shopping-bag',  color: 'text-blue-600',   bg: 'bg-blue-500/10' },
     { label: 'Pesanan Selesai', value: props.stats?.selesai  ?? 0, icon: 'fa-circle-check',  color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
     { label: 'Sedang Diproses', value: props.stats?.diproses ?? 0, icon: 'fa-spinner',       color: 'text-amber-600',  bg: 'bg-amber-500/10' },
-    { label: 'Menunggu',        value: props.stats?.pending  ?? 0, icon: 'fa-clock',         color: 'text-rose-600',   bg: 'bg-rose-500/10' },
+    { label: 'Menunggu',        value: props.stats?.menunggu  ?? 0, icon: 'fa-clock',         color: 'text-rose-600',   bg: 'bg-rose-500/10' },
 ]);
 
 // ── Chart Configs ──────────────────────────────────────────────────
@@ -116,7 +116,7 @@ const barOptions = {
 };
 
 const chartStatusData = computed(() => ({
-    labels: ['Selesai', 'Diproses', 'Pending', 'Diantar'],
+    labels: ['Selesai', 'Diproses', 'Menunggu', 'Diantar'],
     datasets: [{ data: props.chartData?.statusDist ?? [0,0,0,0], backgroundColor: ['#059669','#d97706','#6366f1','#3b82f6'], borderWidth: 0, hoverOffset: 4 }],
 }));
 
@@ -264,7 +264,7 @@ const chartServiceData = computed(() => {
                         <select v-model="statusFilter"
                             class="w-full sm:w-auto px-4 py-3 border border-border bg-surface text-text rounded-sm text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition">
                             <option value="">Semua Status</option>
-                            <option value="pending">Pending</option>
+                            <option value="menunggu">Menunggu</option>
                             <option value="diproses">Diproses</option>
                             <option value="selesai">Selesai</option>
                             <option value="diantar">Diantar</option>

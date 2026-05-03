@@ -13,6 +13,12 @@ defineProps({
 });
 
 const isSidebarOpen = ref(false);
+const isSidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true');
+
+const toggleCollapse = () => {
+    isSidebarCollapsed.value = !isSidebarCollapsed.value;
+    localStorage.setItem('sidebarCollapsed', isSidebarCollapsed.value);
+};
 
 // Close sidebar on navigation (mobile)
 watch(() => usePage().url, () => {
@@ -52,11 +58,16 @@ onMounted(async () => {
         </transition>
 
         <!-- Sidebar -->
-        <Sidebar :is-open="isSidebarOpen" @update:is-open="val => isSidebarOpen = val" />
+        <Sidebar 
+            :is-open="isSidebarOpen" 
+            :is-collapsed="isSidebarCollapsed"
+            @update:is-open="val => isSidebarOpen = val"
+            @toggle-collapse="toggleCollapse"
+        />
 
         <!-- Main Content Wrapper -->
-        <div class="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out"
-             :class="[isSidebarOpen ? 'lg:ml-64' : 'lg:ml-64']"> <!-- Static margin on desktop, dynamic on future mini-sidebar -->
+        <div class="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out min-w-0"
+             :class="[isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64']">
             
             <!-- Topbar (Sticky) -->
             <Topbar :title="title" @toggle-sidebar="isSidebarOpen = !isSidebarOpen" />

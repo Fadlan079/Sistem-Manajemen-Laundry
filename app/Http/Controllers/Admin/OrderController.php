@@ -65,14 +65,14 @@ class OrderController extends Controller
             'total'    => Order::where('status', '!=', 'cart')->count(),
             'selesai'  => Order::where('status', 'selesai')->count(),
             'diproses' => Order::where('status', 'diproses')->count(),
-            'pending'  => Order::where('status', 'dibuat')->count(),
+            'menunggu'  => Order::whereIn('status', ['dibuat', 'menunggu'])->count(),
         ];
 
         // ── Chart 1: Status Distribution (Doughnut) ────────
         $statusDist = [
             Order::where('status', 'selesai')->count(),
             Order::where('status', 'diproses')->count(),
-            Order::where('status', 'dibuat')->count(),
+            Order::whereIn('status', ['dibuat', 'menunggu'])->count(),
             Order::where('status', 'diantar')->count(),
         ];
 

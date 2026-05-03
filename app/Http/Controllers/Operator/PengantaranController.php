@@ -22,7 +22,7 @@ class PengantaranController extends Controller
         // Base query for deliveries that are delivery tasks and not yet completed
         $query = Delivery::with(['order.user', 'courier', 'order.orderItems'])
             ->where('type', 'delivery')
-            ->whereNotIn('status', ['selesai', 'pending']);
+            ->whereNotIn('status', ['selesai', 'menunggu']);
 
         if ($dateFilter) {
             $query->whereHas('order', function ($q) use ($dateFilter) {
@@ -52,12 +52,12 @@ class PengantaranController extends Controller
         $lateThreshold = Carbon::now()->subHours(12);
 
         $stats = [
-            'semua' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])->count(),
-            'belum_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
+            'semua' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'menunggu'])->count(),
+            'belum_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'menunggu'])
                                 ->whereNull('courier_id')->whereNull('external_courier_name')->count(),
-            'sudah_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
+            'sudah_diassign' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'menunggu'])
                                 ->where(fn($q) => $q->whereNotNull('courier_id')->orWhereNotNull('external_courier_name'))->count(),
-            'terlama' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'pending'])
+            'terlama' => Delivery::where('type', 'delivery')->whereNotIn('status', ['selesai', 'menunggu'])
                                 ->whereHas('order', fn($q) => $q->where('created_at', '<', $lateThreshold))
                                 ->count(),
             'hari_ini' => Delivery::where('type', 'delivery')->whereDate('created_at', $today)->count(),

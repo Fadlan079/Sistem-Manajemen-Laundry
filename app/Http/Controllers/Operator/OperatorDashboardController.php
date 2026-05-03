@@ -50,8 +50,8 @@ class OperatorDashboardController extends Controller
 
         // ── Pembayaran Stats ──────────────────────────────────────
         $pembayaran = [
-            'belum_lunas'   => Order::whereHas('payments', fn($q) => $q->where('status', 'pending'))->count(),
-            'tunai_cod'     => Order::whereHas('payments', fn($q) => $q->where('status', 'pending')->whereIn('method', ['cash', 'cod']))->count(),
+            'belum_lunas'   => Order::whereHas('payments', fn($q) => $q->where('status', 'menunggu'))->count(),
+            'tunai_cod'     => Order::whereHas('payments', fn($q) => $q->where('status', 'menunggu')->whereIn('method', ['cash', 'cod']))->count(),
             'lunas_hari_ini' => Order::whereHas('payments', fn($q) => $q->where('status', 'paid')->whereDate('paid_at', $today))->count(),
             'pendapatan_hari_ini' => Payment::where('status', 'paid')->whereDate('paid_at', $today)->sum('amount'),
             'pendapatan_bulan_ini' => Payment::where('status', 'paid')->whereDate('paid_at', '>=', $thisMonth)->sum('amount'),
@@ -70,7 +70,7 @@ class OperatorDashboardController extends Controller
                 'status'   => $o->status,
                 'total'    => (float) $o->total_price,
                 'date'     => $o->created_at->format('d M, H:i'),
-                'payment_status' => $o->payments->first()?->status ?? 'pending',
+                'payment_status' => $o->payments->first()?->status ?? 'menunggu',
             ]);
 
         // ── Antrian Penjemputan Mendesak (unassigned pickups) ─────
@@ -91,9 +91,9 @@ class OperatorDashboardController extends Controller
                 'age_hours' => $d->order->created_at->diffInHours(Carbon::now()),
             ]);
 
-        // ── Pembayaran Mendesak (pending belum lunas) ─────────────
+        // ── Pembayaran Mendesak (menunggu belum lunas) ─────────────
         $urgentPayments = Order::with(['user', 'payments'])
-            ->whereHas('payments', fn($q) => $q->where('status', 'pending'))
+            ->whereHas('payments', fn($q) => $q->where('status', 'menunggu'))
             ->where('total_price', '>', 0)
             ->latest()
             ->limit(3)

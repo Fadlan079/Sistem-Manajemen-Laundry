@@ -86,6 +86,9 @@ Route::middleware(['auth', 'verified', 'role:operator'])
         Route::get('/dashboard', [OperatorDashboardController::class, 'index'])->name('dashboard');
 
         Route::get('/PesananMasuk', [PesananMasukController::class, 'index'])->name('pesanan.masuk');
+        Route::get('/PesananMasuk/export', [PesananMasukController::class, 'export'])->name('pesanan.masuk.export');
+        Route::get('/PesananMasuk/template', [PesananMasukController::class, 'downloadTemplate'])->name('pesanan.masuk.template');
+        Route::post('/PesananMasuk/import', [PesananMasukController::class, 'import'])->name('pesanan.masuk.import');
         Route::post('/PesananMasuk', [PesananMasukController::class, 'store'])->name('pesanan.masuk.store');
         Route::put('/PesananMasuk/{order}', [PesananMasukController::class, 'update'])->name('pesanan.masuk.update');
 

@@ -23,7 +23,7 @@ class ValidOrderStatusTransition implements ValidationRule
     {
         $allowedTransitions = [
             'cart'       => ['dibuat'],
-            'pending'    => ['antri', 'dijemput', 'diproses', 'dibatalkan'],
+            'menunggu'    => ['antri', 'dijemput', 'diproses', 'dibatalkan'],
             'dibuat'     => ['antri', 'dijemput', 'diproses', 'dibatalkan'],
             'antri'      => ['dijemput', 'diproses', 'dibatalkan'],
             'dijemput'   => ['diproses', 'dibatalkan'],

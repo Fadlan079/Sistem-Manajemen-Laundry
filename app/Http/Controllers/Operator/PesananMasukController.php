@@ -14,6 +14,10 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Models\Notification;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\OrdersExport;
+use App\Exports\OrdersTemplateExport;
+use App\Imports\OrdersImport;
 
 class PesananMasukController extends Controller
 {
@@ -22,8 +26,11 @@ class PesananMasukController extends Controller
         $search = $request->input('search', '');
         $status = $request->input('status', '');
         $date = $request->input('date', '');
+        $reportMode = $request->input('reportMode', 'harian');
+        $month = $request->input('month', Carbon::now()->month);
+        $year = $request->input('year', Carbon::now()->year);
 
-        $query = Order::with(['user', 'service', 'payments', 'orderItems', 'deliveries'])
+        $query = Order::with(['user', 'service', 'payments', 'orderItems', 'deliveries', 'operator'])
             ->when($search, function ($q) use ($search) {
                 $numericId = null;
                 if (preg_match('/-(\d{4})$/', $search, $m)) {
@@ -40,7 +47,9 @@ class PesananMasukController extends Controller
                     }
                 });
             })
-            ->when($date, fn($q) => $q->whereDate('created_at', $date))
+            ->when($reportMode === 'harian' && $date, fn($q) => $q->whereDate('created_at', $date))
+            ->when($reportMode === 'bulanan', fn($q) => $q->whereYear('created_at', $year)->whereMonth('created_at', $month))
+            ->when($reportMode === 'tahunan', fn($q) => $q->whereYear('created_at', $year))
             ->when($status, fn($q) => $q->where('status', $status))
             ->latest();
 
@@ -76,13 +85,23 @@ class PesananMasukController extends Controller
                 'laundry_notes' => $o->notes,
                 'hasPickup' => $o->deliveries->where('type', 'pickup')->isNotEmpty(),
                 'hasDelivery' => $o->deliveries->where('type', 'delivery')->isNotEmpty(),
+                'courier_id' => $o->deliveries->where('type', 'pickup')->first()?->courier_id ?? $o->deliveries->where('type', 'delivery')->first()?->courier_id,
+                'external_courier_name' => $o->deliveries->where('type', 'pickup')->first()?->external_courier_name ?? $o->deliveries->where('type', 'delivery')->first()?->external_courier_name,
+                'created_at' => $o->created_at->toIso8601String(),
+                'operator_name' => $o->operator?->name ?? 'System',
             ];
         });
 
         $stats = [
-            'perlu_proses' => Order::whereIn('status', ['dibuat', 'antri', 'dijemput'])->count(),
-            'sedang_kerja' => Order::where('status', 'diproses')->count(),
+            'total' => Order::count(),
             'selesai' => Order::where('status', 'selesai')->count(),
+            'diproses' => Order::where('status', 'diproses')->count(),
+            'menunggu' => Order::whereIn('status', ['dibuat', 'antri', 'dijemput'])->count(),
+            'diterima' => Order::where('status', 'diterima')->count(),
+            'antri' => Order::where('status', 'antri')->count(),
+            'dibatalkan' => Order::where('status', 'dibatalkan')->count(),
+            'siap_jemput' => Order::where('status', 'dibuat')->whereHas('deliveries', fn($q) => $q->where('type', 'pickup'))->count(),
+            'siap_antar' => Order::where('status', 'selesai')->whereHas('deliveries', fn($q) => $q->where('type', 'delivery'))->count(),
         ];
 
         $statusDist = [
@@ -133,11 +152,20 @@ class PesananMasukController extends Controller
         ]);
 
         $customerList = User::where('role', 'pelanggan')->select('id', 'name', 'email')->get();
+        $courierList = User::where('role', 'kurir')->select('id', 'name')->get();
 
         return Inertia::render('dashboard/operator/PesananMasuk', [
             'orders' => $orders,
             'stats' => $stats,
-            'filters' => ['search' => $search, 'status' => $status, 'date' => $date],
+            'couriers' => $courierList,
+            'filters' => [
+                'search' => $search, 
+                'status' => $status, 
+                'date' => $date,
+                'reportMode' => $reportMode,
+                'month' => (int)$month,
+                'year' => (int)$year
+            ],
             'services' => $serviceList,
             'customers' => $customerList,
             'chartData' => [
@@ -148,6 +176,56 @@ class PesananMasukController extends Controller
                 'serviceNames' => $services->pluck('name'),
             ],
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        $search = $request->input('search');
+        $status = $request->input('status');
+        $date = $request->input('date');
+        $reportMode = $request->input('reportMode', 'harian');
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        $query = Order::with(['user', 'service', 'payments', 'operator'])
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+            })
+            ->when($reportMode === 'harian' && $date, fn($q) => $q->whereDate('created_at', $date))
+            ->when($reportMode === 'bulanan', fn($q) => $q->whereYear('created_at', $year)->whereMonth('created_at', $month))
+            ->when($reportMode === 'tahunan', fn($q) => $q->whereYear('created_at', $year))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->latest();
+
+        $orders = $query->get();
+        
+        $filename = 'laporan-pesanan-' . $reportMode . '-' . now()->format('YmdHis') . '.xlsx';
+        return Excel::download(new OrdersExport($orders), $filename);
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new OrdersTemplateExport, 'template-import-pesanan.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $import = new OrdersImport;
+        Excel::import($import, $request->file('file'));
+
+        $report = $import->getImportReport();
+        
+        if (count($report['errors']) > 0) {
+            $msg = "Import selesai dengan " . $report['success_count'] . " data berhasil. ";
+            $msg .= "Namun ada beberapa kendala: " . implode(', ', array_unique($report['errors']));
+            return back()->with('warning', $msg);
+        }
+
+        return back()->with('success', 'Berhasil mengimport ' . $report['success_count'] . ' data pesanan.');
     }
 
     public function store(Request $request)
@@ -222,6 +300,7 @@ class PesananMasukController extends Controller
             'pickup_address' => $validated['pickup_address'] ?? '-',
             'delivery_address' => $validated['delivery_address'] ?? '-',
             'notes' => $validated['laundry_notes'] ?? null,
+            'operator_id' => auth()->id(),
         ]);
 
         // 2. Create Order Item with new structure (operator always inputs actual weight/qty)
@@ -244,7 +323,7 @@ class PesananMasukController extends Controller
             'order_id' => $order->id,
             'amount' => 0, // Computed later for KG
             'method' => $validated['payment_preference'],
-            'status' => 'pending',
+            'status' => 'menunggu',
         ]);
 
         // 4. Create Delivery depending on type
@@ -286,13 +365,54 @@ class PesananMasukController extends Controller
                 new \App\Rules\ValidOrderStatusTransition($order->status)
             ],
             'total_price' => 'required|numeric|min:0',
-            'actual_weight' => 'nullable|numeric|min:0.1',
+            'actual_weight' => 'nullable|numeric|min:0.01',
+            'courier_type' => 'nullable|in:internal,external',
+            'courier_id' => 'nullable|exists:users,id',
+            'external_courier_name' => 'nullable|string|max:100',
+            'external_courier_phone' => 'nullable|string|max:20',
         ]);
 
         $order->update([
             'status' => $validated['status'],
             'total_price' => $validated['total_price'],
+            'operator_id' => auth()->id(),
         ]);
+
+        // Handle weight update if provided
+        if (($validated['actual_weight'] ?? null)) {
+            $item = $order->orderItems->first();
+            if ($item) {
+                $item->update(['actual_weight' => $validated['actual_weight']]);
+                
+                // Recalculate total price if it's a KG service
+                $isKg = in_array(strtolower($order->service?->unit ?? ''), ['/kg', 'kg']);
+                if ($isKg) {
+                    $dists = $order->deliveries->count();
+                    $fee = $dists * 5000;
+                    $newTotal = $fee + ($validated['actual_weight'] * $item->price);
+                    
+                    $order->update(['total_price' => $newTotal]);
+                }
+            }
+        }
+
+        // Handle courier assignment if status is changing to 'antri' (assigning for pickup) or 'selesai' (assigning for delivery)
+        // or if explicitly provided.
+        if (($validated['courier_type'] ?? null)) {
+            $type = in_array($validated['status'], ['antri', 'dijemput']) ? 'pickup' : 'delivery';
+            
+            $delivery = Delivery::where('order_id', $order->id)
+                ->where('type', $type)
+                ->first();
+
+            if ($delivery) {
+                $delivery->update([
+                    'courier_id' => $validated['courier_type'] === 'internal' ? ($validated['courier_id'] ?? null) : null,
+                    'external_courier_name' => $validated['courier_type'] === 'external' ? ($validated['external_courier_name'] ?? null) : null,
+                    'external_courier_phone' => $validated['courier_type'] === 'external' ? ($validated['external_courier_phone'] ?? null) : null,
+                ]);
+            }
+        }
 
         // Clear snap_token if price changed to force regeneration
         $order->payments()->update(['snap_token' => null]);

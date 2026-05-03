@@ -30,7 +30,7 @@ const now = new Date();
 const greeting = now.getHours() < 12 ? 'Selamat Pagi' : now.getHours() < 17 ? 'Selamat Siang' : 'Selamat Sore';
 
 const STATUS_MAP = {
-    pending:  { label: 'Pending',   cls: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-400' },
+    menunggu:  { label: 'Menunggu',   cls: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-400' },
     dijemput: { label: 'Dijemput',  cls: 'bg-teal-100 text-teal-700',     dot: 'bg-teal-400' },
     diproses: { label: 'Diproses',  cls: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-400' },
     selesai:  { label: 'Selesai',   cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400' },
@@ -73,7 +73,7 @@ const chartOptions = {
 };
 
 const chartStatusData = computed(() => ({
-    labels: ['Selesai', 'Diproses', 'Pending', 'Diantar', 'Dijemput'],
+    labels: ['Selesai', 'Diproses', 'Menunggu', 'Diantar', 'Dijemput'],
     datasets: [{
         data: props.statusDist ?? [0,0,0,0,0],
         backgroundColor: ['#059669','#d97706','#6366f1','#3b82f6','#14b8a6'],
@@ -114,7 +114,7 @@ const totalAlert = computed(() =>
                         </div>
                     </div>
                     <div class="text-3xl font-black text-text mb-1">{{ pesanan?.antrian ?? 0 }}</div>
-                    <p class="text-xs text-muted">Pesanan pending</p>
+                    <p class="text-xs text-muted">Pesanan menunggu</p>
                 </div>
 
                 <!-- Diproses -->
